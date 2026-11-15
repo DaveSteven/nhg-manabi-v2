@@ -16,16 +16,15 @@ pytestmark = pytest.mark.skipif(
 
 
 @pytest.fixture(scope="module")
-def engine():
-    engine = create_engine(DATABASE_URL)
-    with engine.connect() as conn:
+def engine(pg_engine):
+    """Alias to the session-scoped isolated test-DB engine (see conftest.py)."""
+    with pg_engine.connect() as conn:
         migrated = conn.execute(
             text("SELECT to_regclass('public.study_sessions') IS NOT NULL")
         ).scalar()
     if not migrated:
-        pytest.skip("database not migrated (run alembic upgrade head first)")
-    yield engine
-    engine.dispose()
+        pytest.skip("test database not migrated (run alembic upgrade head first)")
+    return pg_engine
 
 
 def _seed_release(engine) -> tuple[str, str]:
@@ -79,7 +78,7 @@ def _seed_release(engine) -> tuple[str, str]:
         conn.execute(text(
             "INSERT INTO release_answer_keys (release_id, question_id,"
             " correct_option_id, revision, review_status)"
-            " VALUES (:rid, 'q1', 'o2', 1, 'approved')",
+            " VALUES (:rid, 'q1', 'o2', 1, 'human_reviewed')",
         ), {"rid": release_id})
     return release_id, "q1"
 
@@ -166,7 +165,7 @@ def test_answer_key_requires_existing_option(engine):
                 conn.execute(text(
                     "INSERT INTO release_answer_keys (release_id, question_id,"
                     " correct_option_id, revision, review_status)"
-                    " VALUES (:rid, 'q1', 'nonexistent', 1, 'approved')",
+                    " VALUES (:rid, 'q1', 'nonexistent', 1, 'human_reviewed')",
                 ), {"rid": release_id})
     finally:
         _cleanup(engine, release_id)

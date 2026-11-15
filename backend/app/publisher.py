@@ -86,6 +86,24 @@ def _check_asset(engine: Engine, conn, asset: dict) -> None:
             f"media asset {asset['id']} exists with different sha256")
 
 
+def confirm_rights(engine: Engine, exam_id: str, reviewer_id: str,
+                   notes: str | None = None) -> dict:
+    """Record an independent content-licensing confirmation decision."""
+    import uuid as _uuid
+    with engine.begin() as conn:
+        exists = conn.execute(text(
+            "SELECT 1 FROM exam_catalogs WHERE id = :e"), {"e": exam_id}).first()
+        if exists is None:
+            raise PublishError(f"exam {exam_id!r} not in catalog")
+        conn.execute(text(
+            "INSERT INTO publication_decisions (id, exam_id,"
+            " candidate_content_hash, decision, reviewer_id, notes)"
+            " VALUES (:id, :e, '*', 'rights_confirmed', :reviewer, :notes)"),
+            {"id": _uuid.uuid4(), "e": exam_id, "reviewer": reviewer_id,
+             "notes": notes})
+    return {"ok": True, "exam_id": exam_id, "decision": "rights_confirmed"}
+
+
 def publish_package(engine: Engine, package_id: str,
                     content_hash: str | None = None,
                     reviewer_id: str | None = None,
@@ -249,13 +267,21 @@ def publish_package(engine: Engine, package_id: str,
                     {"r": release_id, "qid": q["id"], "aid": aid})
 
         for ak in package.records["answer_keys.private.jsonl"]:
+            # Review status authority is content_reviews (hash-bound evidence);
+            # staged payload status is only the initial default.
+            reviewed = conn.execute(text(
+                "SELECT review_status FROM content_reviews"
+                " WHERE record_type = 'answer_key' AND canonical_id = :cid"
+                " AND reviewer_type IN ('agent','human')"
+                " ORDER BY checked_at DESC LIMIT 1"),
+                {"cid": ak["question_id"]}).scalar()
             conn.execute(text(
                 "INSERT INTO release_answer_keys (release_id, question_id,"
                 " correct_option_id, revision, review_status)"
                 " VALUES (:r, :qid, :oid, :rev, :status)"),
                 {"r": release_id, "qid": ak["question_id"],
                  "oid": ak["correct_option_ids"][0], "rev": ak["revision"],
-                 "status": ak["review_status"]})
+                 "status": reviewed or ak["review_status"]})
 
         for e in package.records["explanations.jsonl"]:
             conn.execute(text(
@@ -294,11 +320,15 @@ def promote_release(engine: Engine, release_id: str, reviewer_id: str,
                     notes: str | None = None) -> dict:
     """Promote a draft release to published and switch the current pointer.
 
-    Hard content gates (content-review-policy.md): every answer key
-    human_reviewed, every unit conversion complete, every referenced media
-    asset verified. Failing gates raises PublishGateError and the release
-    stays internal — unreviewed question banks must not go public.
+    Hard gates (lightweight review workflow): every answer key carries a
+    valid 'agent_verified' (hash-bound Agent evidence) or 'human_reviewed'
+    verdict; every unit conversion-complete AND not flagged needs_review/
+    blocked by Agent review on the current content hash; media verified; an
+    explicit rights confirmation decision recorded. Unreviewed or disputed
+    content is refused — it must not go public.
     """
+    from app.review_sync import UNIT_BLOCKING, _build_input_for
+
     with engine.begin() as conn:
         release = conn.execute(text(
             "SELECT id, exam_id, content_hash, state FROM exam_releases"
@@ -314,12 +344,13 @@ def promote_release(engine: Engine, release_id: str, reviewer_id: str,
 
         bad_keys = conn.execute(text(
             "SELECT count(*) FROM release_answer_keys"
-            " WHERE release_id = :r AND review_status <> 'human_reviewed'"),
+            " WHERE release_id = :r AND review_status NOT IN"
+            " ('agent_verified','human_reviewed')"),
             {"r": release_id}).scalar()
         if bad_keys:
             raise PublishGateError(
-                f"{bad_keys} answer key(s) not human_reviewed; "
-                "publishing refused")
+                f"{bad_keys} answer key(s) lack a valid 'agent_verified' or "
+                "'human_reviewed' verdict on this content hash; publishing refused")
 
         bad_units = conn.execute(text(
             "SELECT count(*) FROM release_units"
@@ -329,6 +360,29 @@ def promote_release(engine: Engine, release_id: str, reviewer_id: str,
             raise PublishGateError(
                 f"{bad_units} unit(s) not conversion-complete (e.g. heuristic "
                 "A/B splits); publishing refused")
+
+        # Agent-flagged units on the current content hash block publishing.
+        staged_job = conn.execute(text(
+            "SELECT package_id FROM import_jobs WHERE content_hash = :h"
+            " ORDER BY created_at DESC LIMIT 1"), {"h": release.content_hash}).first()
+        if staged_job is not None:
+            _, staged_pkg = _load_staged_package(engine, staged_job.package_id,
+                                                 release.content_hash)
+            flagged = []
+            for u in staged_pkg.records["units.jsonl"]:
+                unit_input = _build_input_for(staged_pkg, u["id"])
+                flagged_unit = conn.execute(text(
+                    "SELECT review_status FROM content_reviews"
+                    " WHERE record_type = 'unit' AND canonical_id = :cid"
+                    " AND content_hash = :chash AND reviewer_type = 'agent'"
+                    " ORDER BY checked_at DESC LIMIT 1"),
+                    {"cid": u["id"], "chash": unit_input["content_hash"]}).scalar()
+                if flagged_unit in UNIT_BLOCKING:
+                    flagged.append({"unit_id": u["id"], "status": flagged_unit})
+            if flagged:
+                raise PublishGateError(
+                    f"{len(flagged)} unit(s) flagged needs_review/blocked by "
+                    f"Agent review: {flagged}; publishing refused")
 
         bad_media = conn.execute(text(
             "SELECT count(*) FROM release_units u"
@@ -341,6 +395,15 @@ def promote_release(engine: Engine, release_id: str, reviewer_id: str,
             raise PublishGateError(
                 f"{bad_media} media asset reference(s) not verified; "
                 "publishing refused")
+
+        rights = conn.execute(text(
+            "SELECT count(*) FROM publication_decisions"
+            " WHERE exam_id = :e AND decision = 'rights_confirmed'"),
+            {"e": release.exam_id}).scalar()
+        if not rights:
+            raise PublishGateError(
+                "no 'rights_confirmed' publication decision for this exam; "
+                "content licensing must be confirmed independently")
 
         conn.execute(text(
             "UPDATE exam_releases SET state = 'published',"

@@ -1,84 +1,20 @@
 """Publisher + API tests: snapshot creation, idempotency, gates, leak checks.
 
-Requires DATABASE_URL at a migrated PostgreSQL (skipped otherwise).
+Runs against the isolated test database (see conftest.py).
 """
 import json
-import os
 
 import pytest
 
-DATABASE_URL = os.environ.get("DATABASE_URL")
+from conftest import CLOZE_UNIT, EXAM_ID, PACKAGE_ID
+
 requires_db = pytest.mark.skipif(
-    not DATABASE_URL, reason="DATABASE_URL not set; requires migrated PostgreSQL"
-)
-
-EXAM_ID = "JLPTGO-N5-TEST-EX"
-PACKAGE_ID = "JLPTGO-N5-TEST-EX-r1"
-CLOZE_UNIT = "JLPTGO-N5-TEST-EX-ly-01-u01"
-
-RELEASE_TABLES = (
-    "release_answer_keys", "release_explanations", "release_option_media",
-    "release_question_media", "release_exam_media", "release_options",
-    "release_questions", "release_unit_materials", "release_units",
-    "release_layers", "release_sections",
+    not __import__("os").environ.get("DATABASE_URL"),
+    reason="DATABASE_URL not set; requires migrated PostgreSQL",
 )
 
 
-@pytest.fixture()
-def pg_engine():
-    from sqlalchemy import create_engine
-    return create_engine(DATABASE_URL)
-
-
-@pytest.fixture()
-def clean_publish(pg_engine):
-    from sqlalchemy import text
-    def wipe():
-        with pg_engine.begin() as conn:
-            conn.execute(text(
-                "DELETE FROM import_records WHERE job_id IN"
-                " (SELECT id FROM import_jobs WHERE package_id = :p)"),
-                {"p": PACKAGE_ID})
-            conn.execute(text(
-                "DELETE FROM import_jobs WHERE package_id = :p"), {"p": PACKAGE_ID})
-            for table in RELEASE_TABLES:
-                conn.execute(text(
-                    f"DELETE FROM {table} WHERE release_id IN"
-                    " (SELECT id FROM exam_releases WHERE exam_id = :e)"), {"e": EXAM_ID})
-            conn.execute(text(
-                "DELETE FROM exam_current_releases WHERE exam_id = :e"), {"e": EXAM_ID})
-            conn.execute(text(
-                "DELETE FROM publication_decisions WHERE exam_id = :e"), {"e": EXAM_ID})
-            conn.execute(text("DELETE FROM exam_releases WHERE exam_id = :e"), {"e": EXAM_ID})
-            conn.execute(text(
-                "DELETE FROM question_registry WHERE exam_id = :e"), {"e": EXAM_ID})
-            conn.execute(text("DELETE FROM media_assets WHERE id = 'JLPTGO-N5-TEST-EX-as001'"))
-            conn.execute(text(
-                "DELETE FROM question_types t WHERE t.id IN"
-                " ('grammar_cloze', 'vocabulary_kanji_reading')"
-                " AND NOT EXISTS (SELECT 1 FROM release_layers l"
-                " WHERE l.question_type_id = t.id)"))
-            conn.execute(text("DELETE FROM exam_catalogs WHERE id = :e"), {"e": EXAM_ID})
-    wipe()
-    yield
-    wipe()
-
-
-@pytest.fixture()
-def staged_and_published(pg_engine, clean_publish):
-    from importer_fixture import make_provenance, make_records, write_zip
-    from app.importer.reader import load_archive
-    from app.importer.staging import stage_package
-    from app.publisher import publish_package
-
-    path = pg_engine.dialect.name and None  # placeholder, real path below
-    import tempfile
-    with tempfile.TemporaryDirectory() as tmp:
-        path = os.path.join(tmp, "pkg.zip")
-        write_zip(make_records(), make_provenance(), path)
-        stage_package(pg_engine, load_archive(__import__("pathlib").Path(path))[0])
-        result = publish_package(pg_engine, PACKAGE_ID)
-    return result
+# fixtures: clean_publish / staged_and_published come from conftest.py
 
 
 # ------------------------------------------------------------- publisher ----
@@ -156,7 +92,7 @@ def test_promote_refuses_unreviewed_content(pg_engine, staged_and_published):
 def test_promote_publishes_after_review_and_sets_pointer(
         pg_engine, staged_and_published):
     from sqlalchemy import text
-    from app.publisher import promote_release
+    from app.publisher import confirm_rights, promote_release
     with pg_engine.begin() as conn:
         conn.execute(text(
             "UPDATE release_answer_keys SET review_status = 'human_reviewed'"
@@ -164,6 +100,7 @@ def test_promote_publishes_after_review_and_sets_pointer(
         conn.execute(text(
             "UPDATE media_assets SET availability = 'verified'"
             " WHERE id = 'JLPTGO-N5-TEST-EX-as001'"))
+    confirm_rights(pg_engine, EXAM_ID, reviewer_id="legal")
     result = promote_release(pg_engine, staged_and_published["release_id"],
                              reviewer_id="reviewer-1", notes="test approval")
     assert result["state"] == "published"
@@ -175,7 +112,28 @@ def test_promote_publishes_after_review_and_sets_pointer(
             "SELECT decision FROM publication_decisions WHERE exam_id = :e"
             " ORDER BY decided_at"), {"e": EXAM_ID}).scalars().all()
     assert str(pointer) == staged_and_published["release_id"]
-    assert decisions == ["snapshot_draft_created", "approved"]
+    assert decisions == ["snapshot_draft_created", "rights_confirmed", "approved"]
+
+
+@requires_db
+def test_promote_requires_independent_rights_confirmation(
+        pg_engine, staged_and_published):
+    from sqlalchemy import text
+    from app.publisher import PublishGateError, confirm_rights, promote_release
+    with pg_engine.begin() as conn:
+        conn.execute(text(
+            "UPDATE release_answer_keys SET review_status = 'human_reviewed'"
+            " WHERE release_id = :r"), {"r": staged_and_published["release_id"]})
+        conn.execute(text(
+            "UPDATE media_assets SET availability = 'verified'"
+            " WHERE id = 'JLPTGO-N5-TEST-EX-as001'"))
+    with pytest.raises(PublishGateError, match="rights_confirmed"):
+        promote_release(pg_engine, staged_and_published["release_id"],
+                        reviewer_id="reviewer-1")
+    confirm_rights(pg_engine, EXAM_ID, reviewer_id="legal", notes="license ok")
+    result = promote_release(pg_engine, staged_and_published["release_id"],
+                             reviewer_id="reviewer-1")
+    assert result["state"] == "published"
 
 
 # ------------------------------------------------------------------- API ----
@@ -183,6 +141,9 @@ def test_promote_publishes_after_review_and_sets_pointer(
 @requires_db
 def test_public_api_hides_draft_and_never_leaks_answers(
         pg_engine, staged_and_published, monkeypatch):
+    # Point the app at the isolated test DB for the duration of this test.
+    monkeypatch.setenv("DATABASE_URL",
+                       pg_engine.url.render_as_string(hide_password=False))
     from fastapi.testclient import TestClient
     from app.main import app
     client = TestClient(app)
@@ -212,7 +173,7 @@ def test_public_api_hides_draft_and_never_leaks_answers(
 
     # Promote for real, then public must expose content but NOT answers.
     from sqlalchemy import text
-    from app.publisher import promote_release
+    from app.publisher import confirm_rights, promote_release
     with pg_engine.begin() as conn:
         conn.execute(text(
             "UPDATE release_answer_keys SET review_status = 'human_reviewed'"
@@ -220,6 +181,7 @@ def test_public_api_hides_draft_and_never_leaks_answers(
         conn.execute(text(
             "UPDATE media_assets SET availability = 'verified'"
             " WHERE id = 'JLPTGO-N5-TEST-EX-as001'"))
+    confirm_rights(pg_engine, EXAM_ID, reviewer_id="legal")
     promote_release(pg_engine, staged_and_published["release_id"],
                     reviewer_id="reviewer-1")
 

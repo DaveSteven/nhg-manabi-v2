@@ -24,6 +24,8 @@
 
 - **Canonical v2.0 是业务内容交换标准**；上游 JSON/ID 和旧库字段不得流入新版业务条件。来源映射留在内部 provenance。
 - Raw 输入只读；导入先进入 staging；Agent 提供校验建议但不能直接写 published 表。
+- 内容审核采用轻量化流程：本地 Agent 校验优先（结果绑定内容哈希同步），异常人工复核。发布门槛接受 `agent_verified`（有有效哈希绑定校验证据）或 `human_reviewed`；`needs_review`、`blocked`、未校验、争议内容一律不得通过发布检查。
+- 已发布 Release 不可被 Agent 直接修改；内容变更必须产生新的候选版本（新 content_hash → 新 release）。版权/使用许可是独立发布检查，发布前必须记录 `rights_confirmed` 决策。
 - 内容已转换/结构验证通过 ≠ 答案正确 ≠ 获得合法对外使用权限。未审核题库不可直接公开。
 - 已发布 Release 是不可变内容快照；新答案/解析修订产生新 release，历史 Session Unit 仍引用旧版。
 - 学生端不能获取未授权正确答案、解析、来源私有文件或其他用户的作答数据。

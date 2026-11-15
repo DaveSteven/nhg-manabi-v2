@@ -28,6 +28,11 @@ def main(argv: list[str] | None = None) -> int:
     p_promote.add_argument("--reviewer", required=True)
     p_promote.add_argument("--notes", default=None)
 
+    p_rights = sub.add_parser("confirm-rights")
+    p_rights.add_argument("exam_id")
+    p_rights.add_argument("--reviewer", required=True)
+    p_rights.add_argument("--notes", default=None)
+
     args = parser.parse_args(argv)
     engine = get_engine()
     try:
@@ -36,10 +41,13 @@ def main(argv: list[str] | None = None) -> int:
                                      content_hash=args.content_hash,
                                      reviewer_id=args.reviewer,
                                      notes=args.notes)
-        else:
+        elif args.command == "promote":
             result = promote_release(engine, args.release_id,
                                      reviewer_id=args.reviewer,
                                      notes=args.notes)
+        else:
+            result = confirm_rights(engine, args.exam_id,
+                                    reviewer_id=args.reviewer, notes=args.notes)
     except CanonicalImportError as e:
         print(json.dumps({"ok": False, "error": str(e)}, ensure_ascii=False),
               file=sys.stderr)

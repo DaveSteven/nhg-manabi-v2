@@ -171,12 +171,6 @@ def test_conversion_needs_review_is_warning_not_error(tmp_path):
 # ---------------------------------------------------------------- staging ----
 
 @pytest.fixture()
-def pg_engine():
-    from sqlalchemy import create_engine
-    return create_engine(DATABASE_URL)
-
-
-@pytest.fixture()
 def clean_staging(pg_engine):
     from sqlalchemy import text
     with pg_engine.begin() as conn:

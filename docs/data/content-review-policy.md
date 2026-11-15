@@ -1,5 +1,16 @@
 # 内容审核、发布与版本追溯规范
 
+## 轻量化审核流程（2026-11-15 起，本地 Agent 校验优先）
+
+1. **Agent 校验**：QA Agent 按 `agent-validation-contract.md` 逐 Unit 审核；系统通过 `app/review_sync.py` 的 `build` 生成绑定 content_hash 的审核任务，Agent 结果经 `sync` 批量同步。
+2. **同步保障**：结果必须回带当前 content_hash（过期即拦截）；哈希绑定 `content_reviews` 证据行，`(record_type, canonical_id, content_hash, reviewer_type, reviewer_id)` 唯一，同批次重放幂等；与人工结论冲突、非法选项、修订冲突均拦截并留审计。
+3. **状态语义**：`agent_verified` = 有有效哈希绑定校验证据的 Agent 通过；`human_reviewed` = 人工确认；两者可通过发布答案门槛。`needs_review`、`blocked`、未校验、`disputed` 不可发布。
+4. **人工复核例外**：Agent 提出的不同正确选项（proposed change）、与人工结论的冲突、Unit 级 needs_review/blocked 必须人工处理；Agent 不能自行改写 Unit 转换状态。
+5. **不可变性**：已发布/撤回 Release 的快照行不被 Agent 同步触碰；其校验证据仅入 `content_reviews`，作用于下一个候选版本（新 content_hash → 新 release）。
+6. **独立门槛保留**：媒体完整性（verified）、Unit 完整性（conversion complete）、版权/使用许可（`publication_decisions` 中需有 `rights_confirmed` 记录）与内容校验相互独立，缺一不可发布。
+
+以下为原有审核原则，继续有效：
+
 ## 独立的三种验证
 
 1. **结构完整性**：实体与媒体引用、RichText、slot、题数、SHA256、转换幂等。
