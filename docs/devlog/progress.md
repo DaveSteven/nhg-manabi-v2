@@ -9,7 +9,8 @@
 - Docker Compose PostgreSQL 16（容器 `nhg-manabi-v2-db`，`127.0.0.1:55432`）。
 - 数据库真实落地：迁移升级/回滚/再升级验证通过；32 表、32 CHECK、46 外键、60 索引。
 - **Canonical staging importer**：验包/哈希/结构校验/幂等 staging 全流程；真实五套样本（N5–N1）已 staged，计数与规范基准吻合（20 Section/83 Layer/440 Unit/498 Question/204 Asset）；重复导入幂等；失败回滚带诊断；published 表保持为空。
-- 测试：30 个测试全部通过（导入器 19、迁移一致性 2、Schema 编译 3、健康检查 1、真实 PG 约束 5）。
+- **Raw → Canonical 转换落地**：`scripts/canonical_v2.py` 收编入仓；对 Raw 原始数据（data/samples/N{1..5}）按级各抽一套完成转换，产物与既有 Canonical 包字节级一致（除时间戳），content_hash 逐包相同，端到端确定性验证成立。
+- 测试：31 个测试全部通过（导入器 20、迁移一致性 2、Schema 编译 3、健康检查 1、真实 PG 约束 5）。
 
 ## 进行中
 

@@ -52,6 +52,26 @@ def _write_and_load(tmp_path, records, provenance):
     return packages[0]
 
 
+def test_reader_loads_directory_packages(tmp_path):
+    records = make_records()
+    provenance = make_provenance()
+    write_zip(records, provenance, tmp_path / "pkg.zip")
+    # Rebuild the same package as a plain directory (not a zip).
+    import zipfile
+    pkg_dir = tmp_path / "pkgdir"
+    with zipfile.ZipFile(tmp_path / "pkg.zip") as z:
+        for item in z.infolist():
+            if item.filename.endswith("/"):
+                continue
+            target = pkg_dir / item.filename
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(z.read(item.filename))
+    packages = load_archive(pkg_dir)
+    assert len(packages) == 1
+    assert packages[0].package_id == "JLPTGO-N5-TEST-EX-r1"
+    assert len(packages[0].records["questions.jsonl"]) == 3
+
+
 def test_valid_fixture_package_passes_validation(tmp_path):
     package = _write_and_load(tmp_path, make_records(), make_provenance())
     vr = validate_package(package)

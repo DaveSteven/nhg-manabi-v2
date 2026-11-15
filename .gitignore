@@ -15,3 +15,9 @@ data/raw/
 *.sqlite3
 data/import_reports/
 memory/
+data/normalized_v2/
+data/samples/N1/
+data/samples/N2/
+data/samples/N3/
+data/samples/N4/
+data/samples/N5/

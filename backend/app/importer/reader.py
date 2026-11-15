@@ -222,7 +222,7 @@ def load_archive(path: Path) -> list[CanonicalPackage]:
                 return (path / name).read_bytes()
 
             load = _read_file_opener(open_binary)
-            return [load(b"", "")]
+            return [load(open_binary("manifest.json"), "")]
         subdirs = sorted(p for p in path.iterdir() if p.is_dir() and (p / "manifest.json").is_file())
         if not subdirs:
             raise PackageReadError(f"{path}: no manifest.json found in directory tree")
