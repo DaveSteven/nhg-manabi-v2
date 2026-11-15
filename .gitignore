@@ -13,3 +13,4 @@ dist/
 data/samples/*.zip
 data/raw/
 *.sqlite3
+data/import_reports/
