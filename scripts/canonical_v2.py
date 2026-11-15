@@ -28,7 +28,7 @@ from pathlib import Path
 from typing import Any
 
 SCHEMA_VERSION = "2.0.0"
-CONVERTER_VERSION = "canonical_v2.0-converter+0.1.0"
+CONVERTER_VERSION = "canonical_v2.0-converter+0.1.1"
 SOURCE_SYSTEM = "mojitest"
 
 SUBJECT_BY_RANGE = [
@@ -137,6 +137,11 @@ class RestrictedHTMLParser(HTMLParser):
         self.placeholders = 0
         self.paragraph_times: list[tuple[str, str] | None] = []
         # per-paragraph (start, end) time attrs, aligned with self.blocks
+        # Attributes are audited, never silently accepted: handled ones
+        # (data-starttime/data-endtime) excluded, everything else counted
+        # for the import report (§5 无损原则 — unknown structure is reported).
+        self.unknown_attrs: Counter[tuple[str, str]] = Counter()
+        self.style_semantics: Counter[str] = Counter()
         self.block_times: list[tuple[str, str] | None] = []
         self.unknown_tags: Counter[str] = Counter()
         self._current_para_times: tuple[str, str] | None = None
@@ -168,6 +173,16 @@ class RestrictedHTMLParser(HTMLParser):
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         tag = tag.lower()
         attrd = {k.lower(): (v or "") for k, v in attrs}
+        if tag != PLACEHOLDER_TAG:
+            handled = ({"p", "div"} & {tag}) and {"data-starttime", "data-endtime"} or set()
+            for name, value in attrd.items():
+                if name in handled:
+                    continue
+                self.unknown_attrs[(tag, name)] += 1
+                if name == "style" and value:
+                    # Style may carry semantics (e.g. double underline);
+                    # record the declaration instead of silently dropping it.
+                    self.style_semantics[value.strip().rstrip(";")] += 1
         if tag == PLACEHOLDER_TAG:
             self.placeholders += 1
             return
@@ -240,6 +255,8 @@ def parse_richtext(html: str | None) -> tuple[dict[str, Any] | None, dict[str, A
     meta = {
         "placeholders": parser.placeholders,
         "unknown_tags": dict(parser.unknown_tags),
+        "unknown_attrs": {f"{t}@{a}": n for (t, a), n in parser.unknown_attrs.items()},
+        "style_semantics": dict(parser.style_semantics),
         "paragraph_times": parser.block_times,
         "block_count": len(parser.blocks),
     }
@@ -484,6 +501,7 @@ class Converter:
         self.exam_dir = exam_dir
         self.out_dir = out_dir
         self.warnings: list[dict[str, Any]] = []
+        self.attr_audit: Counter[str] = Counter()
         self.unresolved: list[dict[str, Any]] = []
         self.level = ""
         self.year = 0
@@ -497,6 +515,17 @@ class Converter:
         entry = {"code": code, "message": message}
         entry.update(extra)
         self.warnings.append(entry)
+
+    def note_meta(self, meta: dict[str, Any], context: str) -> None:
+        """Audit HTML attributes: aggregate for the report, warn on style
+        semantics. Unknown attributes are recorded, never silently dropped."""
+        for key, n in (meta.get("unknown_attrs") or {}).items():
+            self.attr_audit[key] += n
+        for decl in (meta.get("style_semantics") or {}):
+            self.warn(
+                "style_semantics",
+                f"来源 style 属性含语义声明（已记录，未静默丢弃）: {decl!r}: {context}",
+            )
 
     # -- metadata ----------------------------------------------------------
     def load_sources(self) -> tuple[dict[str, Any], list[dict[str, Any]]]:
@@ -676,6 +705,7 @@ class Converter:
 
             title_html = group.get("title") or ""
             inst_rt, inst_meta = parse_richtext(title_html)
+            self.note_meta(inst_meta, f"layer_instruction:{layer_id}")
             if inst_meta["placeholders"]:
                 self.warn(
                     "placeholder_in_instruction",
@@ -794,6 +824,7 @@ class Converter:
         )
 
         import_report = {
+            "source_attr_audit": dict(self.attr_audit),
             "package_id": self.package_id,
             "generated_at": now,
             "converter_version": CONVERTER_VERSION,
@@ -899,6 +930,7 @@ class Converter:
         question_id = f"{unit_id}-q01"
         title_html = item.get("title") or ""
         prompt_rt, meta = parse_richtext(title_html)
+        self.note_meta(meta, f"question_prompt:{question_id}")
         image_asset = self.assets.get(item.get("imageId") or "")
 
         media_asset_ids: list[str] = []
@@ -1000,6 +1032,7 @@ class Converter:
         # ---- passage material
         title_html = group.get("title") or ""
         passage_rt, pmeta = parse_richtext(title_html)
+        self.note_meta(pmeta, f"unit_material:{unit_id}")
         g21_image = self.assets.get(group.get("imageId") or "")
         passage_is_placeholder = bool(pmeta["placeholders"]) and not has_visible_text(passage_rt)
         if pmeta["unknown_tags"]:
@@ -1088,6 +1121,7 @@ class Converter:
         subtitle_html = group.get("subtitle") or ""
         if subtitle_html.strip():
             cues, smeta = parse_subtitles(subtitle_html)
+            self.note_meta(smeta, f"unit_transcript:{unit_id}")
             if cues:
                 if smeta.get("cues_missing_time"):
                     self.warn(
@@ -1119,6 +1153,7 @@ class Converter:
         translation_html = group.get("translation") or ""
         if translation_html.strip():
             t_rt, tmeta = parse_richtext(translation_html)
+            self.note_meta(tmeta, f"unit_translation:{unit_id}")
             if has_visible_text(t_rt):
                 explanations.append({
                     "record_type": "explanation",
@@ -1153,6 +1188,7 @@ class Converter:
             kstatus = "complete"
             title_html_k = kid.get("title") or ""
             prompt_rt, kmeta = parse_richtext(title_html_k)
+            self.note_meta(kmeta, f"question_prompt:{question_id}")
             prompt = finalize_richtext(prompt_rt) if has_visible_text(prompt_rt) else None
             media_asset_ids: list[str] = []
             kid_image = self.assets.get(kid.get("imageId") or "")
@@ -1267,6 +1303,7 @@ class Converter:
                 ok = False
             seen_positions.add(oi)
             rt, meta = parse_richtext(str(raw))
+            self.note_meta(meta, f"option:{question_id}")
             if meta["unknown_tags"]:
                 self.warn(
                     "unknown_tag",
@@ -1336,6 +1373,7 @@ class Converter:
         leaf_translation = (item.get("translation") or "").strip()
         if leaf_translation:
             rt, meta = parse_richtext(leaf_translation)
+            self.note_meta(meta, f"leaf_translation:{question_id}")
             if has_visible_text(rt):
                 explanations.append({
                     "record_type": "explanation",

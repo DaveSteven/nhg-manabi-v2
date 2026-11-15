@@ -10,8 +10,8 @@
 - 数据库真实落地：迁移升级/回滚/再升级验证通过；32 表、32 CHECK、46 外键、60 索引。
 - **Canonical staging importer**：验包/哈希/结构校验/幂等 staging 全流程；真实五套样本（N5–N1）已 staged，计数与规范基准吻合（20 Section/83 Layer/440 Unit/498 Question/204 Asset）；重复导入幂等；失败回滚带诊断；published 表保持为空。
 - **Raw → Canonical 转换落地**：`scripts/canonical_v2.py` 收编入仓；对 Raw 原始数据（data/samples/N{1..5}）按级各抽一套完成转换，产物与既有 Canonical 包字节级一致（除时间戳），content_hash 逐包相同，端到端确定性验证成立。
-- **内容审核轻量化**：Agent 校验结果同步模块（哈希绑定、幂等、冲突拦截、审计）；`agent_verified` 状态（Alembic 0002 约束）；promote 门槛改为 agent_verified/human_reviewed + Agent 存疑 Unit 拦截 + 独立 rights_confirmed 版权门槛；测试隔离库（`<db>_test`）落地，真实开发库不再被测试触碰。
-- 测试：46 个测试全部通过（review_sync 9、publisher/API 7、导入器 20、迁移一致性 2、Schema 编译 3、健康检查 1、真实 PG 约束 5，另含迁移/工具类）。
+- **M1.5 内容清洗审计与字幕时间轴**：原始 HTML 属性全量清单（A/B/C 分类）；Canonical 残留扫描零发现；字幕时间轴覆盖率 100%（1202 cue，143 Unit 全部配对音频，基准=Unit 音频）；越界 21 / 大间隔 20 标 needs_review 固化回归；逐段播放数据兼容性测试通过；五包重转内容字节级一致（内容哈希零变化）；转换器 +0.1.1（属性审计）、验证器增强（缺失 vs 0、大间隔、时长越界）。
+- 测试：48 个测试全部通过（播放兼容 2、review_sync 9、publisher/API 7、导入器 20、迁移一致性 2、Schema 编译 3、健康检查 1、真实 PG 约束 5 等在内）。
 
 ## 进行中
 

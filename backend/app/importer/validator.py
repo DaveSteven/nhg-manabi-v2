@@ -303,13 +303,22 @@ def validate_package(package: CanonicalPackage) -> ValidationResult:
                         if not _positive_int(cue.get("index")):
                             vr.warning("cue_index", cloc,
                                        f"invalid cue index {cue.get('index')!r}")
-                        if not (isinstance(start, int) and isinstance(end, int)
-                                and 0 <= start < end):
-                            vr.warning("cue_time", cloc,
+                        if start is None or end is None:
+                            # Missing timestamps are distinct from an explicit 0
+                            # start (0 is legal); never guess, flag for review.
+                            vr.warning("cue_time_missing", cloc,
+                                       f"cue missing timestamp (start_ms={start!r}, end_ms={end!r}); marked needs_review, not guessed")
+                        elif not (isinstance(start, int) and isinstance(end, int)
+                                  and not isinstance(start, bool)
+                                  and 0 <= start < end):
+                            vr.warning("cue_time_invalid", cloc,
                                        f"invalid cue times ({start!r},{end!r}); marked needs_review, not guessed")
                         elif start < prev_end:
                             vr.warning("cue_order", cloc, "cue overlaps or is out of order")
                         else:
+                            if prev_end >= 0 and start - prev_end > 10_000:
+                                vr.warning("cue_gap_large", cloc,
+                                           f"{start - prev_end}ms gap after previous cue; needs review")
                             prev_end = end
             tfm = m.get("translated_from_material_id")
             if tfm is not None and tfm not in seen_mat_ids:
@@ -318,6 +327,30 @@ def validate_package(package: CanonicalPackage) -> ValidationResult:
                 if tfm not in later_ids:
                     vr.error("material_translation_ref", mloc,
                              f"translated_from_material_id {tfm!r} not found in unit materials")
+
+        # Cue timeline bounds vs the unit's own audio asset: the timeline is
+        # relative to the unit audio (not the whole-exam file); when the audio
+        # binary is verified with a known duration, an overrunning timeline is
+        # a data-quality issue to review, not something to guess away.
+        audio_asset_ids = [m.get("asset_id") for m in materials
+                           if m.get("kind") == "audio" and m.get("asset_id")]
+        for m in materials:
+            cues = m.get("cues") or []
+            ends = [c.get("end_ms") for c in cues
+                    if isinstance(c.get("end_ms"), int)
+                    and not isinstance(c.get("end_ms"), bool)]
+            if not ends or not audio_asset_ids:
+                continue
+            max_end = max(ends)
+            for aid in audio_asset_ids:
+                asset = assets.get(aid) or {}
+                if (asset.get("availability") == "verified"
+                        and asset.get("duration_ms")
+                        and max_end > asset["duration_ms"]):
+                    vr.warning("cue_over_duration",
+                               f"{uloc}.material[{m.get('id')}]",
+                               f"cue timeline ends at {max_end}ms beyond verified"
+                               f" audio duration {asset['duration_ms']}ms; needs review")
 
         # cloze slot binding (7.1): slots must exist in unit text or be flagged,
         # never silently accepted; question.slot_id must belong to the unit.
