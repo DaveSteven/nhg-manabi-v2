@@ -1,0 +1,15 @@
+.env
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+.DS_Store
+node_modules/
+dist/
+.next/
+data/samples/*.zip
+data/raw/
+*.sqlite3
