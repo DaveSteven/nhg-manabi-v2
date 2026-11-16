@@ -215,6 +215,30 @@ describe("Select · single", () => {
   });
 });
 
+describe("Select · text variant", () => {
+  it("is outlined by default and borderless/transparent in text mode", () => {
+    const { rerender } = render(
+      <Select aria-label="v" value="a" items={[{ value: "a", label: "A" }]}
+              onChange={() => {}} />);
+    expect(screen.getByRole("combobox", { name: "v" }))
+      .not.toHaveClass("select-trigger--text");
+    rerender(<Select variant="text" aria-label="v" value="a"
+                     items={[{ value: "a", label: "A" }]} onChange={() => {}} />);
+    expect(screen.getByRole("combobox", { name: "v" }))
+      .toHaveClass("select-trigger", "select-trigger--text");
+  });
+
+  it("still opens and selects like the outlined variant", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<Select variant="text" aria-label="v" value="a" onChange={onChange}
+                   items={[{ value: "a", label: "A" }, { value: "b", label: "B" }]} />);
+    await user.click(screen.getByRole("combobox", { name: "v" }));
+    await user.click(screen.getByRole("option", { name: "B" }));
+    expect(onChange).toHaveBeenCalledWith("b");
+  });
+});
+
 describe("Select · width", () => {
   it("follows the content by default and honours an explicit width", () => {
     const { rerender } = render(

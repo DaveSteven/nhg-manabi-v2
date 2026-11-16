@@ -27,6 +27,8 @@
 
 禁用态：Trigger 与 Option 降低不透明度，Option 不可聚焦选中；`aria-disabled` 暴露给辅助技术。
 
+**变体**：`variant="outlined"`（默认，白底+轻边框）与 `variant="text"`（Text 模式：静止时无背景、无边框，字重 600；悬停/展开时显示暖灰底，键盘焦点仍有品牌色焦点环，不依赖边框传达可点击）。首页顶栏的等级选择使用 Text 模式。
+
 **宽度**：Trigger 未设置 `width` 时跟随内容宽度（无最小宽度）；需要固定或撑满时通过 `width` 指定（数字为 px，或 `100%`）。Popover 宽度不小于 Trigger 与 120px 中的较大者，并随最宽选项扩展。
 
 ## 3. Popover 与 Modal 是不同组件

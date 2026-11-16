@@ -33,6 +33,9 @@ export default function SelectGallery() {
       <div className="select-field"><span id="g2l">Large</span>
         <Select size="large" aria-labelledby="g2l" value={e} items={LEVELS}
                 onChange={setE} /></div>
+      <div className="select-field"><span id="g2t">Text</span>
+        <Select variant="text" aria-labelledby="g2t" value={e} items={LEVELS}
+                onChange={setE} /></div>
       <div className="select-field"><span id="g2">Compact</span>
         <Select size="compact" aria-labelledby="g2" value={e} items={LEVELS}
                 onChange={setE} /></div>

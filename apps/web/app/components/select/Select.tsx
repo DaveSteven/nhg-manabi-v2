@@ -29,6 +29,8 @@ export interface SelectProps {
   onChange: (value: string) => void;
   items: SelectItems;
   size?: "default" | "compact" | "large";
+  /** "text": no background or border (toolbars, header); default "outlined". */
+  variant?: "outlined" | "text";
   placeholder?: string;
   disabled?: boolean;
   searchable?: boolean;
@@ -88,7 +90,7 @@ function Check() {
 
 export function Select(props: SelectProps) {
   const {
-    value, onChange, items, size = "default", placeholder = "请选择",
+    value, onChange, items, size = "default", variant = "outlined", placeholder = "请选择",
     disabled = false, searchable = false, searchPlaceholder = "搜索",
     emptyText = "无匹配项", className, popoverMinWidth = 120, width,
   } = props;
@@ -262,6 +264,7 @@ export function Select(props: SelectProps) {
               className={["select-trigger",
                 size === "compact" ? "select-trigger--compact" : "",
                 size === "large" ? "select-trigger--large" : "",
+                variant === "text" ? "select-trigger--text" : "",
                 open ? "is-open" : "", className ?? ""].filter(Boolean).join(" ")}
               aria-haspopup="listbox" aria-expanded={open}
               aria-controls={open ? listId : undefined}

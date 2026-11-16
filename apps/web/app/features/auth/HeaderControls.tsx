@@ -36,7 +36,7 @@ const LEVEL_ITEMS = JLPT_LEVELS.map((l) => ({ value: l, label: l }));
 function LevelSelect() {
   const { level, setLevel } = useLevel();
   return (
-    <Select aria-label="备考等级" placeholder="等级"
+    <Select variant="text" aria-label="备考等级" placeholder="等级"
             value={level ?? ""} items={LEVEL_ITEMS}
             onChange={(v) => setLevel(v as (typeof JLPT_LEVELS)[number])} />
   );
