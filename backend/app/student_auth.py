@@ -228,7 +228,7 @@ def login(engine: Engine, email: str, password: str) -> dict:
     result: dict | None = None
     with engine.begin() as conn:
         row = conn.execute(text(
-            "SELECT id, email, display_name, current_level, password_hash,"
+            "SELECT id, email, display_name, current_level, avatar, password_hash,"
             " activated_at, disabled_at, failed_login_count, locked_until"
             " FROM users WHERE email = :e FOR UPDATE"),
             {"e": email_norm}).mappings().first()
@@ -264,7 +264,8 @@ def login(engine: Engine, email: str, password: str) -> dict:
                           "user": {"id": str(row["id"]),
                                    "email": row["email"],
                                    "display_name": row["display_name"],
-                                   "current_level": row["current_level"]}}
+                                   "current_level": row["current_level"],
+                                   "avatar": row["avatar"]}}
     if result is None:
         raise StudentAuthError()
     return result
@@ -309,7 +310,7 @@ def logout(engine: Engine, token: str) -> None:
 def get_profile(engine: Engine, user_id) -> dict:
     with engine.begin() as conn:
         row = conn.execute(text(
-            "SELECT id, email, display_name, current_level, created_at,"
+            "SELECT id, email, display_name, current_level, avatar, created_at,"
             " activated_at FROM users WHERE id = :u AND disabled_at IS NULL"),
             {"u": user_id}).mappings().first()
         if row is None:
@@ -317,22 +318,37 @@ def get_profile(engine: Engine, user_id) -> dict:
     return dict(row)
 
 
+AVATAR_IDS = frozenset({
+    "fox", "hokkaido-brown-bear", "japanese-macaque", "koi", "maneki-neko",
+    "owl", "rabbit", "red-crowned-crane", "shiba-inu", "shima-enaga",
+    "sika-deer", "tanuki",
+})
+
+UNSET = object()  # distinguishes "avatar not sent" from "reset to default"
+
+
 def update_profile(engine: Engine, user_id, display_name: str | None,
-                   current_level: str | None) -> dict:
+                   current_level: str | None, avatar=UNSET) -> dict:
     if current_level is not None and current_level not in LEVELS:
         raise StudentInputError("current_level", "等级必须是 N5–N1")
     if display_name is not None:
         display_name = display_name.strip()
         if not 1 <= len(display_name) <= 128:
             raise StudentInputError("display_name", "昵称长度需在 1–128 字符")
+    if avatar is not UNSET and avatar is not None and avatar not in AVATAR_IDS:
+        raise StudentInputError("avatar", "头像不在可选范围内")
+    sets = ["display_name = COALESCE(:d, display_name)",
+            "current_level = COALESCE(:l, current_level)"]
+    params = {"d": display_name, "l": current_level, "u": user_id}
+    if avatar is not UNSET:  # explicit null resets to the default avatar
+        sets.append("avatar = :a")
+        params["a"] = avatar
     with engine.begin() as conn:
         row = conn.execute(text(
-            "UPDATE users SET"
-            " display_name = COALESCE(:d, display_name),"
-            " current_level = COALESCE(:l, current_level)"
+            f"UPDATE users SET {', '.join(sets)}"
             " WHERE id = :u AND disabled_at IS NULL"
-            " RETURNING id, email, display_name, current_level"),
-            {"d": display_name, "l": current_level, "u": user_id}).mappings().first()
+            " RETURNING id, email, display_name, current_level, avatar"),
+            params).mappings().first()
         if row is None:
             raise StudentAuthError()
     return dict(row)

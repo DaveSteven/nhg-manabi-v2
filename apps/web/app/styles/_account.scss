@@ -1,0 +1,202 @@
+/* Account menu, avatars and user center (tokens only). */
+
+/* ---- avatar (default = solid colour + first character) ---- */
+.user-avatar {
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: 50%;
+  border: 2px solid var(--color-border);
+  color: #fff;
+  font-weight: 700;
+  line-height: 1;
+  background: var(--accent-sakura);
+
+  img { width: 100%; height: 100%; object-fit: cover; display: block; }
+}
+
+.user-avatar-md { width: 40px; height: 40px; font-size: 17px; }
+.user-avatar-lg { width: 72px; height: 72px; font-size: 30px; }
+
+.user-avatar-c0 { background: var(--accent-sakura); border-color: transparent; }
+.user-avatar-c1 { background: var(--accent-lavender); border-color: transparent; }
+.user-avatar-c2 { background: var(--accent-matcha); border-color: transparent; }
+.user-avatar-c3 { background: var(--accent-apricot); border-color: transparent; }
+
+/* ---- header avatar + popover ---- */
+.account-menu { position: relative; }
+
+.account-avatar-button {
+  display: grid;
+  place-items: center;
+  width: var(--touch-min);
+  height: var(--touch-min);
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  cursor: pointer;
+
+  &:hover .user-avatar { box-shadow: var(--shadow-floating); }
+  &:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+}
+
+.account-popover {
+  position: absolute;
+  right: 0;
+  top: calc(100% + var(--space-2));
+  min-width: 220px;
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-floating);
+  display: grid;
+  gap: 2px;
+
+  a, button {
+    display: block;
+    width: 100%;
+    padding: var(--space-3);
+    border: none;
+    border-radius: 8px;
+    background: none;
+    color: var(--color-ink);
+    font: inherit;
+    font-size: 14px;
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+
+    &:hover { background: var(--color-surface-subtle); }
+    &:disabled { opacity: 0.5; cursor: wait; }
+  }
+}
+
+.account-popover-id {
+  display: grid;
+  gap: 2px;
+  padding: var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: var(--space-1);
+
+  strong { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  span { font-size: 12px; color: var(--color-text-muted); overflow: hidden; text-overflow: ellipsis; }
+}
+
+/* ---- user center page ---- */
+.account-page {
+  display: grid;
+  gap: var(--space-4);
+  max-width: 640px;
+  margin: var(--space-6) auto;
+
+  h1 { font-size: var(--text-heading); margin: 0; }
+}
+
+.account-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-6);
+  flex-wrap: wrap;
+}
+
+.account-identity { flex: 1; min-width: 0; }
+.account-display-name {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.account-identity .text-aux { margin: 2px 0 0; }
+
+.account-level {
+  label { display: flex; align-items: center; gap: var(--space-3); }
+  select {
+    min-height: 40px;
+    padding: 0 var(--space-3);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-pill);
+    background: var(--color-surface);
+    color: var(--color-ink);
+    font: inherit;
+  }
+  .text-aux { margin: 0; }
+}
+
+.account-actions { display: flex; justify-content: flex-end; }
+
+/* ---- edit dialog ---- */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: var(--space-4);
+  background: rgba(43, 43, 51, 0.35);
+}
+
+.modal {
+  width: min(480px, 100%);
+  max-height: calc(100vh - 2 * var(--space-4));
+  overflow-y: auto;
+  padding: var(--space-6);
+  display: grid;
+  gap: var(--space-4);
+
+  h2 { margin: 0; font-size: 18px; }
+}
+
+.edit-avatar-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  .text-aux { margin: 0; }
+}
+
+.avatar-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(56px, 1fr));
+  gap: var(--space-2);
+}
+
+.avatar-pick {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  padding: 2px;
+  border: 2px solid var(--color-border);
+  border-radius: 50%;
+  background: var(--color-surface);
+  cursor: pointer;
+  overflow: hidden;
+
+  img, .user-avatar { width: 100%; height: 100%; border: none; border-radius: 50%; object-fit: cover; }
+  &:hover { border-color: var(--color-text-muted); }
+  &.is-current { border-color: var(--color-primary); box-shadow: 0 0 0 3px var(--color-primary-soft); }
+  &:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--color-text-secondary);
+
+  input {
+    min-height: 44px;
+    padding: 0 var(--space-3);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    font: inherit;
+    color: var(--color-ink);
+    background: var(--color-surface);
+    &:focus { outline: 2px solid var(--color-primary-soft); border-color: var(--color-primary); }
+  }
+}
+
+.form-error { margin: 0; color: var(--color-danger); font-size: 14px; }

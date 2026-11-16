@@ -49,6 +49,7 @@ class ResetIn(BaseModel):
 class MeUpdate(BaseModel):
     display_name: str | None = None
     current_level: str | None = None
+    avatar: str | None = None  # sent as null = reset to default avatar
 
 
 def _base_url() -> str:
@@ -149,6 +150,7 @@ def _profile_payload(profile: dict) -> dict:
         "email": profile["email"],
         "display_name": profile["display_name"],
         "current_level": profile["current_level"],
+        "avatar": profile.get("avatar"),
         "activated": profile.get("activated_at") is not None,
     }
 
@@ -169,7 +171,9 @@ def update_me(body: MeUpdate,
     try:
         profile = student_auth.update_profile(
             get_engine(), UUID(str(session["id"])), body.display_name,
-            body.current_level)
+            body.current_level,
+            body.avatar if "avatar" in body.model_fields_set
+            else student_auth.UNSET)
     except student_auth.StudentInputError as exc:
         raise _input_error(exc) from exc
     except student_auth.StudentAuthError as exc:

@@ -257,3 +257,54 @@ def test_unauthenticated_stays_fail_closed(monkeypatch):
     # isolated test DB
     with pytest.raises(NotAuthenticated):
         get_current_user_id(authorization="Bearer whatever")
+
+
+# --------------------------------------------------------------- avatar ----
+
+def _auth_headers(client, pg_engine):
+    activate(pg_engine)
+    token = login(client).json()["token"]
+    return {"Authorization": f"Bearer {token}"}
+
+
+def test_new_account_has_default_avatar_and_login_returns_it(client, pg_engine):
+    activate(pg_engine)
+    body = login(client).json()
+    assert body["user"]["avatar"] is None
+    headers = {"Authorization": f"Bearer {body['token']}"}
+    assert client.get("/api/me", headers=headers).json()["avatar"] is None
+
+
+def test_avatar_set_keep_and_reset(client, pg_engine):
+    headers = _auth_headers(client, pg_engine)
+    r = client.patch("/api/me", json={"avatar": "fox"}, headers=headers)
+    assert r.status_code == 200 and r.json()["avatar"] == "fox"
+    # a patch that does not mention avatar keeps it
+    r = client.patch("/api/me", json={"display_name": "Newname"}, headers=headers)
+    assert r.json()["avatar"] == "fox" and r.json()["display_name"] == "Newname"
+    assert client.get("/api/me", headers=headers).json()["avatar"] == "fox"
+    # explicit null resets to the default
+    r = client.patch("/api/me", json={"avatar": None}, headers=headers)
+    assert r.status_code == 200 and r.json()["avatar"] is None
+
+
+def test_avatar_and_nickname_saved_together(client, pg_engine):
+    headers = _auth_headers(client, pg_engine)
+    r = client.patch("/api/me", json={"avatar": "koi", "display_name": "  A B "},
+                     headers=headers)
+    assert r.json()["avatar"] == "koi" and r.json()["display_name"] == "A B"
+
+
+def test_unknown_avatar_is_a_field_level_400_and_changes_nothing(client, pg_engine):
+    headers = _auth_headers(client, pg_engine)
+    client.patch("/api/me", json={"avatar": "owl"}, headers=headers)
+    r = client.patch("/api/me", json={"avatar": "../etc/passwd",
+                                      "display_name": "Hacker"}, headers=headers)
+    assert r.status_code == 400
+    assert r.json()["detail"]["field"] == "avatar"
+    me = client.get("/api/me", headers=headers).json()
+    assert me["avatar"] == "owl" and me["display_name"] != "Hacker"
+
+
+def test_avatar_patch_requires_session(client):
+    assert client.patch("/api/me", json={"avatar": "fox"}).status_code == 401

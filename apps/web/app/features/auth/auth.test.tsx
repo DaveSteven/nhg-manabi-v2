@@ -22,6 +22,7 @@ const USER = {
   email: "student@example.com",
   display_name: "小明",
   current_level: "N2" as const,
+  avatar: null,
 };
 
 beforeAll(() => server.listen());
@@ -112,22 +113,34 @@ describe("useLevel", () => {
 // -------------------------------------------------------- HeaderControls ----
 
 describe("HeaderControls", () => {
-  it("shows sign-in/sign-up links when logged out, and no level selector", () => {
+  it("shows sign-in/sign-up links when logged out, and no avatar", () => {
     renderRoutes([{ path: "study", Component: HeaderControls }], "/study");
     expect(screen.getByRole("link", { name: "登录" }))
       .toHaveAttribute("href", "/login");
     expect(screen.getByRole("link", { name: "注册" }))
       .toHaveAttribute("href", "/register");
-    expect(screen.queryByLabelText("备考等级")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "账户菜单" })).not.toBeInTheDocument();
   });
 
-  it("shows the level selector for signed-in students", () => {
+  it("signed in: only the avatar is shown (no name, no level selector, no sign-out)", () => {
     authStore.setSession("tok-123", USER);
     renderRoutes([{ path: "study", Component: HeaderControls }], "/study");
-    expect(screen.getByLabelText("备考等级")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "账户菜单" })).toBeInTheDocument();
+    // default solid avatar carries the first character of the nickname
+    expect(screen.getByRole("button", { name: "账户菜单" })).toHaveTextContent("小");
+    expect(screen.queryByLabelText("备考等级")).not.toBeInTheDocument();
+    expect(screen.queryByText("退出登录")).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "登录" })).not.toBeInTheDocument();
   });
 
-  it("shows the display name and signing out clears the session", async () => {
+  it("renders the chosen avatar image", () => {
+    authStore.setSession("tok-123", { ...USER, avatar: "fox" });
+    renderRoutes([{ path: "study", Component: HeaderControls }], "/study");
+    expect(screen.getByRole("button", { name: "账户菜单" }).querySelector("img"))
+      .not.toBeNull();
+  });
+
+  it("menu offers 用户中心 and signing out clears the session", async () => {
     const user = userEvent.setup();
     let logoutCalled = false;
     server.use(http.post(`${ORIGIN}/api/auth/logout`, () => {
@@ -136,13 +149,24 @@ describe("HeaderControls", () => {
     }));
     authStore.setSession("tok-123", USER);
     renderRoutes([{ path: "study", Component: HeaderControls }], "/study");
-    expect(screen.getByText("小明")).toBeInTheDocument();
-    await user.click(screen.getByText("退出"));
-    // HeaderControls re-renders signed out (logout navigates to /study)
+    await user.click(screen.getByRole("button", { name: "账户菜单" }));
+    expect(screen.getByRole("menuitem", { name: "用户中心" }))
+      .toHaveAttribute("href", "/study/account");
+    await user.click(screen.getByRole("menuitem", { name: "退出登录" }));
     expect(await screen.findByRole("link", { name: "登录" })).toBeInTheDocument();
     expect(logoutCalled).toBe(true);
     expect(authStore.get().user).toBeNull();
     expect(window.localStorage.getItem("jlptgo.session_token")).toBeNull();
+  });
+
+  it("Escape closes the menu", async () => {
+    const user = userEvent.setup();
+    authStore.setSession("tok-123", USER);
+    renderRoutes([{ path: "study", Component: HeaderControls }], "/study");
+    await user.click(screen.getByRole("button", { name: "账户菜单" }));
+    expect(screen.getByRole("menu")).toBeInTheDocument();
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
   });
 });
 

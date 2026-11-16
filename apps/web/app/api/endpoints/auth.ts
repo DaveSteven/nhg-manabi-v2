@@ -18,6 +18,8 @@ export const UserProfileSchema = z.strictObject({
   email: z.string(),
   display_name: z.string(),
   current_level: z.enum(JLPT_LEVELS),
+  /** Fixed-set avatar id; null = default solid-colour avatar. */
+  avatar: z.string().nullable(),
 });
 export type UserProfile = z.infer<typeof UserProfileSchema>;
 
@@ -118,7 +120,9 @@ export async function getMe(signal?: AbortSignal): Promise<MeResponse> {
 }
 
 export async function updateMe(patch: { display_name?: string;
-                                        current_level?: JlptLevel },
+                                        current_level?: JlptLevel;
+                                        /** null resets to the default avatar */
+                                        avatar?: string | null },
                                signal?: AbortSignal): Promise<MeResponse> {
   const raw = await apiFetch("/api/me", { method: "PATCH", body: patch, signal });
   return parse(MeResponseSchema, "/api/me", raw);

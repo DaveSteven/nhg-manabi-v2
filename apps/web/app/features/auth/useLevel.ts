@@ -49,6 +49,7 @@ export function useLevel(): {
           id: me.id, email: me.email,
           display_name: me.display_name,
           current_level: me.current_level,
+          avatar: me.avatar,
         }))
         .catch(() => {
           // best-effort: keep the local choice; server wins on next sync
