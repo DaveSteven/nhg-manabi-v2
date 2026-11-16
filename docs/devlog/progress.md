@@ -49,6 +49,7 @@
 - **学生账户体系完成（2026-11-16，ADR-0011）**：用户四项决策（邮箱登录、完整邮件流程、30 天 localStorage 会话、scrypt）。后端：Alembic 0007（users/user_sessions/auth_email_tokens，测试库与开发库已迁移）、共享 scrypt 抽取、register/login/logout/verify/resend/forgot/reset + GET/PATCH /api/me、统一 401 与 5 次锁定、Resend 邮件（无 key 走 dev 日志）、`get_current_user_id` 按约定替换（真实会话优先，dev_test 非生产兜底）；**后端 154 passed + 2 skipped**。前端：会话令牌存储、auth DTO/端点、authStore/useLevel 双轨、顶栏账户入口与等级选择器（**仅登录后显示**，用户决定）、5 个 noindex 认证页、ExamList 偏好种子（显式「全部」不被重种）；auth 专项 14 测试 + 种子回归；**前端 139 passed**、typecheck/build 通过。真实 Chrome 走查全流程通过（注册→验证→重放幂等→未验证拒绝→登录→等级 N1 持久→退出，服务端 DB 核验；后端临时移除真实 RESEND key，邮件走本地日志，未发真实邮件）。走查抓到并修复 3 个真实缺陷（StrictMode 双触发 verify、sticky 头部 pointer-events 恢复选择器旧类名、ExamList 空值被重种）。api-conventions 与 deployment 已同步。风险：无 IP 级限流（随部署硬化）；生产必须配置邮件三环境变量；React Router 默认 StrictMode 要求一次性 effect 防重触发。
 
 - **真实发信联调（2026-11-16）**：修复 `backend/.env` 未加载、系统代理与缺 User-Agent 导致的 Resend 403；本机对用户自己邮箱发送一次测试邮件无报错（用户确认已收到）；后端 157 passed + 2 skipped。注册/找回密码真实邮件端到端与生产发信域名未验证。
+- **本地 Docker 全栈（2026-11-16，ADR-0012）**：compose 增加 migrate/api/web，学生端 :8080、管理端 :8081（nginx 反代 /api，媒体只读挂载），冒烟通过：路由/noindex 规则、105 套目录、媒体 Range 206。未在容器内走浏览器全流程与管理端登录；非生产方案。
 ## 未开始（按依赖顺序）
 
 1. M2.2 Commit 2–4：学习首页/试卷目录 → Canonical 渲染器（含音频）→ 作答闭环与反馈（实施计划、ADR-0007、后端契约与媒体接口均已就绪）。

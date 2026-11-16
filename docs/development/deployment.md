@@ -28,6 +28,14 @@ uvicorn app.main:app --reload --port 8001
 
 检查 `/health` 只是进程活性，不等于数据库 readiness；必须加真实 `SELECT 1`/迁移版本检查再认为 M0 完成。
 
+## 本地全容器运行（ADR-0012）
+
+```bash
+docker compose --env-file .env up -d --build
+```
+
+学生端 `http://localhost:8080`，管理端 `http://localhost:8081`，API 仅经二者的 `/api/` 反代访问。`migrate` 自动升级到最新迁移；媒体目录只读挂载 `data/v2-media`。停止：`docker compose --env-file .env down`（不加 `-v`，数据卷保留）。端口 8000/5432 属于其他项目容器，勿占用。
+
 ## 学生账户邮件配置（ADR-0011）
 
 后端额外读取（可放在 `backend/.env`）：

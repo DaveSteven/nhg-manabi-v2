@@ -16,6 +16,42 @@ services:
       interval: 5s
       timeout: 5s
       retries: 12
+  migrate:
+    build: {context: ., dockerfile: backend/Dockerfile}
+    image: nhg-manabi-v2-api
+    command: ["alembic", "upgrade", "head"]
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-nhg_v2}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-nhg_manabi_v2}
+    depends_on:
+      postgres: {condition: service_healthy}
+
+  api:
+    image: nhg-manabi-v2-api
+    container_name: nhg-manabi-v2-api
+    restart: unless-stopped
+    env_file:
+      - path: backend/.env   # mail keys; optional
+        required: false
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-nhg_v2}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-nhg_manabi_v2}
+      MEDIA_STORAGE_DIR: /srv/media
+      PUBLISH_POLICY: ${PUBLISH_POLICY:-auto}
+      APP_BASE_URL: http://localhost:8080
+    volumes:
+      - ./data/v2-media:/srv/media:ro
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+
+  web:
+    build: {context: ., dockerfile: deploy/web.Dockerfile}
+    container_name: nhg-manabi-v2-web
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:8080"   # student site
+      - "127.0.0.1:8081:8081"   # admin
+    depends_on:
+      - api
+
 volumes:
   nhg_manabi_v2_pgdata:
     name: nhg_manabi_v2_pgdata

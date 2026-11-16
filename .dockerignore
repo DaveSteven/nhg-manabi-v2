@@ -1,0 +1,14 @@
+.git
+**/node_modules
+**/.venv
+**/__pycache__
+**/dist
+apps/web/build
+apps/web/.react-router
+data
+docs
+memory
+backend/.env
+backend/.local
+.env
+.claude

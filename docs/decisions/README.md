@@ -46,3 +46,4 @@
 - `ADR-0008-shadcn-admin-foundation.md`
 - `ADR-0009-admin-identity-table.md`
 - `ADR-0010-auto-publish-and-super-admin.md`
+- `ADR-0012-local-docker-deployment.md`
