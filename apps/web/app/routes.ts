@@ -16,5 +16,7 @@ export default [
       "practice/:sessionId/results",
       "routes/study.practice.$sessionId.results.tsx",
     ),
+    // DEV-ONLY render harness (VITE_DEV_TOOLS=1); never linked from nav.
+    route("dev/unit/:unitId", "routes/study.dev.unit.$unitId.tsx"),
   ]),
 ] satisfies RouteConfig;

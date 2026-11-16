@@ -23,7 +23,7 @@ data/samples/N4/
 data/samples/N5/
 
 # Controlled v2 media storage (populated by app.media_sync)
-data/v2-media/
+data/v2-media*/
 
 # Frontend build & generated types
 apps/web/build/
