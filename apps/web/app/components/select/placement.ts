@@ -19,6 +19,8 @@ export interface PlacementInput {
   gap?: number;
   margin?: number;
   minWidth?: number;
+  /** Hard cap for the popover height (e.g. 250). */
+  maxHeight?: number;
 }
 
 export interface Placement {
@@ -36,12 +38,13 @@ export function computePlacement(input: PlacementInput): Placement {
 
   const spaceBelow = viewport.height - anchor.bottom - gap - margin;
   const spaceAbove = anchor.top - gap - margin;
-  const fitsBelow = content.height <= spaceBelow;
+  const wantedHeight = Math.min(content.height, input.maxHeight ?? Infinity);
+  const fitsBelow = wantedHeight <= spaceBelow;
   const side: "bottom" | "top" =
     fitsBelow || spaceBelow >= spaceAbove ? "bottom" : "top";
 
   const available = Math.max(0, side === "bottom" ? spaceBelow : spaceAbove);
-  const maxHeight = Math.min(content.height, available);
+  const maxHeight = Math.min(wantedHeight, available);
   const top = side === "bottom"
     ? anchor.bottom + gap
     : anchor.top - gap - maxHeight;

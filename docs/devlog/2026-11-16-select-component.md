@@ -52,3 +52,10 @@
 ## 续：Text 模式悬停/展开变主题色（同日，用户指示）
 - Text 模式悬停与展开时，文字与箭头变为 `--color-primary`（`#b94968`），背景与边框仍透明；静止为墨色文字 + 灰箭头。`select-spec.md` 同步。
 - 验证：容器内浏览器展开状态读取计算样式——`color` 与箭头均为 `rgb(185,73,104)`，背景透明；静止状态为 `rgb(43,43,51)`/灰。真实鼠标悬停态由 CSS `:hover` 规则承担，未单独用真实鼠标悬停截图验证（展开态与悬停态走同一条规则）。纯样式改动，无新增自动化测试；`pnpm build` 通过。
+
+## 续：Popover 最大高度 250px 与自定义滚动条（同日，用户指示）
+- Popover 高度上限 250px（`popoverMaxHeight` 可改，默认 250），选项列表在内部滚动，搜索框固定在顶部；`computePlacement` 新增 `maxHeight`，且用「封顶后的高度」判断下方是否放得下（避免自然高度很大时无谓翻转）。
+- 滚动条：8px 命中区（可见 4px）、胶囊圆角、无轨道、樱色半透明滑块（悬停加深），`overscroll-behavior: contain`。
+- 过程发现：第一版同时设置了标准的 `scrollbar-width/scrollbar-color` 和 `::-webkit-scrollbar`，Chrome 在设置标准属性后会忽略 WebKit 伪元素，实测列表 `offsetWidth-clientWidth=0`（macOS 叠加滚动条，样式未生效）。改为只在 `@supports not selector(::-webkit-scrollbar)`（Firefox）下使用标准属性后，实测宽度 8px，滚动条滑块可见。
+- 测试：placement 新增 3 例、Select 新增 2 例，并更新原「靠近底部翻转」用例的高度期望（300→250）；typecheck 通过；vitest 21 文件 / 192 passed；`pnpm build` 通过。容器内真实页面（年份筛选 17 项）：popover 实高 250px，列表 790px 内容在 232px 内滚动，滚动条可见。
+- 未验证：Firefox 的 `scrollbar-color` 近似效果、Safari、深色模式、触屏滚动。

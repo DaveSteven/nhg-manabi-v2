@@ -123,9 +123,33 @@
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
+  overscroll-behavior: contain; /* don't scroll the page behind the list */
   display: grid;
   gap: 2px;
   align-content: start;
+
+  /* Soft scrollbar in the brand palette: thin, rounded, sakura-tinted thumb,
+     no track. Firefox uses scrollbar-color/width; WebKit/Blink the pseudo
+     elements below. */
+  /* Chrome ignores ::-webkit-scrollbar once the standard properties are set,
+     so those are limited to engines without WebKit scrollbars (Firefox). */
+  @supports not selector(::-webkit-scrollbar) {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(185, 73, 104, 0.32) transparent;
+  }
+
+  &::-webkit-scrollbar { width: 8px; }
+  &::-webkit-scrollbar-track { background: transparent; margin: 4px 0; }
+  &::-webkit-scrollbar-thumb {
+    background: rgba(185, 73, 104, 0.28);
+    border: 2px solid transparent;
+    background-clip: content-box; /* visible thumb 4px, hit area 8px */
+    border-radius: var(--radius-pill);
+  }
+  &::-webkit-scrollbar-thumb:hover {
+    background: rgba(185, 73, 104, 0.55);
+    background-clip: content-box;
+  }
 }
 
 /* ---- Option ---- */

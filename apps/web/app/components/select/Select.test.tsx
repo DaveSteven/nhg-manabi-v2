@@ -210,8 +210,9 @@ describe("Select · single", () => {
     await user.click(trigger());
     const pop = screen.getByRole("listbox").closest(".popover") as HTMLElement;
     expect(pop.dataset.side).toBe("top");
-    expect(pop.style.maxHeight).toBe("300px");
-    expect(parseFloat(pop.style.top) + 300).toBeLessThanOrEqual(720);
+    // natural 300px is capped to the 250px popover maximum
+    expect(pop.style.maxHeight).toBe("250px");
+    expect(parseFloat(pop.style.top) + 250).toBeLessThanOrEqual(720);
   });
 });
 
@@ -252,6 +253,36 @@ describe("Select · width", () => {
     rerender(<Select aria-label="w" width="100%" value="a"
                      items={[{ value: "a", label: "A" }]} onChange={() => {}} />);
     expect(screen.getByRole("combobox", { name: "w" }).style.width).toBe("100%");
+  });
+});
+
+describe("Select · popover height", () => {
+  it("caps the popover at 250px by default and lets the list scroll inside", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockReturnValue(900);
+    vi.spyOn(HTMLElement.prototype, "offsetWidth", "get").mockReturnValue(180);
+    Object.defineProperty(window, "innerHeight", { value: 1200, configurable: true });
+    const many = Array.from({ length: 30 }, (_, i) =>
+      ({ value: String(i), label: `Item ${i}` }));
+    render(<Harness items={many} />);
+    await user.click(trigger());
+    const pop = screen.getByRole("listbox").closest(".popover") as HTMLElement;
+    expect(pop.style.maxHeight).toBe("250px");
+    expect(screen.getByRole("listbox")).toHaveClass("select-list");
+  });
+
+  it("popoverMaxHeight overrides the cap", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockReturnValue(900);
+    vi.spyOn(HTMLElement.prototype, "offsetWidth", "get").mockReturnValue(180);
+    Object.defineProperty(window, "innerHeight", { value: 1200, configurable: true });
+    render(<Select aria-label="m" value="" popoverMaxHeight={320}
+                   items={Array.from({ length: 30 }, (_, i) =>
+                     ({ value: String(i), label: `Item ${i}` }))}
+                   onChange={() => {}} />);
+    await user.click(screen.getByRole("combobox", { name: "m" }));
+    const pop = screen.getByRole("listbox").closest(".popover") as HTMLElement;
+    expect(pop.style.maxHeight).toBe("320px");
   });
 });
 

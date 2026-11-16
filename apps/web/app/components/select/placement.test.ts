@@ -63,4 +63,32 @@ describe("computePlacement", () => {
       content: { width: 60, height: 100 }, viewport, minWidth: 180 });
     expect(p.width).toBe(180);
   });
+
+  it("caps the height at maxHeight even when there is more room", () => {
+    const p = computePlacement({ anchor: anchor(100),
+      content: { width: 150, height: 900 }, viewport, maxHeight: 250 });
+    expect(p.side).toBe("bottom");
+    expect(p.maxHeight).toBe(250);
+  });
+
+  it("uses the capped height (not the natural one) to decide whether it fits below", () => {
+    // natural 900 would not fit below (only ~156 left → flips), but the
+    // 250 cap fits above (700-6-8 = 686) and below does not: flips, 250 high
+    const p = computePlacement({ anchor: anchor(650),
+      content: { width: 150, height: 900 }, viewport, maxHeight: 250 });
+    expect(p.side).toBe("top");
+    expect(p.maxHeight).toBe(250);
+    // and when the cap does fit below, it stays below
+    const q = computePlacement({ anchor: anchor(300),
+      content: { width: 150, height: 900 }, viewport, maxHeight: 250 });
+    expect(q.side).toBe("bottom");
+    expect(q.maxHeight).toBe(250);
+  });
+
+  it("still shrinks below the cap when space is tighter than the cap", () => {
+    const p = computePlacement({ anchor: anchor(20),
+      content: { width: 150, height: 900 }, viewport: { width: 1000, height: 200 },
+      maxHeight: 250 });
+    expect(p.maxHeight).toBeLessThan(250);
+  });
 });

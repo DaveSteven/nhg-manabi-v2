@@ -38,6 +38,8 @@ export interface SelectProps {
   emptyText?: string;
   className?: string;
   popoverMinWidth?: number;
+  /** Popover height cap in px (default 250); options scroll beyond it. */
+  popoverMaxHeight?: number;
   /** Trigger width; omit to follow the content. */
   width?: number | string;
   "aria-label"?: string;
@@ -92,7 +94,7 @@ export function Select(props: SelectProps) {
   const {
     value, onChange, items, size = "default", variant = "outlined", placeholder = "请选择",
     disabled = false, searchable = false, searchPlaceholder = "搜索",
-    emptyText = "无匹配项", className, popoverMinWidth = 120, width,
+    emptyText = "无匹配项", className, popoverMinWidth = 120, popoverMaxHeight = 250, width,
   } = props;
   const uid = useId();
   const listId = `${uid}-list`;
@@ -283,6 +285,7 @@ export function Select(props: SelectProps) {
       </button>
 
       <Popover open={open} anchorRef={triggerRef} minWidth={popoverMinWidth}
+               maxHeight={popoverMaxHeight}
                className="select-popover"
                onClose={(reason) => close(reason === "escape")}>
         {searchable ? (

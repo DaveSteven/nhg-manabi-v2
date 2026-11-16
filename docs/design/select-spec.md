@@ -16,7 +16,7 @@
 | Select Trigger（默认） | 高度 44px，**胶囊圆角（999px）**，白色背景，轻边框，右侧下拉箭头 |
 | Compact Select | 高度 36px，胶囊，用于工具栏、密集筛选 |
 | Large Select | 高度 52px，胶囊，字号 16px，用于需要强调的位置（备用，当前未使用） |
-| Popover | 圆角 16px，白底，轻阴影，内边距 8px |
+| Popover | 圆角 16px，白底，轻阴影，内边距 8px，**最大高度 250px**（可用 `popoverMaxHeight` 调整），超出后列表内部滚动 |
 | Option Item | 高度 42px，圆角 10px，左右内边距 12px |
 | Selected | 浅樱底色 `#F6E8EC`，深樱文字，右侧对勾（不只靠颜色表达） |
 | Hover | 柔和暖灰背景（`--color-surface-subtle`），不使用明显彩色边框 |
@@ -30,6 +30,8 @@
 **变体**：`variant="outlined"`（默认，白底+轻边框）与 `variant="text"`（Text 模式：任何状态（静止、悬停、展开）都无背景、无边框，字重 600；悬停与展开时文字和箭头变为主题色（`--color-primary`），箭头展开时翻转，另有手型光标和键盘焦点时的品牌色焦点环）。首页顶栏的等级选择使用 Text 模式。
 
 **宽度**：Trigger 未设置 `width` 时跟随内容宽度（无最小宽度）；需要固定或撑满时通过 `width` 指定（数字为 px，或 `100%`）。Popover 宽度不小于 Trigger 与 120px 中的较大者，并随最宽选项扩展。
+
+**滚动条**：选项列表超出最大高度时使用自定义细滚动条——8px 命中区（可见 4px）、胶囊圆角、无轨道、樱色半透明滑块（悬停加深），Firefox 用 `scrollbar-width: thin` + `scrollbar-color` 近似；`overscroll-behavior: contain` 防止滚动穿透到页面。搜索框固定在顶部，不随列表滚动。
 
 ## 3. Popover 与 Modal 是不同组件
 

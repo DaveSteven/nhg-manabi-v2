@@ -15,13 +15,15 @@ import { computePlacement } from "./placement";
  * re-placed against the viewport (flip / clamp / cap height) on scroll,
  * resize and content size changes.
  */
-export function Popover({ open, anchorRef, onClose, minWidth, className,
-                          children }: {
+export function Popover({ open, anchorRef, onClose, minWidth, maxHeight,
+                          className, children }: {
   open: boolean;
   anchorRef: RefObject<HTMLElement | null>;
   /** `restoreFocus` is true for Esc (caller returns focus to the anchor). */
   onClose: (reason: "escape" | "outside") => void;
   minWidth?: number;
+  /** Height cap in px; content beyond it scrolls inside. */
+  maxHeight?: number;
   className?: string;
   children: ReactNode;
 }) {
@@ -46,6 +48,7 @@ export function Popover({ open, anchorRef, onClose, minWidth, className,
         content: natural,
         viewport: { width: window.innerWidth, height: window.innerHeight },
         minWidth,
+        maxHeight,
       });
       el.style.top = `${p.top}px`;
       el.style.left = `${p.left}px`;
@@ -65,7 +68,7 @@ export function Popover({ open, anchorRef, onClose, minWidth, className,
       window.removeEventListener("scroll", place, true);
       ro?.disconnect();
     };
-  }, [open, anchorRef, minWidth]);
+  }, [open, anchorRef, minWidth, maxHeight]);
 
   useEffect(() => {
     if (!open) return;
