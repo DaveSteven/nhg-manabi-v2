@@ -21,6 +21,9 @@
 .user-avatar-lg { width: 72px; height: 72px; font-size: 30px; }
 .user-avatar-xl { width: 104px; height: 104px; font-size: 44px; border-width: 3px; }
 
+/* Picture avatars everywhere: no ring, no fill, no clipping. */
+.user-avatar-img { border: none; background: transparent; overflow: visible; }
+
 .user-avatar-c0 { background: var(--accent-sakura); border-color: transparent; }
 .user-avatar-c1 { background: var(--accent-lavender); border-color: transparent; }
 .user-avatar-c2 { background: var(--accent-matcha); border-color: transparent; }
@@ -37,8 +40,6 @@
 
   /* larger than the generic md avatar; picture avatars drop border + fill */
   .user-avatar { width: 52px; height: 52px; font-size: 22px; }
-  .user-avatar-img { border: none; background: transparent; overflow: visible; }
-
   &:hover .user-avatar { box-shadow: none; transform: scale(1.06); }
   &:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
 }
