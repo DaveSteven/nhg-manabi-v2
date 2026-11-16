@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import type { ExamSummary } from "../../api/dto/exam";
 import { describeLoadError } from "../../api/errors";
 import { useExamList } from "./useExamCatalog";
+import { Select } from "../../components/select";
 import { examTitle, examRoute } from "./viewModels";
 import { useLevel } from "../auth/useLevel";
 
@@ -38,6 +39,10 @@ export function ExamListView() {
   const data = query.data ?? [];
   const levels = [...new Set(data.map((e) => e.level))];
   const years = [...new Set(data.map((e) => e.year))].sort((a, b) => b - a);
+  const levelItems = [{ value: "", label: "全部" },
+    ...levels.map((l) => ({ value: l, label: l }))];
+  const yearItems = [{ value: "", label: "全部" },
+    ...years.map((y) => ({ value: String(y), label: `${y}` }))];
   const filtered = data.filter((e) =>
     (!level || e.level === level) && (!year || String(e.year) === year));
 
@@ -46,22 +51,18 @@ export function ExamListView() {
       <h1>历年试卷</h1>
 
       <div className="exam-filters">
-        <label>
-          等级{" "}
-          <select value={level}
-                  onChange={(ev) => updateParam(params, setParams, "level", ev.target.value)}>
-            <option value="">全部</option>
-            {levels.map((l) => <option key={l} value={l}>{l}</option>)}
-          </select>
-        </label>
-        <label>
-          年份{" "}
-          <select value={year}
-                  onChange={(ev) => updateParam(params, setParams, "year", ev.target.value)}>
-            <option value="">全部</option>
-            {years.map((y) => <option key={y} value={y}>{y}</option>)}
-          </select>
-        </label>
+        <div className="select-field">
+          <span id="exam-filter-level">等级</span>
+          <Select aria-labelledby="exam-filter-level" value={level}
+                  items={levelItems}
+                  onChange={(v) => updateParam(params, setParams, "level", v)} />
+        </div>
+        <div className="select-field">
+          <span id="exam-filter-year">年份</span>
+          <Select aria-labelledby="exam-filter-year" value={year}
+                  items={yearItems}
+                  onChange={(v) => updateParam(params, setParams, "year", v)} />
+        </div>
       </div>
 
       {query.isPending ? (

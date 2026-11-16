@@ -407,6 +407,10 @@ Hover：
 
 导航胶囊的 Active 样式不应直接套用到所有 Tab 和题目选项上。
 
+### 9.5 选择器（Select）与 Popover
+
+下拉选择统一使用自研 Select 组件，规格见 [`select-spec.md`](select-spec.md)（Trigger 44/36px、Popover 16px 圆角、选中浅樱 + 对勾、Popover 与 Modal 区分、避让视口且不被父容器裁剪）。不再使用原生 `<select>` 作为用户可见控件。
+
 ## 10. 响应式设计
 
 ### Desktop（≥1024px）

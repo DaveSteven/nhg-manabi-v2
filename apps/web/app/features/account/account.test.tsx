@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { ORIGIN, server } from "../../test/mocks/server";
 import { renderRoutes } from "../../test/render";
+import { chooseOption } from "../../test/select";
 import { authStore } from "../auth/authStore";
 import { AccountPage } from "./AccountPage";
 
@@ -45,7 +46,7 @@ describe("AccountPage", () => {
     expect(screen.getByText("小明", { selector: ".account-display-name" }))
       .toBeInTheDocument();
     expect(screen.getAllByText("student@example.com").length).toBeGreaterThan(0);
-    expect(screen.getByLabelText("备考等级")).toHaveValue("N2");
+    expect(screen.getByRole("combobox", { name: "备考等级" })).toHaveTextContent("N2");
   });
 
   it("edits avatar and nickname with one PATCH and updates the store", async () => {
@@ -135,7 +136,7 @@ describe("AccountPage", () => {
     }));
     authStore.setSession("tok", USER);
     renderAccount();
-    await user.selectOptions(screen.getByLabelText("备考等级"), "N1");
+    await chooseOption(user, "备考等级", "N1");
     await waitFor(() => expect(body).toEqual({ current_level: "N1" }));
   });
 

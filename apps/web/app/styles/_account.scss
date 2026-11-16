@@ -102,16 +102,6 @@
   padding: var(--space-3) 0;
 
   & + & { border-top: 1px solid var(--color-border); }
-
-  select {
-    min-height: 40px;
-    padding: 0 var(--space-3);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-pill);
-    background: var(--color-surface);
-    color: var(--color-ink);
-    font: inherit;
-  }
 }
 
 .account-row-text {

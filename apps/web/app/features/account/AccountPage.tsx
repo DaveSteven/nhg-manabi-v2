@@ -5,6 +5,9 @@ import { JLPT_LEVELS, useLevel } from "../auth/useLevel";
 import { EditProfileDialog } from "./EditProfileDialog";
 import { signOut } from "./signOut";
 import { UserAvatar } from "./UserAvatar";
+import { Select } from "../../components/select";
+
+const LEVEL_ITEMS = JLPT_LEVELS.map((l) => ({ value: l, label: l }));
 
 /**
  * 用户中心 (/study/account), v1-style two columns: identity card on the
@@ -48,15 +51,9 @@ export function AccountPage() {
               <strong>目标级别</strong>
               <small>试卷列表默认按此级别筛选</small>
             </div>
-            <select aria-label="备考等级" value={level ?? ""}
-                    onChange={(e) => {
-                      if (e.target.value) {
-                        setLevel(e.target.value as (typeof JLPT_LEVELS)[number]);
-                      }
-                    }}>
-              <option value="">未设置</option>
-              {JLPT_LEVELS.map((l) => <option key={l} value={l}>{l}</option>)}
-            </select>
+            <Select aria-label="备考等级" placeholder="未设置"
+                    value={level ?? ""} items={LEVEL_ITEMS}
+                    onChange={(v) => setLevel(v as (typeof JLPT_LEVELS)[number])} />
           </div>
         </section>
 

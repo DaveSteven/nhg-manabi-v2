@@ -2,6 +2,7 @@ import { Link } from "react-router";
 import { useAuth } from "./authStore";
 import { JLPT_LEVELS, useLevel } from "./useLevel";
 import { UserAvatar } from "../account/UserAvatar";
+import { Select } from "../../components/select";
 
 /**
  * Right slot of the study header (design v1.1 §3.1): signed-in students see
@@ -30,19 +31,13 @@ export function HeaderControls() {
   );
 }
 
+const LEVEL_ITEMS = JLPT_LEVELS.map((l) => ({ value: l, label: l }));
+
 function LevelSelect() {
   const { level, setLevel } = useLevel();
   return (
-    <label className="level-select">
-      <span className="sr-only">备考等级</span>
-      <select value={level ?? ""}
-              onChange={(e) => {
-                const v = e.target.value;
-                if (v) setLevel(v as (typeof JLPT_LEVELS)[number]);
-              }}>
-        <option value="">等级</option>
-        {JLPT_LEVELS.map((l) => <option key={l} value={l}>{l}</option>)}
-      </select>
-    </label>
+    <Select size="compact" aria-label="备考等级" placeholder="等级"
+            value={level ?? ""} items={LEVEL_ITEMS}
+            onChange={(v) => setLevel(v as (typeof JLPT_LEVELS)[number])} />
   );
 }

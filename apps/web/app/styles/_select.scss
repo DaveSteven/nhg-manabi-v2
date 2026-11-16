@@ -1,0 +1,182 @@
+/* Select + Popover (docs/design/select-spec.md). Tokens only. */
+
+/* ---- Trigger ---- */
+.select-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-width: 120px;
+  height: 44px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font: inherit;
+  font-size: var(--text-body);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--motion-fast), background var(--motion-fast);
+
+  &:hover:not(:disabled) { background: var(--color-surface-subtle); }
+  &:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+  &.is-open { border-color: var(--color-primary); }
+  &:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .select-chevron {
+    flex-shrink: 0;
+    color: var(--color-text-muted);
+    transition: transform var(--motion-fast);
+  }
+  &.is-open .select-chevron { transform: rotate(180deg); }
+}
+
+/* Compact: navigation / toolbars */
+.select-trigger--compact {
+  height: 36px;
+  min-width: 76px;
+  padding: 0 var(--space-3);
+  font-size: 14px;
+  border-radius: 12px;
+}
+
+.select-value {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  &.is-placeholder { color: var(--color-text-muted); }
+}
+
+/* ---- Popover (no overlay; portal + fixed) ---- */
+.popover {
+  position: fixed;
+  z-index: 60;
+  box-sizing: border-box;
+  border-radius: 16px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-floating);
+  padding: var(--space-2);
+  animation: popover-in-bottom 180ms ease-out both;
+
+  &[data-side="top"] { animation-name: popover-in-top; }
+}
+
+@keyframes popover-in-bottom {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes popover-in-top {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .popover { animation: none; }
+  .select-trigger, .select-trigger .select-chevron { transition: none; }
+}
+
+.select-popover {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.select-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: grid;
+  gap: 2px;
+  align-content: start;
+}
+
+/* ---- Option ---- */
+.select-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  box-sizing: border-box;
+  min-height: 42px;
+  padding: 0 var(--space-3);
+  border-radius: 10px;
+  color: var(--color-ink);
+  font-size: var(--text-body);
+  cursor: pointer;
+  user-select: none;
+
+  /* hover / keyboard highlight: warm grey, no coloured border */
+  &.is-active { background: var(--color-surface-subtle); }
+
+  /* selected: light sakura + deep sakura text + check (never colour only) */
+  &.is-selected {
+    background: var(--color-primary-soft);
+    color: var(--color-primary-hover);
+    font-weight: 600;
+  }
+
+  &.is-disabled { opacity: 0.45; cursor: not-allowed; }
+}
+
+/* keyboard focus ring (brand colour) — only while navigating by keyboard */
+.select-list[data-nav="keyboard"] .select-option.is-active {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
+}
+
+.select-option-label { min-width: 0; overflow-wrap: anywhere; }
+.select-check { flex-shrink: 0; }
+
+/* ---- Group / search / empty ---- */
+.select-group { display: grid; gap: 2px; }
+.select-group + .select-group { margin-top: var(--space-1); }
+
+.select-group-label {
+  padding: var(--space-2) var(--space-3) var(--space-1);
+  color: var(--color-text-muted);
+  font-size: var(--text-aux);
+  font-weight: 600;
+}
+
+.select-search {
+  box-sizing: border-box;
+  width: 100%;
+  height: 40px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font: inherit;
+  font-size: 14px;
+
+  &:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 1px;
+    border-color: var(--color-primary);
+  }
+}
+
+.select-empty {
+  padding: var(--space-4) var(--space-3);
+  color: var(--color-text-muted);
+  font-size: 14px;
+  text-align: center;
+}
+
+/* label + trigger pair used by filters and settings */
+.select-field {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 14px;
+  color: var(--color-text-secondary);
+}

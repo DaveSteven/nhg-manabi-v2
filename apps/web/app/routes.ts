@@ -21,6 +21,7 @@ export default [
     ),
     // DEV-ONLY render harness (VITE_DEV_TOOLS=1); never linked from nav.
     route("dev/unit/:unitId", "routes/study.dev.unit.$unitId.tsx"),
+    route("dev/select", "routes/study.dev.select.tsx"),
   ]),
   route("login", "routes/_auth.login.tsx"),
   route("register", "routes/_auth.register.tsx"),

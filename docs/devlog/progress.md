@@ -51,6 +51,7 @@
 - **真实发信联调（2026-11-16）**：修复 `backend/.env` 未加载、系统代理与缺 User-Agent 导致的 Resend 403；本机对用户自己邮箱发送一次测试邮件无报错（用户确认已收到）；后端 157 passed + 2 skipped。注册/找回密码真实邮件端到端与生产发信域名未验证。
 - **本地 Docker 全栈（2026-11-16，ADR-0012）**：compose 增加 migrate/api/web，学生端 :8080、管理端 :8081（nginx 反代 /api，媒体只读挂载），冒烟通过：路由/noindex 规则、105 套目录、媒体 Range 206。未在容器内走浏览器全流程与管理端登录；非生产方案。
 - **用户中心与头像（2026-11-16，ADR-0013）**：顶栏已登录显示等级选择器 + 头像（点击直达用户中心），首页历年试卷按等级筛选；`/study/account` 为 v1 式左右两栏，可编辑头像（沿用 v1 的 12 张固定头像，默认纯色首字头像）与昵称，备考等级移入此页；Alembic 0008；后端 162 passed + 2 skipped，web 155 passed；容器内真实浏览器桌面/375px 验证通过。无统计/收藏/改密码；非生产。
+- **Select / Popover 组件规范与实现（2026-11-16）**：新增 `docs/design/select-spec.md`；自研 Select（Single/Grouped/Searchable，combobox + listbox，键盘与 ARIA，IME 保护）与 Popover（portal、无遮罩、避让视口、不被父容器裁剪、Esc 不穿透 Modal）；替换应用内全部 5 处原生 select；web 184 passed；dev 画廊与容器内真实页面目检通过。未测 Firefox/Safari/触屏/屏幕阅读器/深色模式。
 ## 未开始（按依赖顺序）
 
 1. M2.2 Commit 2–4：学习首页/试卷目录 → Canonical 渲染器（含音频）→ 作答闭环与反馈（实施计划、ADR-0007、后端契约与媒体接口均已就绪）。

@@ -3,6 +3,7 @@ import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { ORIGIN, server } from "../../test/mocks/server";
+import { chooseOption } from "../../test/select";
 import { renderRoutes } from "../../test/render";
 import { authStore, useAuth } from "./authStore";
 import { useLevel } from "./useLevel";
@@ -129,7 +130,7 @@ describe("HeaderControls", () => {
     expect(avatar).toHaveAttribute("href", "/study/account");
     // default solid avatar carries the first character of the nickname
     expect(avatar).toHaveTextContent("小");
-    expect(screen.getByLabelText("备考等级")).toHaveValue("N2");
+    expect(screen.getByRole("combobox", { name: "备考等级" })).toHaveTextContent("N2");
     // no menu, name or sign-out in the header
     expect(screen.queryByRole("menu")).not.toBeInTheDocument();
     expect(screen.queryByText("退出登录")).not.toBeInTheDocument();
@@ -146,7 +147,7 @@ describe("HeaderControls", () => {
     }));
     authStore.setSession("tok-123", USER);
     renderRoutes([{ path: "study", Component: HeaderControls }], "/study");
-    await user.selectOptions(screen.getByLabelText("备考等级"), "N1");
+    await chooseOption(user, "备考等级", "N1");
     await waitFor(() => expect(body).toEqual({ current_level: "N1" }));
     await waitFor(() => expect(authStore.get().user?.current_level).toBe("N1"));
   });

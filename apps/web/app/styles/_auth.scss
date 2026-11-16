@@ -8,7 +8,6 @@
   justify-self: end;
 }
 
-.level-select select,
 .secondary-button {
   min-height: 40px;
   padding: 0 var(--space-4);
@@ -23,11 +22,6 @@
 
   &:hover { background: var(--color-surface-subtle); }
   &:disabled { opacity: 0.5; cursor: wait; }
-}
-
-.level-select select {
-  min-width: 76px;
-  padding-right: var(--space-3);
 }
 
 .account-links {

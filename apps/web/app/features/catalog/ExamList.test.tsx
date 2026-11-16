@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { ORIGIN, server } from "../../test/mocks/server";
 import { renderRoutes } from "../../test/render";
+import { chooseOption } from "../../test/select";
 import StudyLayout from "../../routes/study";
 import ExamListPage from "../../routes/study.exams._index";
 
@@ -47,21 +48,21 @@ describe("ExamList", () => {
     );
     await screen.findByText("2018年12月 N2");
 
-    await user.selectOptions(screen.getByLabelText("等级", { exact: true }), "N5");
+    await chooseOption(user, "等级", "N5");
     expect(screen.queryByText("2018年12月 N2")).not.toBeInTheDocument();
     expect(screen.getByText("2018年7月 N5")).toBeInTheDocument();
     expect(rendered.router.state.location.search).toBe("?level=N5");
 
-    await user.selectOptions(screen.getByLabelText(/年份/), "2018");
+    await chooseOption(user, "年份", "2018");
     expect(rendered.router.state.location.search).toContain("year=2018");
 
     // year=2018 + level=N5 → still the N5 2018-07 exam
     expect(screen.getByText("2018年7月 N5")).toBeInTheDocument();
     // level=N2 with year=2018 → the N2 2018-12 exam matches again
-    await user.selectOptions(screen.getByLabelText("等级", { exact: true }), "N2");
+    await chooseOption(user, "等级", "N2");
     expect(screen.getByText("2018年12月 N2")).toBeInTheDocument();
     // level=N1 with year=2018 → no match at all
-    await user.selectOptions(screen.getByLabelText("等级", { exact: true }), "N1");
+    await chooseOption(user, "等级", "N1");
     expect(screen.getByText("没有符合条件的试卷。")).toBeInTheDocument();
   });
 
@@ -80,7 +81,7 @@ describe("ExamList", () => {
     expect(screen.queryByText("2018年12月 N2")).not.toBeInTheDocument();
 
     // explicit 全部 writes ?level= and must NOT re-seed on a fresh mount
-    await user.selectOptions(screen.getByLabelText("等级", { exact: true }), "");
+    await chooseOption(user, "等级", "全部");
     expect(screen.getByText("2018年12月 N2")).toBeInTheDocument();
     renderRoutes(
       [{ path: "study", Component: StudyLayout,
