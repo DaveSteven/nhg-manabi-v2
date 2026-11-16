@@ -61,15 +61,17 @@
   &.is-placeholder { color: var(--color-text-muted); }
 }
 
-/* Text mode: no background or border at rest; hover/open show a soft fill,
-   focus keeps the brand ring. */
-.select-trigger--text {
-  border-color: transparent;
-  background: transparent;
+/* Text mode: never any background or border — rest, hover, open. Only the
+   chevron (rotates when open) and the brand focus ring signal interaction. */
+.select-trigger.select-trigger--text {
   font-weight: 600;
 
+  &,
   &:hover:not(:disabled),
-  &.is-open { background: var(--color-surface-subtle); border-color: transparent; }
+  &.is-open {
+    background: transparent;
+    border-color: transparent;
+  }
 }
 
 /* ---- Popover (no overlay; portal + fixed) ---- */
