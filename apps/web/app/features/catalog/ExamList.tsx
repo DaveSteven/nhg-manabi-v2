@@ -1,19 +1,37 @@
 import { Link, useSearchParams } from "react-router";
+import { useEffect, useState } from "react";
 import type { ExamSummary } from "../../api/dto/exam";
 import { describeLoadError } from "../../api/errors";
 import { useExamList } from "./useExamCatalog";
 import { examTitle, examRoute } from "./viewModels";
+import { useLevel } from "../auth/useLevel";
 
 /**
  * Published exam catalog. Real level/year/month/title only — months are
  * whatever the data contains (no hardcoded July/December assumption).
- * Filters live in URL search params so state survives refresh.
+ * Filters live in URL search params so state survives refresh. The
+ * account level preference (ADR-0011) seeds the level filter once on
+ * first visit; afterwards the user's explicit URL choice always wins
+ * (including clearing it back to 全部).
  */
 export function ExamListView() {
   const query = useExamList();
   const [params, setParams] = useSearchParams();
+  const { level: preferredLevel } = useLevel();
+  const [seeded, setSeeded] = useState(false);
   const level = params.get("level") ?? "";
   const year = params.get("year") ?? "";
+
+  useEffect(() => {
+    if (seeded) return;
+    setSeeded(true);
+    if (preferredLevel && !params.get("level")) {
+      const next = new URLSearchParams(params);
+      next.set("level", preferredLevel);
+      setParams(next, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seeded]);
 
   const data = query.data ?? [];
   const levels = [...new Set(data.map((e) => e.level))];
@@ -76,7 +94,9 @@ function updateParam(params: URLSearchParams,
                      setParams: (p: URLSearchParams) => void,
                      key: string, value: string) {
   const next = new URLSearchParams(params);
-  if (value) next.set(key, value);
-  else next.delete(key);
+  // Set explicitly even when empty: an empty value must stay distinguishable
+  // from "never chosen" so the level preference doesn't re-seed a filter
+  // the user just cleared.
+  next.set(key, value);
   setParams(next);
 }

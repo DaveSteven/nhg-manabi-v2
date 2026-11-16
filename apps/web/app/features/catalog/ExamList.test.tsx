@@ -47,7 +47,7 @@ describe("ExamList", () => {
     );
     await screen.findByText("2018年12月 N2");
 
-    await user.selectOptions(screen.getByLabelText(/等级/), "N5");
+    await user.selectOptions(screen.getByLabelText("等级", { exact: true }), "N5");
     expect(screen.queryByText("2018年12月 N2")).not.toBeInTheDocument();
     expect(screen.getByText("2018年7月 N5")).toBeInTheDocument();
     expect(rendered.router.state.location.search).toBe("?level=N5");
@@ -58,10 +58,10 @@ describe("ExamList", () => {
     // year=2018 + level=N5 → still the N5 2018-07 exam
     expect(screen.getByText("2018年7月 N5")).toBeInTheDocument();
     // level=N2 with year=2018 → the N2 2018-12 exam matches again
-    await user.selectOptions(screen.getByLabelText(/等级/), "N2");
+    await user.selectOptions(screen.getByLabelText("等级", { exact: true }), "N2");
     expect(screen.getByText("2018年12月 N2")).toBeInTheDocument();
     // level=N1 with year=2018 → no match at all
-    await user.selectOptions(screen.getByLabelText(/等级/), "N1");
+    await user.selectOptions(screen.getByLabelText("等级", { exact: true }), "N1");
     expect(screen.getByText("没有符合条件的试卷。")).toBeInTheDocument();
   });
 

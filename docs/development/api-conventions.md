@@ -27,6 +27,7 @@
 - 401 未认证、403 未授权、404 不可访问/不存在、409 并发会话/版本冲突、422 校验失败；上传大小与限流另定。
 - 管理端使用单独权限（至少内容校验/发布角色），校验 Agent 不应拥有直接发布权限。
 - 管理端认证（ADR-0009）：`POST /api/admin/auth/login` 换取不透明 Bearer 令牌（12 小时绝对过期，可撤回，库内只存 SHA-256）；缺失/无效/过期令牌 401，角色不足 403（viewer ⊂ reviewer ⊂ publisher）；登录失败一律同一 401 响应，连续 5 次失败锁定 15 分钟；无 dev_test 旁路，学生令牌与管理员令牌互不通用。审核/发布记录的 `reviewer_id` 由服务端写为 `admin:<id>`，不接受客户端传入。
+- 学生端账户认证（ADR-0011）：`POST /api/auth/register`（邮箱+密码，注册后未验证不可登录）、`login`、`logout`、`verify-email`、`resend-verification`、`forgot-password`、`reset-password`；`GET/PATCH /api/me`（display_name、current_level）。会话为 30 天绝对过期的不透明 Bearer 令牌（库内只存 SHA-256，可撤销）；登录失败/未验证/停用/锁定一律同一 401；`resend-verification` 与 `forgot-password` 对任何账号状态统一 200，不泄漏存在性；注册与重置的字段级错误返回 400 `{"detail":{"field","message"}}`；重置成功撤销该用户全部会话；登录连续失败 5 次锁定 15 分钟。作答域身份仍由 `get_current_user_id` 服务端解析：真实会话令牌优先，`AUTH_MODE=dev_test` 仅非生产可用（ADR-0006 语义不变）。
 
 ## 并发和幂等
 

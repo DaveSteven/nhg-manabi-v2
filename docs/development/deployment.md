@@ -28,6 +28,16 @@ uvicorn app.main:app --reload --port 8001
 
 检查 `/health` 只是进程活性，不等于数据库 readiness；必须加真实 `SELECT 1`/迁移版本检查再认为 M0 完成。
 
+## 学生账户邮件配置（ADR-0011）
+
+后端额外读取（可放在 `backend/.env`）：
+
+- `RESEND_API_KEY`：Resend API 密钥；**未设置时为本地开发模式**，验证/重置链接追加写入 `backend/.local/dev-email.log`（不打真实邮件、注册不失败）。
+- `MAIL_FROM`：发件人（如 `JLPT GO <noreply@example.com>`），生产必配。
+- `APP_BASE_URL`：邮件链接指向的学生端地址（本地默认 `http://localhost:5173`；生产改为正式域名）。
+
+生产部署 checklist 必须包含以上三项；缺 key 的生产部署会让用户收不到验证/重置邮件（服务端日志有 error）。
+
 ## 变更与备份
 
 - 禁止把 v2 migration 或 Docker Compose 的挂载目录指向 v1 线上数据库/Volumes/服务器发布目录。

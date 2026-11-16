@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { apiFetch } from "./client";
 import { ApiError } from "./errors";
-import { setDevUserToken } from "./authToken";
 
 function mockFetchOnce(status: number, body: string | null,
                        contentType = "application/json") {

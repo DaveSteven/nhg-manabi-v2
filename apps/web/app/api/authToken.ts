@@ -1,32 +1,32 @@
 /**
- * DEV-ONLY bearer token (ADR-0006 dev_test identity).
+ * Bearer token resolution (ADR-0011).
  *
- * In AUTH_MODE=dev_test the backend treats the bearer token itself as the
- * test user UUID (must be listed in DEV_TEST_USER_IDS) and hard-disables
- * this mechanism in production. There is no real login flow in M2.2; the
- * token comes from build-time env or a localStorage override used by dev
- * tooling. Replace `getBearerToken` when real authentication lands.
+ * The student session token (opaque, 30 days, server-side SHA-256) lives
+ * in localStorage under a dedicated key; authStore (features/auth) keeps
+ * it in sync with the cached profile. VITE_DEV_USER_TOKEN remains the
+ * dev-tooling override (ADR-0006 dev_test identity, production-disabled
+ * server-side). Replace getBearerToken again when real auth hardens.
  */
-const STORAGE_KEY = "dev_user_token";
+const SESSION_KEY = "jlptgo.session_token";
 
 export function getBearerToken(): string | null {
   if (import.meta.env.VITE_DEV_USER_TOKEN) {
     return import.meta.env.VITE_DEV_USER_TOKEN;
   }
   try {
-    return window.localStorage.getItem(STORAGE_KEY);
+    return window.localStorage.getItem(SESSION_KEY);
   } catch {
     // Prerender build or storage-disabled context: no token.
     return null;
   }
 }
 
-export function setDevUserToken(token: string | null): void {
+export function setSessionToken(token: string | null): void {
   try {
     if (token === null) {
-      window.localStorage.removeItem(STORAGE_KEY);
+      window.localStorage.removeItem(SESSION_KEY);
     } else {
-      window.localStorage.setItem(STORAGE_KEY, token);
+      window.localStorage.setItem(SESSION_KEY, token);
     }
   } catch {
     // ignore: storage unavailable

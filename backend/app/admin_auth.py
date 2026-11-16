@@ -5,9 +5,7 @@ dev/test bypass here: an administrator must exist in admin_users and hold
 a live admin_sessions row. Passwords: stdlib scrypt with per-hash salt.
 Session tokens: 256-bit random, only SHA-256 stored.
 """
-import base64
 import hashlib
-import hmac
 import re
 import secrets
 import uuid
@@ -18,14 +16,14 @@ from fastapi.security.utils import get_authorization_scheme_param
 from sqlalchemy import text
 from sqlalchemy.engine import Engine
 
+from app.passwords import hash_password, verify_password
+
 ROLES = ("super_admin",)  # ADR-0010: multi-role hierarchy deferred
 SESSION_TTL = timedelta(hours=12)
 MAX_FAILURES = 5
 LOCK_FOR = timedelta(minutes=15)
 MIN_PASSWORD_LEN = 12
 _USERNAME_RE = re.compile(r"^[a-z0-9._-]{3,40}$")
-
-_SCRYPT_N, _SCRYPT_R, _SCRYPT_P = 2 ** 15, 8, 1
 
 
 class AdminError(ValueError):
@@ -37,29 +35,8 @@ class AdminAuthError(Exception):
 
 
 # ------------------------------------------------------------- passwords ----
-
-def hash_password(password: str) -> str:
-    salt = secrets.token_bytes(16)
-    dk = hashlib.scrypt(password.encode("utf-8"), salt=salt, n=_SCRYPT_N,
-                        r=_SCRYPT_R, p=_SCRYPT_P, maxmem=128 * 1024 * 1024,
-                        dklen=32)
-    b64 = lambda b: base64.b64encode(b).decode("ascii")
-    return f"scrypt${_SCRYPT_N}${_SCRYPT_R}${_SCRYPT_P}${b64(salt)}${b64(dk)}"
-
-
-def verify_password(password: str, stored: str) -> bool:
-    try:
-        scheme, n, r, p, salt, dk = stored.split("$")
-        if scheme != "scrypt":
-            return False
-        expected = base64.b64decode(dk)
-        got = hashlib.scrypt(password.encode("utf-8"),
-                             salt=base64.b64decode(salt), n=int(n), r=int(r),
-                             p=int(p), maxmem=128 * 1024 * 1024,
-                             dklen=len(expected))
-        return hmac.compare_digest(got, expected)
-    except Exception:
-        return False
+# scrypt hash/verify live in app/passwords.py (shared with students,
+# ADR-0011); the admin policy keeps its stricter 12-char minimum.
 
 
 def _check_password_strength(password: str) -> None:

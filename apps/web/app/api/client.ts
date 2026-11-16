@@ -3,7 +3,7 @@ import { getBearerToken } from "./authToken";
 import { ApiError, networkError, normalizeErrorBody } from "./errors";
 
 export interface ApiRequest {
-  method?: "GET" | "POST" | "PUT" | "DELETE";
+  method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   body?: unknown;
   signal?: AbortSignal;
 }
