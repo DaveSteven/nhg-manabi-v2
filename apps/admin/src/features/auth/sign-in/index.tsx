@@ -14,12 +14,12 @@ export function SignIn() {
 
   return (
     <AuthLayout>
-      <Card className='max-w-sm gap-4'>
-        <CardHeader>
+      <Card className='w-full gap-5 py-8'>
+        <CardHeader className='px-8'>
           <CardTitle className='text-lg tracking-tight'>登录</CardTitle>
           <CardDescription>JLPT GO 管理端，仅限管理员。</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className='px-8'>
           <UserAuthForm redirectTo={redirect} />
         </CardContent>
       </Card>

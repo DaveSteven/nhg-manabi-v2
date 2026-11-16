@@ -6,8 +6,8 @@ type AuthLayoutProps = {
 
 export function AuthLayout({ children }: AuthLayoutProps) {
   return (
-    <div className='container grid h-svh max-w-none items-center justify-center'>
-      <div className='mx-auto flex w-full flex-col justify-center space-y-2 py-8 sm:p-8'>
+    <div className='flex min-h-svh w-full items-center justify-center'>
+      <div className='mx-auto flex w-full max-w-lg flex-col justify-center space-y-2 px-4 py-8 sm:px-8'>
         <div className='mb-4 flex items-center justify-center'>
           <Logo className='me-2' />
           <h1 className='text-xl font-medium'>JLPT GO 管理端</h1>
