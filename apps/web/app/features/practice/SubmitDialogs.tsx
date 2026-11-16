@@ -13,10 +13,14 @@ export function UnansweredConfirmDialog({ count, submitting, onConfirm, onCancel
     <div role="dialog" aria-modal="true" aria-label="未答题确认"
          className="dialog card">
       <h2>确认提交</h2>
-      <p>
-        本次有 <strong>{count}</strong> 道题未作答。
-        你可以继续答题，或确认提交。未作答的题将记为「未答」，与错误答案区分。
-      </p>
+      {count > 0 ? (
+        <p>
+          本次有 <strong>{count}</strong> 道题未作答。
+          你可以继续答题，或确认提交。未作答的题将记为「未答」，与错误答案区分。
+        </p>
+      ) : (
+        <p>本组题目已全部作答。提交后本组将锁定，不能再修改。</p>
+      )}
       <div className="dialog-actions">
         <button type="button" onClick={onCancel}>返回答题</button>
         <button type="button" className="primary" disabled={submitting}

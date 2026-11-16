@@ -27,3 +27,7 @@
 - 未在容器内用浏览器走完整学习流程、未测管理端登录与容器内真实发信。
 - 后端无自动化测试覆盖镜像；未测 `down`/重启后的恢复。
 - 无 TLS、备份、日志、restricted DB role；非生产方案。
+
+## 续：提交确认文案（同日）
+- 修复：`UnansweredConfirmDialog` 在 0 道未作答时不再显示「本次有 0 道题未作答」，改为「本组题目已全部作答。提交后本组将锁定，不能再修改。」；有未答时文案不变。新增 `SubmitDialogs.test.tsx` 2 例。
+- 测试：web typecheck 通过；vitest 18 文件 / 141 passed（stderr 仍有既知 happy-dom 卸载噪声）。web 容器已重建并确认产物含新文案；未再次在浏览器走查该对话框。
