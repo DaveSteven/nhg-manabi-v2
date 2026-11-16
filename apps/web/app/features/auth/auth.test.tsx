@@ -123,6 +123,27 @@ describe("HeaderControls", () => {
     expect(screen.queryByRole("link", { name: "用户中心" })).not.toBeInTheDocument();
   });
 
+  it("guests get the level selector too, with a 全部等级 option", async () => {
+    const user = userEvent.setup();
+    renderRoutes([{ path: "study", Component: HeaderControls }], "/study");
+    const sel = screen.getByRole("combobox", { name: "备考等级" });
+    expect(sel).toHaveTextContent("全部等级");
+    await chooseOption(user, "备考等级", "N3");
+    expect(sel).toHaveTextContent("N3");
+    expect(window.localStorage.getItem("jlptgo.level")).toBe("N3");
+    await chooseOption(user, "备考等级", "全部等级");
+    expect(window.localStorage.getItem("jlptgo.level")).toBeNull();
+  });
+
+  it("signed-in students cannot clear their level (no 全部等级 option)", async () => {
+    const user = userEvent.setup();
+    authStore.setSession("tok-123", USER);
+    renderRoutes([{ path: "study", Component: HeaderControls }], "/study");
+    await user.click(screen.getByRole("combobox", { name: "备考等级" }));
+    expect(screen.getAllByRole("option").map((o) => o.textContent))
+      .toEqual(["N5", "N4", "N3", "N2", "N1"]);
+  });
+
   it("signed in: level selector beside an avatar linking to the user center", () => {
     authStore.setSession("tok-123", USER);
     renderRoutes([{ path: "study", Component: HeaderControls }], "/study");

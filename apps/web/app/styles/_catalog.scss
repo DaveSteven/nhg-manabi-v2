@@ -307,12 +307,74 @@ h2 { font-size: var(--text-question); }
   color: var(--color-text-muted);
 }
 
-.exam-list {
+/* Year rows: left column = year, right column = month capsules */
+.exam-years {
   list-style: none;
   margin: 0 0 var(--space-4);
   padding: 0;
+}
+
+.exam-year-row {
   display: grid;
+  grid-template-columns: 88px 1fr;
+  align-items: start;
+  gap: var(--space-4);
+  padding: var(--space-4) 0;
+
+  & + & { border-top: 1px solid var(--color-border); }
+}
+
+.exam-year {
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 44px;
+  font-variant-numeric: tabular-nums;
+}
+
+.exam-chips {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+/* Capsule card */
+.exam-chip {
+  display: inline-flex;
+  align-items: center;
   gap: var(--space-2);
+  min-height: 44px;
+  padding: 0 var(--space-6);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+  color: var(--color-ink);
+  font-weight: 600;
+  text-decoration: none;
+  transition: border-color var(--motion-fast), color var(--motion-fast),
+    transform var(--motion-fast);
+
+  &:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+    transform: translateY(-1px);
+  }
+  &:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+}
+
+.exam-chip-level {
+  padding: 1px var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--color-primary-soft);
+  color: var(--color-primary-hover);
+  font-size: 12px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .exam-chip { transition: none; &:hover { transform: none; } }
 }
 
 .exam-filters {
@@ -320,14 +382,6 @@ h2 { font-size: var(--text-question); }
   flex-wrap: wrap;
   gap: var(--space-4);
   margin-bottom: var(--space-4);
-}
-
-.exam-row {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--space-3);
-  padding: var(--space-3) var(--space-4);
 }
 
 .exam-level {
@@ -344,8 +398,6 @@ h2 { font-size: var(--text-question); }
   flex-shrink: 0;
   align-self: center;
 }
-
-.exam-title { flex: 1; min-width: 12em; }
 
 .feedback-mode {
   display: flex;

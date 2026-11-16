@@ -26,6 +26,14 @@ export function ExamListView() {
   const yearItems = [{ value: "", label: "全部" },
     ...years.map((y) => ({ value: String(y), label: `${y}` }))];
   const filtered = byLevel.filter((e) => !year || String(e.year) === year);
+  // newest year first; within a year: 7月, 12月 … (month ascending, then level)
+  const rows = years
+    .map((y) => ({
+      year: y,
+      items: filtered.filter((e) => e.year === y)
+        .sort((a, b) => a.month - b.month || a.level.localeCompare(b.level)),
+    }))
+    .filter((r) => r.items.length > 0);
 
   return (
     <section aria-label="历年试卷目录">
@@ -53,18 +61,27 @@ export function ExamListView() {
       ) : filtered.length === 0 ? (
         <p>没有符合条件的试卷。</p>
       ) : (
-        <ul className="exam-list">
-          {filtered.map((e: ExamSummary) => (
-            <li key={e.exam_id} className="card exam-row">
-              <span className="exam-level">{e.level}</span>
-              <span className="exam-title">
-                {e.title === examTitle(e) ? examTitle(e)
-                  : `${examTitle(e)} · ${e.title}`}
-              </span>
-              <Link to={examRoute(e.exam_id)}>查看试卷</Link>
+        <ol className="exam-years">
+          {rows.map(({ year: y, items }) => (
+            <li key={y} className="exam-year-row" aria-label={`${y}年`}>
+              <span className="exam-year" aria-hidden="true">{y}</span>
+              <ul className="exam-chips">
+                {items.map((e: ExamSummary) => (
+                  <li key={e.exam_id}>
+                    <Link className="exam-chip" to={examRoute(e.exam_id)}
+                          aria-label={examTitle(e)}
+                          title={e.title === examTitle(e) ? undefined : e.title}>
+                      <span>{e.month}月</span>
+                      {level ? null : (
+                        <span className="exam-chip-level">{e.level}</span>
+                      )}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
             </li>
           ))}
-        </ul>
+        </ol>
       )}
     </section>
   );

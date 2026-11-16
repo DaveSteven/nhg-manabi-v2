@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useSyncExternalStore } from "react";
 import { updateMe, type JlptLevel, JLPT_LEVELS } from "../../api/endpoints/auth";
 import { authStore, useAuth } from "./authStore";
 
@@ -32,18 +32,41 @@ function writeLocal(level: JlptLevel | null): void {
   }
 }
 
+// Guest level is shared by every component through localStorage + a tiny
+// pub/sub, so the header selector and the pages reading it stay in sync.
+const guestListeners = new Set<() => void>();
+
+function subscribeGuest(listener: () => void): () => void {
+  guestListeners.add(listener);
+  window.addEventListener("storage", listener);
+  return () => {
+    guestListeners.delete(listener);
+    window.removeEventListener("storage", listener);
+  };
+}
+
+function guestSnapshot(): JlptLevel | null {
+  return readLocal();
+}
+
+function notifyGuest(): void {
+  guestListeners.forEach((l) => l());
+}
+
 export function useLevel(): {
   level: JlptLevel | null;
   setLevel: (level: JlptLevel) => void;
+  /** Guests only: back to "all levels". Signed-in profiles always have one. */
+  clearLevel: () => void;
 } {
   const auth = useAuth();
-  const [guestLevel, setGuestLevel] = useState<JlptLevel | null>(readLocal);
+  const guestLevel = useSyncExternalStore(
+    subscribeGuest, guestSnapshot, () => null);
 
   const setLevel = useCallback((level: JlptLevel) => {
-    const user = authStore.get().user;
-    if (user) {
-      setGuestLevel(level);
-      writeLocal(level);
+    writeLocal(level);
+    notifyGuest();
+    if (authStore.get().user) {
       updateMe({ current_level: level })
         .then((me) => authStore.setUser({
           id: me.id, email: me.email,
@@ -54,11 +77,14 @@ export function useLevel(): {
         .catch(() => {
           // best-effort: keep the local choice; server wins on next sync
         });
-    } else {
-      setGuestLevel(level);
-      writeLocal(level);
     }
   }, []);
 
-  return { level: auth.user?.current_level ?? guestLevel, setLevel };
+  const clearLevel = useCallback(() => {
+    if (authStore.get().user) return;
+    writeLocal(null);
+    notifyGuest();
+  }, []);
+
+  return { level: auth.user?.current_level ?? guestLevel, setLevel, clearLevel };
 }
