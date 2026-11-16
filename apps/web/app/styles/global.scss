@@ -244,25 +244,24 @@ button {
   padding: var(--space-1);
   border-radius: var(--radius-pill);
   background-color: rgba(255, 255, 255, 0.92);
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
   box-shadow: var(--shadow-card);
   overflow-x: auto;
+  /* No backdrop-filter here on purpose: the nav sits inside the header-row
+     capsule, which has its own backdrop-filter, and a nested backdrop-filter
+     keeps painting a fill/blur layer even at blur(0), so the pill would never
+     look transparent. At 92% white a blur adds nothing visible anyway. */
   /* same duration/easing as .header-row so the two shells swap in lockstep */
   transition:
     background-color var(--motion-normal) ease,
-    box-shadow var(--motion-normal) ease,
-    backdrop-filter var(--motion-normal) ease;
+    box-shadow var(--motion-normal) ease;
 }
 
 /* stuck: the header-row capsule is now the shell, so the nav pill becomes fully
-   transparent (no fill, shadow or blur of its own); it turns white again when
-   the header is released at the top. */
+   transparent (no fill or shadow of its own); it turns white again when the
+   header is released at the top. */
 .site-header.is-stuck .topnav {
   background-color: rgba(255, 255, 255, 0);
   box-shadow: none;
-  -webkit-backdrop-filter: blur(0);
-  backdrop-filter: blur(0);
 }
 
 

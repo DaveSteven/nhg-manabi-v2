@@ -122,3 +122,9 @@
 - `.topnav` 的背景改为 `background-color`，过渡 `background-color / box-shadow / backdrop-filter` 220ms `ease`，与 `.header-row` 完全相同；`.site-header.is-stuck .topnav` 背景透明、无阴影、`blur(0)`。取消吸顶（回到顶部）后背景渐变回 `rgba(255,255,255,0.92)` + 浅阴影 + `blur(8px)`，两层外壳同步交替。`design-system.md` 吸顶态表格的「导航胶囊」行同步。
 - 验证（容器内）：静止 `nav bg=rgba(255,255,255,.92)`、blur 8px、浅阴影，`row bg` 透明；吸顶 `nav bg` 透明、blur 0、无阴影，`row bg=rgba(255,255,255,.78)`；滚回顶部恢复。两元素计算出的 `transition-duration` 均为 0.22s、timing 均为 `ease`；截图确认吸顶时导航只剩当前项的粉色高亮，其余项无底。前端 202 passed，build 通过；纯样式改动无新增断言。
 - 未验证：过渡的实际观感（该窗格中 CSS 过渡不推进，只核对了起止值与 duration/timing）；吸顶态下非当前导航项的文字对比度（在 78% 白的胶囊上，目视可读，未做对比度测量）。
+
+## 续：`.topnav` 去掉 backdrop-filter（同日，用户反馈）
+- 用户在自己的浏览器里发现：吸顶态 `.topnav` 背景设为透明后，必须去掉 `backdrop-filter` 才真的看得到透明。原因：导航嵌套在带 `backdrop-filter` 的外层胶囊内，嵌套的 backdrop-filter 即使 `blur(0)` 也会继续绘制一层；我上一轮只核对了计算值（`blur(0px)`、背景 `rgba(…,0)`），没有发现这点——计算值正确不等于渲染正确。
+- 修复：`.topnav` 完全移除 `backdrop-filter`（含 `-webkit-`）及其过渡；92% 白底上本来也看不出自身模糊。过渡只剩 `background-color` 与 `box-shadow`，时长/缓动仍与 `header-row` 一致（220ms ease）。`design-system.md` 吸顶态「导航胶囊」行补充此约束与原因。
+- 验证：容器内干净加载并关闭过渡后滚动，吸顶态 `nav` 背景 `rgba(255,255,255,0)`、阴影 none、`backdrop-filter: none`，截图中导航只剩当前项高亮，无白色底；vitest 22 文件 / 202 passed；build 通过。
+- 注意：该浏览器窗格不推进 CSS 过渡，我之前一次脚本里留下的未完成过渡会让随后的截图显示过期的中间色（曾出现「吸顶时导航仍是白底」的假象），验证时需先关闭过渡并重新加载页面。过渡动画本身的观感仍未在该窗格验证。
