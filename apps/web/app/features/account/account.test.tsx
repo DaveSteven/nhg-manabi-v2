@@ -44,7 +44,7 @@ describe("AccountPage", () => {
     renderAccount();
     expect(screen.getByText("小明", { selector: ".account-display-name" }))
       .toBeInTheDocument();
-    expect(screen.getByText("student@example.com")).toBeInTheDocument();
+    expect(screen.getAllByText("student@example.com").length).toBeGreaterThan(0);
     expect(screen.getByLabelText("备考等级")).toHaveValue("N2");
   });
 

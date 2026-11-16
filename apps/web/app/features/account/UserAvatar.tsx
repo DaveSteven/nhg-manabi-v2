@@ -13,7 +13,7 @@ interface AvatarUser {
  */
 export function UserAvatar({ user, size = "md" }: {
   user: AvatarUser;
-  size?: "md" | "lg";
+  size?: "md" | "lg" | "xl";
 }) {
   const url = avatarUrl(user.avatar);
   const cls = `user-avatar user-avatar-${size}`;

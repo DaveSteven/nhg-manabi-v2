@@ -3,13 +3,14 @@ import { Navigate, useNavigate } from "react-router";
 import { useAuth } from "../auth/authStore";
 import { JLPT_LEVELS, useLevel } from "../auth/useLevel";
 import { EditProfileDialog } from "./EditProfileDialog";
-import { signOut } from "./AccountMenu";
+import { signOut } from "./signOut";
 import { UserAvatar } from "./UserAvatar";
 
 /**
- * 用户中心 (/study/account): identity card with avatar/nickname/email,
- * edit entry, target-level preference, sign-out. Only real account data —
- * study statistics land with the M3 progress model, not faked here.
+ * 用户中心 (/study/account), v1-style two columns: identity card on the
+ * left (avatar/nickname/email/edit), grouped setting cards on the right
+ * (target level, account). Only real account data — study statistics
+ * land with the M3 progress model, not faked here. Stacks on narrow screens.
  */
 export function AccountPage() {
   const auth = useAuth();
@@ -25,10 +26,10 @@ export function AccountPage() {
 
   return (
     <div className="account-page">
-      <h1>用户中心</h1>
+      <h1 className="account-title">用户中心</h1>
 
-      <section className="card account-card" aria-label="个人资料">
-        <UserAvatar user={user} size="lg" />
+      <aside className="card account-profile" aria-label="个人资料">
+        <UserAvatar user={user} size="xl" />
         <div className="account-identity">
           <p className="account-display-name">{user.display_name}</p>
           <p className="text-aux">{user.email}</p>
@@ -37,32 +38,52 @@ export function AccountPage() {
                 onClick={() => setEditing(true)}>
           编辑资料
         </button>
-      </section>
+      </aside>
 
-      <section className="card account-card account-level" aria-label="备考设置">
-        <label>
-          <span>备考等级</span>
-          <select value={level ?? ""}
-                  onChange={(e) => {
-                    if (e.target.value) setLevel(e.target.value as (typeof JLPT_LEVELS)[number]);
-                  }}>
-            <option value="">未设置</option>
-            {JLPT_LEVELS.map((l) => <option key={l} value={l}>{l}</option>)}
-          </select>
-        </label>
-        <p className="text-aux">用于试卷列表的默认等级筛选。</p>
-      </section>
+      <div className="account-groups">
+        <section className="card account-group" aria-label="备考目标">
+          <h2 className="account-group-title">备考目标</h2>
+          <div className="account-row">
+            <div className="account-row-text">
+              <strong>目标级别</strong>
+              <small>试卷列表默认按此级别筛选</small>
+            </div>
+            <select aria-label="备考等级" value={level ?? ""}
+                    onChange={(e) => {
+                      if (e.target.value) {
+                        setLevel(e.target.value as (typeof JLPT_LEVELS)[number]);
+                      }
+                    }}>
+              <option value="">未设置</option>
+              {JLPT_LEVELS.map((l) => <option key={l} value={l}>{l}</option>)}
+            </select>
+          </div>
+        </section>
 
-      <section className="account-actions">
-        <button type="button" className="secondary-button" disabled={busy}
-                onClick={async () => {
-                  setBusy(true);
-                  await signOut();
-                  navigate("/study");
-                }}>
-          退出登录
-        </button>
-      </section>
+        <section className="card account-group" aria-label="账号">
+          <h2 className="account-group-title">账号</h2>
+          <div className="account-row">
+            <div className="account-row-text">
+              <strong>登录邮箱</strong>
+              <small>{user.email}</small>
+            </div>
+          </div>
+          <div className="account-row">
+            <div className="account-row-text">
+              <strong>结束本次会话</strong>
+              <small>退出后需要重新登录</small>
+            </div>
+            <button type="button" className="secondary-button" disabled={busy}
+                    onClick={async () => {
+                      setBusy(true);
+                      await signOut();
+                      navigate("/study");
+                    }}>
+              退出登录
+            </button>
+          </div>
+        </section>
+      </div>
 
       {editing ? (
         <EditProfileDialog user={user} onClose={() => setEditing(false)} />
