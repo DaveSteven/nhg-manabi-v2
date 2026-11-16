@@ -1,4 +1,6 @@
-# devlog · 2026-11-16 · 学生账户体系（注册/登录）· 后端完成，前端实现完成、测试进行中
+# devlog · 2026-11-16 · 学生账户体系（注册/登录）· 完成
+
+> 状态更新（同日晚间续）：本条目上半部分为会话暂停时的快照；**任务现已全部完成**，见文末「续：完成情况」。
 
 ## 范围
 
@@ -28,13 +30,30 @@
 
 ## 尚未完成（下次继续）
 
-1. auth 专项前端测试（store 持久化、useLevel 双轨、HeaderControls 两态、登录/注册/验证页交互、DTO 契约）。
-2. 真实浏览器走查：注册→（本地 dev 邮件日志取链接）→验证→登录→等级切换同步→退出→与练习会话的跨账号隔离。**注意：本地已配真实 RESEND_API_KEY（backend/.env），走查时应临时移除该变量改走 dev 邮件日志，避免向真实地址发信。**
-3. 8001 端口的后端进程需重启才能加载新的 auth 路由；走查前先重启。
-4. 本 devlog 与 progress 更新随本提交入库；整体任务在下一次会话完成后才算收尾。
+（已全部完成，见下节。）
+
+## 续：完成情况（同日晚间）
+
+1. **auth 专项前端测试**：`features/auth/auth.test.tsx` 14 例（store 持久化与订阅、useLevel 访客/登录双轨与 PATCH 失败容错、HeaderControls 两态、登录/注册/验证/找回/重置五个页面交互含字段级错误映射、`fieldErrorFrom`）。**前端全量 17 文件 / 139 passed**；typecheck、production build 通过。
+2. **真实浏览器走查（真实 Chrome + 真实 uvicorn:8001 + 开发库；后端进程临时移除 RESEND_API_KEY，邮件走 `backend/.local/dev-email.log`，未发任何真实邮件）**，全部通过：注册→取验证链接→激活→同链接重放幂等（already）→未验证登录被统一 401 文案拒绝→登录→顶栏显示昵称→等级切 N1→刷新后会话与等级保持（服务端核验 `users.current_level='N1'`）→退出→刷新仍为登出（会话 revoked，DB 核验）；试卷目录偏好种子（干净访问种入 `?level=N1`）、显式「全部」(`?level=`) 刷新后不再被重种（见下）。
+3. 走查抓到并修复 **3 个真实缺陷**：
+   - `VerifyEmailPage` effect 被 React Router 默认 `entry.client.tsx` 的 `<StrictMode>` 双触发：第一次消费令牌返回 ok、第二次返回 already；后被 alive-flag 与单发守卫组合卡死在「验证中」。修复：per-token 单发守卫 + 去掉 alive 标志（StrictMode cleanup 不吞唯一在途请求）。
+   - sticky 头部 `pointer-events:none` 穿透后，恢复选择器仍写旧类名 `.header-controls`，新组件 `.header-controls-inner` 继承 none，「退出」按钮不可点击。修复选择器。
+   - ExamList 偏好种子判断 `!params.get("level")` 把显式空值（`?level=`=全部）当未选择，刷新被重种回偏好等级；改严格 `=== null` 判断，并补「种子一次 + 全部存活」回归测试。
+4. **用户新决定（2026-11-16）：等级选择器仅登录后显示**（访客不显示）。`HeaderControls` 按登录态渲染；测试覆盖访客无选择器/登录显示两态；真实浏览器确认访客顶栏无选择器。
+5. 8001 后端以新代码重启验证（auth 路由生效）；走查完成后两台 dev server 已停止。
+
+## 测试（真实结果，续）
+
+- 后端全量：**154 passed + 2 skipped**（环境性 skip，与本次无关）。
+- 前端全量：**17 文件 / 139 passed**（新增 14 例 auth + 1 例 ExamList 种子回归）。
+- `pnpm typecheck`、`pnpm build`（含 SSG/SPA 产物与凭据泄漏检查）：通过。
+- 服务端 DB 核验：走查用户 `current_level='N1'`、未验证账户 `activated_at NULL`、logout 后 `user_sessions.revoked_at` 非空。
+- `backend/.local/dev-email.log` 确认 gitignored，未提交。
 
 ## 已知风险 / 记录
 
 - 无 IP 级限流（锁定列 + 统一 401 + scrypt 成本为底线），随部署硬化处理（ADR-0011 已记录）。
-- iOS Safari 不支持 `background-attachment: fixed`（上条 devlog 遗留，与本次无关）。
-- `background` 渐变与顶栏透明化的两个走查遗留项同样未处理（上条 devlog）。
+- 生产部署必须配置 `RESEND_API_KEY`/`MAIL_FROM`/`APP_BASE_URL`，否则用户收不到验证/重置邮件（本地走 dev 日志）。
+- React Router 默认入口带 StrictMode：今后写「只应执行一次」的 effect 必须做防重触发（见 VerifyEmailPage 修复注释）。
+- iOS Safari 不支持 `background-attachment: fixed`（上一条 devlog 遗留，与本次无关）。

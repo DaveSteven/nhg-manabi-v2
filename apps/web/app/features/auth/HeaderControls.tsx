@@ -5,14 +5,16 @@ import { useAuth, authStore } from "./authStore";
 import { useLevel, JLPT_LEVELS } from "./useLevel";
 
 /**
- * Right slot of the study header (design v1.1 §3.1): the JLPT target
- * level selector and the account entry. Both render real state only —
- * no fake avatar.
+ * Right slot of the study header (design v1.1 §3.1): account entry, plus
+ * the JLPT target-level selector for signed-in students (user decision
+ * 2026-11-16: guests don't see the selector). Real state only — no fake
+ * avatar.
  */
 export function HeaderControls() {
+  const auth = useAuth();
   return (
     <div className="header-controls-inner">
-      <LevelSelect />
+      {auth.user ? <LevelSelect /> : null}
       <AccountArea />
     </div>
   );

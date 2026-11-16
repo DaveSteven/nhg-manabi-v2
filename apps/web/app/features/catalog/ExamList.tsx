@@ -25,7 +25,9 @@ export function ExamListView() {
   useEffect(() => {
     if (seeded) return;
     setSeeded(true);
-    if (preferredLevel && !params.get("level")) {
+    // Seed only when the user never chose a level. An EMPTY value
+    // ("?level=") is an explicit 全部 and must not re-seed on reload.
+    if (preferredLevel && params.get("level") === null) {
       const next = new URLSearchParams(params);
       next.set("level", preferredLevel);
       setParams(next, { replace: true });

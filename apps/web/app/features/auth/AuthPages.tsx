@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   fieldErrorFrom,
   forgotPassword,
@@ -193,14 +193,18 @@ export function VerifyEmailPage() {
   const token = params.get("token") ?? "";
   const [state, setState] = useState<"working" | "ok" | "already" | "invalid">(
     token ? "working" : "invalid");
+  // StrictMode dev double-invokes effects; verification is one-shot on the
+  // server (a second call returns "already"), so fire once per token.
+  const firedToken = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!token) return;
-    let alive = true;
+    if (!token || firedToken.current === token) return;
+    firedToken.current = token;
+    // No alive-flag: StrictMode's cleanup must not swallow the single
+    // in-flight verification (setState after unmount is a safe no-op).
     verifyEmail(token)
-      .then((r) => { if (alive) setState(r === "already" ? "already" : "ok"); })
-      .catch(() => { if (alive) setState("invalid"); });
-    return () => { alive = false; };
+      .then((r) => setState(r === "already" ? "already" : "ok"))
+      .catch(() => setState("invalid"));
   }, [token]);
 
   return (

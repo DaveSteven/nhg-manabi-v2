@@ -65,6 +65,33 @@ describe("ExamList", () => {
     expect(screen.getByText("没有符合条件的试卷。")).toBeInTheDocument();
   });
 
+  it("seeds the level preference once, and an explicit 全部 survives reload", async () => {
+    const user = userEvent.setup();
+    useExamsHandler();
+    window.localStorage.setItem("jlptgo.level", "N5");
+    // first visit: preference seeds the URL (replace, not push)
+    const rendered = renderRoutes(
+      [{ path: "study", Component: StudyLayout,
+         children: [{ path: "exams", Component: ExamListPage }] }],
+      "/study/exams",
+    );
+    await screen.findByText("2018年7月 N5");
+    expect(rendered.router.state.location.search).toBe("?level=N5");
+    expect(screen.queryByText("2018年12月 N2")).not.toBeInTheDocument();
+
+    // explicit 全部 writes ?level= and must NOT re-seed on a fresh mount
+    await user.selectOptions(screen.getByLabelText("等级", { exact: true }), "");
+    expect(screen.getByText("2018年12月 N2")).toBeInTheDocument();
+    renderRoutes(
+      [{ path: "study", Component: StudyLayout,
+         children: [{ path: "exams", Component: ExamListPage }] }],
+      "/study/exams?level=",
+    );
+    await screen.findByText("2018年12月 N2");
+    expect(screen.getByText("2019年7月 N1")).toBeInTheDocument();
+    window.localStorage.removeItem("jlptgo.level");
+  });
+
   it("links to exam detail routes", async () => {
     useExamsHandler();
     const rendered = renderRoutes(
