@@ -61,8 +61,9 @@
   &.is-placeholder { color: var(--color-text-muted); }
 }
 
-/* Text mode: never any background or border — rest, hover, open. Only the
-   chevron (rotates when open) and the brand focus ring signal interaction. */
+/* Text mode: never any background or border — rest, hover, open. Hover/open
+   turn the text and arrow to the theme colour; the arrow rotates when open and
+   the brand focus ring shows on keyboard focus. */
 .select-trigger.select-trigger--text {
   font-weight: 600;
 
@@ -71,6 +72,14 @@
   &.is-open {
     background: transparent;
     border-color: transparent;
+  }
+
+  /* hover / open: text + arrow turn the theme colour */
+  &:hover:not(:disabled),
+  &.is-open {
+    color: var(--color-primary);
+
+    .select-chevron { color: currentColor; }
   }
 }
 
