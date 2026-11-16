@@ -2,6 +2,7 @@ import type { MetaFunction } from "react-router";
 import { Link, Outlet } from "react-router";
 import { TopNav } from "../components/TopNav";
 import { HeaderControls } from "../features/auth/HeaderControls";
+import { useScrolled } from "../components/useScrolled";
 
 /**
  * /study SPA layout (design-system.md v1.1 §3.1): brand left, centered
@@ -15,18 +16,22 @@ export const meta: MetaFunction = () => [
 ];
 
 export default function StudyLayout() {
+  // once the sticky header sits over scrolled content its row becomes a capsule
+  const stuck = useScrolled();
   return (
     <div className="study-shell">
-      <header className="site-header">
-        <div className="container header-row">
-          <Link to="/" className="brand">
-            <span className="brand-mark" aria-hidden="true">日</span>
-            <span className="brand-name">
-              JLPT GO <span className="brand-version">2.0</span>
-            </span>
-          </Link>
-          <TopNav />
-          <HeaderControls />
+      <header className={stuck ? "site-header is-stuck" : "site-header"}>
+        <div className="container">
+          <div className="header-row">
+            <Link to="/" className="brand">
+              <span className="brand-mark" aria-hidden="true">日</span>
+              <span className="brand-name">
+                JLPT GO <span className="brand-version">2.0</span>
+              </span>
+            </Link>
+            <TopNav />
+            <HeaderControls />
+          </div>
         </div>
       </header>
       <main className="container">

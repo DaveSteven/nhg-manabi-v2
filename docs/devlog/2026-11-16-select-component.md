@@ -106,3 +106,10 @@
 - 设计规范：`design-system.md` §7.2 增加 H1–H6 表（含窄屏与用途、使用规则）与 §13.1 Token。
 - 测试：typecheck 通过；vitest 21 文件 / 201 passed；build 通过（纯样式改动，无新增断言）。容器内浏览器：桌面 h1 计算值 38px、首页区块标题 24px；375px 下 h1 30px、单行、无横向溢出；找回密码卡片标题 38px 观感可接受。
 - 未逐页核对：试卷大纲页、练习页、结果页、对话框在新字号下的排版；深色模式；平板宽度（721–1023px 仍用桌面梯度）。H1 变大后首页标题区、用户中心标题的上下间距沿用旧值，未专门调整。
+
+## 续：吸顶后 header-row 变胶囊并带过渡（同日，用户指示）
+- `useScrolled(8)`（`components/useScrolled.ts`，被动 scroll 监听）；`StudyLayout` 的 `<header>` 在滚动超过 8px 时加 `is-stuck`。`.header-row` 始终带一层透明的胶囊外壳（1px 透明边框、36px 圆角、`8px 16px` 内边距 + 等量负外边距），吸顶后背景变 78% 白 + 14px 模糊、出现边框与浮层阴影；背景/边框/阴影/模糊 220ms 过渡，`prefers-reduced-motion` 下关闭。
+- 过程发现：原 `header-row` 与页面 `.container` 是同一个元素（`class="container header-row"`），我给它加的内边距/外边距覆盖了 container 的水平内边距，品牌被推到了视口边缘（x=1）。已拆为 `<div class="container"><div class="header-row">`，改后品牌 x=33、页面标题 x=32，对齐一致。
+- 测试：新增 1 例（滚动阈值 8px：3px 不触发、120px 触发、回 0 取消）；typecheck 通过；vitest 22 文件 / 202 passed；build 通过。容器内浏览器：静止态背景全透明；滚动 300px 后 `is-stuck`、背景 `rgba(255,255,255,0.78)`、模糊 14px、边框与阴影生效；两种状态下 header 高度均 98px、品牌 x 均 33，无布局位移；截图确认内容在半透明胶囊下滚动。
+- 未验证：过渡动画本身的观感（该浏览器窗格中 CSS 过渡不推进，只核对了起止状态的计算值）；375px 窄屏下多行折叠头部的胶囊观感；深色模式；Firefox/Safari 对 `backdrop-filter` 的表现（Firefox 已支持，旧版 Safari 需 `-webkit-` 前缀，未加）。
+- 规范冲突：design-system §3.1 写着「Logo 不与主导航强行包在同一胶囊容器内」「不使用通栏背景色」，已在 §3.1 末尾新增「吸顶态」小节说明仅吸顶态例外。
