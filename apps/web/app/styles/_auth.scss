@@ -1,6 +1,6 @@
 /* Auth pages + header account controls (ADR-0011). Tokens only. */
 
-/* Header right slot: guest sign-in links (signed-in avatar: _account.scss) */
+/* Header right slot: guest sign-in links (signed-in: level + avatar, _account.scss) */
 .header-controls-inner {
   display: flex;
   align-items: center;
@@ -8,6 +8,7 @@
   justify-self: end;
 }
 
+.level-select select,
 .secondary-button {
   min-height: 40px;
   padding: 0 var(--space-4);
@@ -22,6 +23,11 @@
 
   &:hover { background: var(--color-surface-subtle); }
   &:disabled { opacity: 0.5; cursor: wait; }
+}
+
+.level-select select {
+  min-width: 76px;
+  padding-right: var(--space-3);
 }
 
 .account-links {

@@ -180,12 +180,6 @@ export function StudyHome() {
       <section aria-label="历年试卷入口" className="exam-entry">
         <div className="section-head">
           <h2>历年试卷</h2>
-          {level ? (
-            <Link className="level-chip" to="/study/account"
-                  aria-label={`备考等级 ${level}，前往用户中心修改`}>
-              {level}
-            </Link>
-          ) : null}
           <p className="section-hint">按年份进行完整练习，熟悉考试形式</p>
           <Link className="section-more" to="/study/exams">
             查看全部<span aria-hidden="true"> →</span>

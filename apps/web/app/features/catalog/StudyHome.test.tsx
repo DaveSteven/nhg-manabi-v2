@@ -148,7 +148,7 @@ describe("StudyHome", () => {
     const USER = { id: "u1", email: "a@example.com", display_name: "小明",
                    current_level: "N2" as const, avatar: null };
 
-    it("shows only the signed-in student's level, with a level chip", async () => {
+    it("shows only the signed-in student's level", async () => {
       server.use(http.get(`*/api/exams`, () => HttpResponse.json([
         exam("a", "N1", 2025), exam("b", "N2", 2024), exam("c", "N2", 2023),
         exam("d", "N5", 2022),
@@ -160,8 +160,6 @@ describe("StudyHome", () => {
       expect(within(entry).getByText("2023年")).toBeInTheDocument();
       expect(within(entry).queryByText("2025年")).not.toBeInTheDocument();
       expect(within(entry).queryByText("2022年")).not.toBeInTheDocument();
-      expect(within(entry).getByRole("link", { name: /备考等级 N2/ }))
-        .toHaveAttribute("href", "/study/account");
     });
 
     it("explains an empty level instead of showing other levels", async () => {
@@ -174,14 +172,13 @@ describe("StudyHome", () => {
       expect(screen.queryByText("2025年")).not.toBeInTheDocument();
     });
 
-    it("without a level, shows the latest exams of all levels and no chip", async () => {
+    it("without a level, shows the latest exams of all levels", async () => {
       server.use(http.get(`*/api/exams`, () => HttpResponse.json([
         exam("a", "N1", 2025), exam("b", "N2", 2024),
       ])));
       renderHome();
       expect(await screen.findByText("2025年")).toBeInTheDocument();
       expect(screen.getByText("2024年")).toBeInTheDocument();
-      expect(screen.queryByRole("link", { name: /备考等级/ })).not.toBeInTheDocument();
     });
   });
 });

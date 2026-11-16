@@ -1,5 +1,5 @@
 import { beforeAll, afterAll, afterEach, describe, expect, it } from "vitest";
-import { screen } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { ORIGIN, server } from "../../test/mocks/server";
@@ -122,19 +122,33 @@ describe("HeaderControls", () => {
     expect(screen.queryByRole("link", { name: "用户中心" })).not.toBeInTheDocument();
   });
 
-  it("signed in: only the avatar, linking straight to the user center", () => {
+  it("signed in: level selector beside an avatar linking to the user center", () => {
     authStore.setSession("tok-123", USER);
     renderRoutes([{ path: "study", Component: HeaderControls }], "/study");
     const avatar = screen.getByRole("link", { name: "用户中心" });
     expect(avatar).toHaveAttribute("href", "/study/account");
     // default solid avatar carries the first character of the nickname
     expect(avatar).toHaveTextContent("小");
-    // no menu, name, level selector or sign-out in the header
+    expect(screen.getByLabelText("备考等级")).toHaveValue("N2");
+    // no menu, name or sign-out in the header
     expect(screen.queryByRole("menu")).not.toBeInTheDocument();
-    expect(screen.queryByLabelText("备考等级")).not.toBeInTheDocument();
     expect(screen.queryByText("退出登录")).not.toBeInTheDocument();
     expect(screen.queryByText("小明")).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "登录" })).not.toBeInTheDocument();
+  });
+
+  it("changing the header level syncs to the profile", async () => {
+    const user = userEvent.setup();
+    let body: unknown = null;
+    server.use(http.patch(`${ORIGIN}/api/me`, async ({ request }) => {
+      body = await request.json();
+      return HttpResponse.json({ ...USER, current_level: "N1", activated: true });
+    }));
+    authStore.setSession("tok-123", USER);
+    renderRoutes([{ path: "study", Component: HeaderControls }], "/study");
+    await user.selectOptions(screen.getByLabelText("备考等级"), "N1");
+    await waitFor(() => expect(body).toEqual({ current_level: "N1" }));
+    await waitFor(() => expect(authStore.get().user?.current_level).toBe("N1"));
   });
 
   it("renders the chosen avatar image", () => {

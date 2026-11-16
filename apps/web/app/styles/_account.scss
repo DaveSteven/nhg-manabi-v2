@@ -193,18 +193,3 @@
 }
 
 .form-error { margin: 0; color: var(--color-danger); font-size: 14px; }
-
-/* ---- level chip beside a section heading (home 历年试卷) ---- */
-.level-chip {
-  display: inline-flex;
-  align-items: center;
-  padding: 2px var(--space-3);
-  border-radius: var(--radius-pill);
-  background: var(--color-primary-soft);
-  color: var(--color-primary);
-  font-size: 13px;
-  font-weight: 700;
-  text-decoration: none;
-
-  &:hover { background: var(--color-primary); color: #fff; }
-}
