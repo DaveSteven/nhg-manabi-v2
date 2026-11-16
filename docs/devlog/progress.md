@@ -21,7 +21,7 @@
 
 - **M2 核心学习流程**（计划见 `docs/development/M2-core-learning-flow.md`）：FastAPI 作答引擎 → React 学习页面 → 端到端验收。**M2.1 全部完成（Task 01–08）**，下一步 M2.2 Task 09–11（React 学习页面）。
 - **M2.2 前端实施准备（2026-11-16）**：新增 `docs/development/M2.2-frontend-implementation.md`，已明确 React Router Framework Mode SSG+SPA、学习首页、试卷目录、Canonical Unit/RichText/听力渲染、草稿与提交反馈、自动恢复及测试验收。可先实施工程/只读页面/renderer；答题闭环现在可直接对接 Task 05–08 已落地的 API（见下）与集成测试。`apps/web` 当前仍只有 README，未创建 React 工程。
-- **Claude 项目开发入口（2026-11-16）**：新增根目录 `CLAUDE.md` 与 `.claude/skills/nhg-manabi-development/SKILL.md`。Claude Code 进入仓库后先导入并完整读取 `AGENTS.md`，再强制加载开发 skill，用于所有开发类任务的文档路由、工作树保护、测试真实性与 devlog/progress/同批提交收尾。
+- **Claude 项目开发入口与分支流程（2026-11-16）**：根目录 `CLAUDE.md` 与 `.claude/skills/nhg-manabi-development/SKILL.md` 强制 Claude Code 先读取 `AGENTS.md`，再执行文档路由、工作树保护、测试真实性与收尾要求；日常开发/提交统一使用 `develop`，`main` 仅记录成功上线状态，只有上线验收完成并获用户明确确认后才合并。
 
 ## 未开始（按依赖顺序）
 

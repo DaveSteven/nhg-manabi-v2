@@ -15,7 +15,7 @@ Use this skill for every development task in `nhg-manabi-v2`, including tasks th
    - `docs/README.md`
    - `docs/decisions/README.md`
    - `docs/devlog/progress.md`
-3. Inspect `git status --short --branch`, recent commits, and the target files. Preserve unrelated or concurrent changes; do not overwrite them or fold them into the task's commit.
+3. Inspect `git status --short --branch`, recent commits, and the target files. Ordinary development belongs on `develop`; if currently on `main`, do not edit or commit there. Preserve unrelated or concurrent changes and change branches only when it is safe to do so.
 4. Read the task-specific documents below before proposing or implementing a solution.
 5. State the task scope, applicable constraints, actual current implementation state, and any conflicts between documentation and code. Do not treat a plan, suggestion, or uncommitted code as completed functionality.
 
@@ -42,7 +42,10 @@ Read only the relevant branch in addition to the four mandatory files above. Fol
 - For Schema changes, create a new Alembic revision and verify real PostgreSQL upgrade, constraints, and rollback. Do not create tables at application runtime.
 - Use the server as authority for identity, Session state, submitted answers, feedback permission, and results. Client hiding is not an authorization boundary.
 - Run checks proportional to the changed area and record their real outputs. Never report a skipped or unavailable check as passed.
-- Do not publish content, modify production data, push Git commits, or touch external systems unless the user explicitly authorizes that action.
+- Commit ordinary implementation and documentation to `develop`. `main` represents code that has already been deployed successfully, not merely code that passed local tests.
+- Deployment uses a reviewed, verified `develop` commit. Merge the deployed `develop` state into `main` only after deployment succeeds, acceptance is complete, and the user explicitly confirms the merge. If deployment fails or rolls back, leave `main` unchanged and continue fixes on `develop`.
+- Do not publish content, modify production data, push branches, deploy, merge into `main`, or touch other external systems unless the user explicitly authorizes that specific action.
+- A user-directed emergency hotfix may start from `main`; after successful deployment, synchronize the hotfix back to `develop` so the branches do not diverge.
 
 ## Before declaring completion
 
@@ -52,7 +55,7 @@ Complete all repository closeout requirements in the same change:
 2. Update `docs/devlog/progress.md` to match the repository's real state without overstating completion.
 3. Add or update an ADR only when architecture or a durable product decision changed.
 4. Run `git diff --check`, the relevant tests/static checks, and inspect the final diff and worktree for unrelated files.
-5. Commit implementation, tests, devlog, progress, and any ADR together. Do not include another agent's or user's unrelated changes. Do not push unless explicitly asked.
-6. Report the commit ID, verification results, skipped checks, remaining risks, and whether the branch is ahead of its remote.
+5. Commit implementation, tests, devlog, progress, and any ADR together on `develop`. Do not include another agent's or user's unrelated changes. Do not push, deploy, or merge to `main` unless explicitly asked and the release condition above is satisfied.
+6. Report the branch, commit ID, verification results, skipped checks, remaining risks, and whether the branch is ahead of its remote.
 
 If the task is only an investigation or review and the user did not request changes, do not create a commit or mutate project files; report findings with file evidence instead.
