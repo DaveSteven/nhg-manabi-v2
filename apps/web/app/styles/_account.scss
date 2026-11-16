@@ -58,7 +58,6 @@
 .account-title {
   grid-column: 1 / -1;
   margin: 0;
-  font-size: var(--text-heading);
 }
 
 .account-profile {
@@ -132,7 +131,7 @@
   display: grid;
   gap: var(--space-4);
 
-  h2 { margin: 0; font-size: 18px; }
+  h2 { margin: 0; font-size: var(--text-h4); } /* dialog title */
 }
 
 .edit-avatar-row {

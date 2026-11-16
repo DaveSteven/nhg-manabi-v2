@@ -55,7 +55,13 @@
   --text-aux: 12px;
   --text-body: 15px;
   --text-question: 17px;
-  --text-heading: 22px;
+  /* heading scale H1–H6 (design-system §7.2); mobile steps down below */
+  --text-h1: 38px;
+  --text-h2: 30px;
+  --text-h3: 24px;
+  --text-h4: 20px;
+  --text-h5: 17px;
+  --text-h6: 15px;
 
   /* layout (v1.1 §4.1 / §3.1) */
   --page-max-width: 1280px;
@@ -74,4 +80,13 @@
 
   /* audio dock (fixed bottom player) + safe area reserve */
   --audio-dock-height: 64px;
+}
+
+@media (max-width: 720px) {
+  :root {
+    --text-h1: 30px;
+    --text-h2: 26px;
+    --text-h3: 22px;
+    --text-h4: 19px;
+  }
 }

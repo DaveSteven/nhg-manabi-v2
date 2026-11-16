@@ -72,7 +72,7 @@ export default function ResultsRoute() {
         </div>
       </dl>
 
-      <h2>逐题复盘</h2>
+      <h2 className="module-title">逐题复盘</h2>
       <ol className="results-review">
         {data.questions.map((q) => {
           const verdict = resultVerdict(q);
