@@ -1,4 +1,4 @@
-"""Administrator identity (ADR-0009): accounts, sessions, role gating.
+"""Administrator identity (ADR-0009, roles simplified by ADR-0010).
 
 Separate from student identity (app/auth.py). There is deliberately NO
 dev/test bypass here: an administrator must exist in admin_users and hold
@@ -18,7 +18,7 @@ from fastapi.security.utils import get_authorization_scheme_param
 from sqlalchemy import text
 from sqlalchemy.engine import Engine
 
-ROLES = ("viewer", "reviewer", "publisher")  # ordered, each includes the previous
+ROLES = ("super_admin",)  # ADR-0010: multi-role hierarchy deferred
 SESSION_TTL = timedelta(hours=12)
 MAX_FAILURES = 5
 LOCK_FOR = timedelta(minutes=15)
@@ -215,11 +215,9 @@ def _bearer(authorization: str | None) -> str | None:
     return token if scheme.lower() == "bearer" and token else None
 
 
-def require_admin(min_role: str = "viewer"):
-    """Dependency factory: 401 without a valid admin session, 403 if the
-    role is below ``min_role``. No bypass of any kind."""
-    if min_role not in ROLES:
-        raise ValueError(min_role)
+def require_admin():
+    """Dependency factory: 401 without a valid admin session. Every admin is
+    a super_admin (ADR-0010). No bypass of any kind."""
 
     def dep(authorization: str | None = Header(default=None)) -> dict:
         from app.db.engine import get_engine
@@ -227,8 +225,6 @@ def require_admin(min_role: str = "viewer"):
         admin = authenticate_token(get_engine(), token) if token else None
         if admin is None:
             raise HTTPException(status_code=401, detail="admin authentication required")
-        if ROLES.index(admin["role"]) < ROLES.index(min_role):
-            raise HTTPException(status_code=403, detail="insufficient admin role")
         return admin
 
     return dep

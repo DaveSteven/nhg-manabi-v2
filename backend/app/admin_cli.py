@@ -1,7 +1,7 @@
 """Administrator management CLI (ADR-0009). Passwords are read with getpass,
 never from arguments, environment or files, and are never printed.
 
-    python -m app.admin_cli create-admin <username> --role reviewer [--display-name "Name"]
+    python -m app.admin_cli create-admin <username> [--display-name "Name"]   # always super_admin (ADR-0010)
     python -m app.admin_cli reset-password <username>
     python -m app.admin_cli deactivate <username>
     python -m app.admin_cli activate <username>
@@ -12,7 +12,7 @@ import json
 import sys
 
 from app.admin_auth import (AdminError, create_admin, reset_password,
-                            set_active, ROLES)
+                            set_active)
 from app.db.engine import get_engine
 
 
@@ -29,7 +29,6 @@ def main(argv: list[str] | None = None) -> int:
     sub = p.add_subparsers(dest="command", required=True)
     c = sub.add_parser("create-admin")
     c.add_argument("username")
-    c.add_argument("--role", choices=ROLES, required=True)
     c.add_argument("--display-name", default=None)
     for name in ("reset-password", "deactivate", "activate"):
         sub.add_parser(name).add_argument("username")
@@ -37,7 +36,7 @@ def main(argv: list[str] | None = None) -> int:
     engine = get_engine()
     try:
         if args.command == "create-admin":
-            out = create_admin(engine, args.username, _ask_password(), args.role,
+            out = create_admin(engine, args.username, _ask_password(), "super_admin",
                                display_name=args.display_name)
         elif args.command == "reset-password":
             reset_password(engine, args.username, _ask_password())

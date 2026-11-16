@@ -35,14 +35,13 @@ def _client(monkeypatch, pg_engine):
     # Role-gated probe routes (the real admin endpoints arrive in later slices).
     probe = FastAPI()
     probe.include_router(app.router)
-    for role in ("viewer", "reviewer", "publisher"):
-        probe.add_api_route(
-            f"/t/{role}", lambda a=Depends(require_admin(role)): {"id": str(a["id"])},
-            methods=["GET"])
+    probe.add_api_route(
+        "/t/admin", lambda a=Depends(require_admin()): {"id": str(a["id"])},
+        methods=["GET"])
     return TestClient(probe)
 
 
-def _mk(pg_engine, username="alice", role="reviewer", password=PW):
+def _mk(pg_engine, username="alice", role="super_admin", password=PW):
     from app.admin_auth import create_admin
     return create_admin(pg_engine, username, password, role,
                         display_name=username.title())
@@ -72,13 +71,13 @@ def test_create_admin_validates_and_normalises(pg_engine):
     with pytest.raises(AdminError):
         create_admin(pg_engine, "alice", "short", "reviewer")           # weak pw
     with pytest.raises(AdminError):
-        create_admin(pg_engine, "alice", PW, "superuser")               # bad role
+        create_admin(pg_engine, "alice", PW, "reviewer")                # only super_admin
     with pytest.raises(AdminError):
         create_admin(pg_engine, "Al ice!", PW, "viewer")                # bad name
-    row = _mk(pg_engine, "alice", "viewer")
-    assert row["role"] == "viewer" and "password_hash" not in row
+    row = _mk(pg_engine, "alice")
+    assert row["role"] == "super_admin" and "password_hash" not in row
     with pytest.raises(AdminError):
-        _mk(pg_engine, "alice", "viewer")                               # duplicate
+        _mk(pg_engine, "alice")                                         # duplicate
     with pg_engine.connect() as conn:
         stored = conn.execute(text(
             "SELECT password_hash FROM admin_users")).scalar()
@@ -93,7 +92,7 @@ def test_db_constraints_reject_bad_rows(pg_engine):
         with pg_engine.begin() as conn:
             conn.execute(text(
                 "INSERT INTO admin_users (id, username, display_name,"
-                " password_hash, role) VALUES (:i, 'bob', 'Bob', 'x', 'root')"),
+                " password_hash, role) VALUES (:i, 'bob', 'Bob', 'x', 'viewer')"),
                 {"i": uuid.uuid4()})
 
 
@@ -188,22 +187,14 @@ def test_deactivate_and_password_reset_revoke_sessions(monkeypatch, pg_engine):
 # ------------------------------------------------------------------ roles ----
 
 @requires_db
-def test_role_hierarchy_and_status_codes(monkeypatch, pg_engine):
-    for name, role in (("v", "viewer"), ("r", "reviewer"), ("p", "publisher")):
-        _mk(pg_engine, name * 3, role)
+def test_super_admin_is_the_only_role_and_gate_is_401_without_token(monkeypatch, pg_engine):
+    _mk(pg_engine, "root1")
     c = _client(monkeypatch, pg_engine)
-    tok = {role: {"Authorization": "Bearer " + _login(c, name * 3).json()["token"]}
-           for name, role in (("v", "viewer"), ("r", "reviewer"), ("p", "publisher"))}
-    expect = {  # (token role, route role) -> status
-        ("viewer", "viewer"): 200, ("viewer", "reviewer"): 403,
-        ("viewer", "publisher"): 403, ("reviewer", "viewer"): 200,
-        ("reviewer", "reviewer"): 200, ("reviewer", "publisher"): 403,
-        ("publisher", "viewer"): 200, ("publisher", "reviewer"): 200,
-        ("publisher", "publisher"): 200}
-    for (have, need), status in expect.items():
-        assert c.get(f"/t/{need}", headers=tok[have]).status_code == status, (have, need)
-    assert c.get("/t/viewer").status_code == 401            # no token
-    assert c.get("/t/viewer", headers={"Authorization": "Bearer nope"}).status_code == 401
+    tok = {"Authorization": "Bearer " + _login(c, "root1").json()["token"]}
+    assert c.get("/t/admin", headers=tok).status_code == 200
+    assert c.get("/api/admin/auth/me", headers=tok).json()["role"] == "super_admin"
+    assert c.get("/t/admin").status_code == 401                       # no token
+    assert c.get("/t/admin", headers={"Authorization": "Bearer nope"}).status_code == 401
 
 
 # -------------------------------------------------------------- isolation ----
@@ -219,7 +210,7 @@ def test_student_and_admin_identities_do_not_cross(monkeypatch, pg_engine):
     # dev_test student token is NOT an admin credential (no bypass).
     assert c.get("/api/admin/auth/me",
                  headers={"Authorization": f"Bearer {student}"}).status_code == 401
-    assert c.get("/t/viewer",
+    assert c.get("/t/admin",
                  headers={"Authorization": f"Bearer {student}"}).status_code == 401
     # An admin session token is NOT a student identity.
     admin_tok = _login(c).json()["token"]
@@ -236,11 +227,10 @@ def test_cli_create_admin_prompts_for_password(monkeypatch, pg_engine, capsys):
     import getpass
     monkeypatch.setattr(getpass, "getpass", lambda prompt="": PW)
     from app import admin_cli
-    rc = admin_cli.main(["create-admin", "carol", "--role", "reviewer",
-                         "--display-name", "Carol"])
+    rc = admin_cli.main(["create-admin", "carol", "--display-name", "Carol"])
     out = capsys.readouterr()
     assert rc == 0 and "carol" in out.out
     assert PW not in out.out and PW not in out.err
     with pg_engine.connect() as conn:
         assert conn.execute(text(
-            "SELECT role FROM admin_users WHERE username='carol'")).scalar() == "reviewer"
+            "SELECT role FROM admin_users WHERE username='carol'")).scalar() == "super_admin"

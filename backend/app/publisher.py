@@ -331,6 +331,68 @@ def publish_package(engine: Engine, package_id: str,
             "revision": next_rev, "idempotent": False}
 
 
+def auto_publish_package(engine: Engine, package_id: str,
+                         reviewer_id: str = "system:auto-publish") -> dict:
+    """ADR-0010 policy 'auto': create the release snapshot and publish it
+    WITHOUT the review / rights / media gates.
+
+    Nothing is relabelled as verified: answer-key and unit statuses stay as
+    they are. The ``auto_published`` decision stores a JSON note listing what
+    was NOT verified, so the audit trail never implies review. Structural
+    validation in the importer/publish_package still applies, and the public
+    API still hides units that are not conversion-complete.
+    """
+    created = publish_package(engine, package_id, reviewer_id=reviewer_id)
+    release_id = created["release_id"]
+    with engine.begin() as conn:
+        release = conn.execute(text(
+            "SELECT id, exam_id, content_hash, state FROM exam_releases"
+            " WHERE id = :r"), {"r": release_id}).first()
+        if release.state == "published":
+            return {"release_id": release_id, "state": "published",
+                    "idempotent": True}
+        if release.state == "withdrawn":
+            raise PublishError("withdrawn releases cannot be auto-published; "
+                               "create a new release")
+        unverified = conn.execute(text(
+            "SELECT count(*) FROM release_answer_keys WHERE release_id = :r"
+            " AND review_status NOT IN ('agent_verified','human_reviewed')"),
+            {"r": release_id}).scalar()
+        incomplete = conn.execute(text(
+            "SELECT count(*) FROM release_units WHERE release_id = :r"
+            " AND conversion_status <> 'complete'"), {"r": release_id}).scalar()
+        unchecked_media = conn.execute(text(
+            "SELECT count(DISTINCT a.id) FROM release_unit_materials m"
+            " JOIN media_assets a ON a.id = m.asset_id"
+            " WHERE m.release_id = :r AND a.availability <> 'verified'"),
+            {"r": release_id}).scalar()
+        rights = conn.execute(text(
+            "SELECT count(*) FROM publication_decisions WHERE exam_id = :e"
+            " AND decision = 'rights_confirmed'"), {"e": release.exam_id}).scalar()
+        note = json.dumps({
+            "policy": "auto", "adr": "ADR-0010",
+            "unverified_answer_keys": unverified,
+            "units_not_conversion_complete": incomplete,
+            "unverified_media_assets": unchecked_media,
+            "rights_confirmed": bool(rights)}, ensure_ascii=False)
+        conn.execute(text(
+            "UPDATE exam_releases SET state = 'published',"
+            " published_at = now() WHERE id = :r"), {"r": release_id})
+        conn.execute(text(
+            "INSERT INTO exam_current_releases (exam_id, release_id, changed_at)"
+            " VALUES (:e, :r, now())"
+            " ON CONFLICT (exam_id) DO UPDATE SET"
+            " release_id = EXCLUDED.release_id, changed_at = now()"),
+            {"e": release.exam_id, "r": release_id})
+        conn.execute(text(
+            "INSERT INTO publication_decisions (id, exam_id,"
+            " candidate_content_hash, decision, reviewer_id, notes)"
+            " VALUES (:id, :e, :h, 'auto_published', :reviewer, :notes)"),
+            {"id": uuid.uuid4(), "e": release.exam_id,
+             "h": release.content_hash, "reviewer": reviewer_id, "notes": note})
+    return {"release_id": release_id, "state": "published", "idempotent": False}
+
+
 def promote_release(engine: Engine, release_id: str, reviewer_id: str,
                     notes: str | None = None) -> dict:
     """Promote a draft release to published and switch the current pointer.

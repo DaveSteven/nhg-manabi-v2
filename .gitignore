@@ -28,3 +28,6 @@ data/v2-media*/
 # Frontend build & generated types
 apps/web/build/
 apps/web/.react-router/
+
+# Local-only secrets (e.g. generated dev admin password)
+.local/

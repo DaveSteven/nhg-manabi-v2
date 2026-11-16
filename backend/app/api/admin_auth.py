@@ -24,14 +24,14 @@ def admin_login(body: LoginBody) -> dict:
 
 
 @router.get("/api/admin/auth/me")
-def admin_me(admin: dict = Depends(require_admin("viewer"))) -> dict:
+def admin_me(admin: dict = Depends(require_admin())) -> dict:
     return {"id": str(admin["id"]), "username": admin["username"],
             "display_name": admin["display_name"], "role": admin["role"]}
 
 
 @router.post("/api/admin/auth/logout", status_code=204)
 def admin_logout(authorization: str | None = Header(default=None),
-                 admin: dict = Depends(require_admin("viewer"))) -> Response:
+                 admin: dict = Depends(require_admin())) -> Response:
     token = _bearer(authorization)
     if token:
         logout(get_engine(), token)

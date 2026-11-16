@@ -22,6 +22,7 @@
 
 ## 三、数据/发布权限红线
 
+- **发布策略（2026-11-16 起，ADR-0010）**：用户决定默认 `PUBLISH_POLICY=auto`——入库即发布，暂不做审核流程；下面关于审核/发布门槛与 `rights_confirmed` 的几条仅在 `PUBLISH_POLICY=gated` 时适用（代码与测试保留）。`auto` 不得把内容标成已验证；部署、推送、合并 `main` 仍须用户明确授权。
 - **Canonical v2.0 是业务内容交换标准**；上游 JSON/ID 和旧库字段不得流入新版业务条件。来源映射留在内部 provenance。
 - Raw 输入只读；导入先进入 staging；Agent 提供校验建议但不能直接写 published 表。
 - 内容审核采用轻量化流程：本地 Agent 校验优先（结果绑定内容哈希同步），异常人工复核。发布门槛接受 `agent_verified`（有有效哈希绑定校验证据）或 `human_reviewed`；`needs_review`、`blocked`、未校验、争议内容一律不得通过发布检查。
