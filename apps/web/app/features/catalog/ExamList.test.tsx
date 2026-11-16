@@ -113,31 +113,25 @@ describe("ExamList", () => {
     expect(chip.lastElementChild).toHaveClass("exam-chip-count");
   });
 
-  it("has no level filter, only a year filter", async () => {
+  it("has no filters on the page (no level and no year select)", async () => {
     useExamsHandler();
     renderList();
     await screen.findByRole("listitem", { name: "2019年" });
-    expect(screen.queryByRole("combobox", { name: "等级" })).not.toBeInTheDocument();
-    expect(screen.getByRole("combobox", { name: "年份" })).toBeInTheDocument();
+    // the only combobox left is the header's 备考等级 selector
+    expect(screen.getAllByRole("combobox").map((c) => c.getAttribute("aria-label")))
+      .toEqual(["备考等级"]);
+    expect(screen.queryByText("年份")).not.toBeInTheDocument();
+    expect(screen.queryByRole("combobox", { name: "年份" })).not.toBeInTheDocument();
   });
 
-  it("filters by year via the URL search params", async () => {
-    const user = userEvent.setup();
+  it("lists every year, newest first, ignoring a stale ?year= in the URL", async () => {
     useExamsHandler();
-    const rendered = renderList();
-    await screen.findByRole("listitem", { name: "2018年" });
-    await chooseOption(user, "年份", "2019");
-    expect(rendered.router.state.location.search).toBe("?year=2019");
-    expect(screen.getByRole("listitem", { name: "2019年" })).toBeInTheDocument();
-    expect(screen.queryByRole("listitem", { name: "2018年" })).not.toBeInTheDocument();
-    // back to 全部 removes the param
-    await chooseOption(user, "年份", "全部");
-    expect(rendered.router.state.location.search).toBe("");
+    renderList("/study/exams?year=2019&level=N5");
+    await screen.findByRole("listitem", { name: "2019年" });
     expect(screen.getByRole("listitem", { name: "2018年" })).toBeInTheDocument();
   });
 
-  it("follows the target level: only that level's exams and years are offered", async () => {
-    const user = userEvent.setup();
+  it("follows the target level: only that level's exams and years are listed", async () => {
     useExamsHandler();
     window.localStorage.setItem("jlptgo.level", "N5");
     renderList();
@@ -146,9 +140,6 @@ describe("ExamList", () => {
     // N5 only has 2018 → one capsule, no level tag inside it
     expect(within(rowOf("2018")).getAllByRole("link")).toHaveLength(1);
     expect(within(rowOf("2018")).getByRole("link")).toHaveTextContent(/^7月40 题$/);
-    await user.click(screen.getByRole("combobox", { name: "年份" }));
-    expect(screen.getAllByRole("option").map((o) => o.textContent))
-      .toEqual(["全部", "2018"]);
   });
 
   it("explains a target level with no published exams", async () => {
