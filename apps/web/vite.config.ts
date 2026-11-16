@@ -22,7 +22,7 @@ export default defineConfig({
     setupFiles: ["./app/test/setup.ts"],
     css: false,
     environmentOptions: {
-      happyDom: { url: "http://localhost/" },
+      happyDOM: { url: "http://localhost/" },
     },
   },
 });

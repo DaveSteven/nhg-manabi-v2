@@ -6,7 +6,7 @@ import { ORIGIN, server } from "../../test/mocks/server";
 import { renderRoutes } from "../../test/render";
 import StudyLayout from "../../routes/study";
 import ExamDetailPage from "../../routes/study.exams.$examId";
-import PracticePage from "../../routes/study.practice.$sessionId";
+import PracticeRoute from "../../routes/study.practice.$sessionId";
 
 const outline = {
   exam_id: "E-N2-2018-12",
@@ -75,6 +75,12 @@ const createdSession = {
 
 const { units_meta: _omitted, ...sessionBase } = createdSession;
 const oldSession = { ...sessionBase, id: "old-session" };
+const practiceUnit = {
+  release_id: "r-uuid-1", id: "u-v1", layer_id: "ly-v1",
+  question_type_id: "vocabulary_kanji_reading", kind: "single", position: 1,
+  label: "問題1", slot_ids: [], conversion_status: "complete",
+  materials: [], questions: [],
+};
 
 beforeAll(() => server.listen());
 afterEach(() => server.resetHandlers());
@@ -82,8 +88,16 @@ afterAll(() => server.close());
 
 /** resetHandlers wipes test-scoped overrides, so every test re-applies. */
 function useOutlineHandler() {
-  server.use(http.get(`*/api/exams/E-N2-2018-12`, () =>
-    HttpResponse.json(outline)));
+  server.use(
+    http.get(`*/api/exams/E-N2-2018-12`, () => HttpResponse.json(outline)),
+    http.get(`*/api/practice/sessions/:sessionId`, ({ params }) =>
+      HttpResponse.json(params.sessionId === "old-session"
+        ? oldSession : sessionBase)),
+    http.get(`*/api/releases/r-uuid-1/units/u-v1`, () =>
+      HttpResponse.json(practiceUnit)),
+    http.get(`*/api/practice/sessions/:sessionId/drafts`, () =>
+      HttpResponse.json({ drafts: [] })),
+  );
 }
 
 describe("ExamOutline", () => {
@@ -91,7 +105,7 @@ describe("ExamOutline", () => {
     return renderRoutes(
       [{ path: "study", Component: StudyLayout, children: [
         { path: "exams/:examId", Component: ExamDetailPage },
-        { path: "practice/:sessionId", Component: PracticePage },
+        { path: "practice/:sessionId", Component: PracticeRoute },
       ] }],
       "/study/exams/E-N2-2018-12",
     );
@@ -137,7 +151,7 @@ describe("ExamOutline", () => {
       units: [{ release_id: "r-uuid-1", unit_id: "u-v1" }],
     });
     // navigated to the practice page for the new session
-    expect(await screen.findByText("练习")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: /练习/ })).toBeInTheDocument();
   });
 
   it("shows the continue/end conflict dialog on 409 active_session_exists", async () => {
@@ -162,7 +176,7 @@ describe("ExamOutline", () => {
 
     // 继续旧练习 → navigates to the OLD session page
     await user.click(screen.getByRole("button", { name: "继续旧练习" }));
-    expect(await screen.findByText("练习")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: /练习/ })).toBeInTheDocument();
     expect(screen.queryByRole("region", { name: "试卷详情" }))
       .not.toBeInTheDocument();
     void oldSession;

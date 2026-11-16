@@ -21,8 +21,8 @@
 
 ## 进行中（当前开发阶段）
 
-- **前端 SCSS 规范补充（2026-11-16）**：学生端前端新增明确工程要求——新增或修改样式统一使用 SCSS，组件局部样式优先 `.module.scss`，共享 token/reset/基础样式使用职责明确的全局 `.scss` 入口；现有 CSS 留待相关实现任务随改随迁。本次仅更新规范，尚未安装 `sass` 或迁移现有样式。
-- **M2 核心学习流程**（计划见 `docs/development/M2-core-learning-flow.md`）：FastAPI 作答引擎 → React 学习页面 → 端到端验收。**M2.1 全部完成（Task 01–08）**；M2.2 进行中：**Commit A、1、2、3 已完成**，下一步 Commit 4（作答持久化与反馈闭环）。
+- **前端 SCSS 落地（2026-11-16）**：`apps/web` 已安装 Dart Sass，`tokens.css`/`global.css` 迁移为 SCSS；练习、对话框、反馈和结果样式拆至 `_practice.scss`，使用 `@use` 和嵌套组织作用域。新增或修改样式继续遵守 SCSS 规范。
+- **M2 核心学习流程**（计划见 `docs/development/M2-core-learning-flow.md`）：FastAPI 作答引擎 → React 学习页面 → 端到端验收。**M2.1 全部完成（Task 01–08）**；M2.2 Commit A、1、2、3、4 已完成，下一步进入 Commit 5/M2.3 隔离测试库端到端、部署与视觉验收。
 - **M2.2 前端实施准备（2026-11-16）**：新增 `docs/development/M2.2-frontend-implementation.md`，已明确 React Router Framework Mode SSG+SPA、学习首页、试卷目录、Canonical Unit/RichText/听力渲染、草稿与提交反馈、自动恢复及测试验收。
 - **M2.2 Commit A 媒体前置（2026-11-16）**：Alembic `0004` `media_storage` 映射表；`python -m app.media_sync` 独立同步步骤（SHA-256 内容寻址、校验后原子落盘、幂等/自修复/失败诊断）；`GET /api/releases/{rid}/assets/{aid}` 四重门槛公开媒体接口（统一 404、RFC 9110 Range、历史 release 可读）；迁移升级/回滚验证通过；回归 103 passed + 2 skipped（环境性 skip）。接口契约已写入 M2.2 计划 §6/§8；真实样本同步与浏览器冒烟待执行。
 - **M2.2 Commit 1 前端脚手架（2026-11-16）**：pnpm workspace + `apps/web`（React Router 7 Framework Mode，`ssr:false` + `prerender:["/"]`，`entry.server.tsx` 仅构建期 prerender 用，无运行时 Node SSR）；樱与墨 tokens 与全局样式；四项顶导航（未实现入口「暂未开放」）；API adapter（zod strictObject DTO，拒绝 cues/答案字段泄漏；三种后端错误形状归一化；dev_test token）；Vite dev proxy `/api`→8001（不加 CORS）；构建验收脚本（预渲染品牌 HTML、noindex SPA fallback、凭据泄漏扫描）。typecheck 通过；vitest 37 passed；`pnpm build` 含产物检查通过。品牌页为最小占位，真实文案待设计输入。
@@ -30,6 +30,7 @@
 - **M2.2 Commit 2 学习首页与试卷目录（2026-11-16）**：`features/catalog`（学习首页四学科入口+继续练习卡片+并行请求独立状态；试卷列表 URL 筛选；下划线 Tab/Layer 展开/Unit 列表）、`features/practice` 409 活跃会话冲突对话框（继续/结束旧练习，ended_early 语义显式确认）；MSW 集成测试 14 例。vitest 51 passed。实现期发现 jsdom 与 Node undici 的 AbortSignal realm 冲突会使 react-router 数据路由全部导航静默失败，vitest 环境改用 happy-dom（记录于 devlog）。真实后端走查合并至 Commit 4。
 
 - **M2.2 Commit 3 Canonical 渲染器（2026-11-16）**：RichText v1 白名单安全渲染（零 dangerouslySetInnerHTML、未知节点安全降级、slot 对 unit.slot_ids 完整性校验）、中性 view model（printed_number 透传、prompt=null 合法）、A/B 双文与衬线阅读排版、固定底部音频 dock（播放/拖动/缓冲/失败态，safe-area 预留）、dev 渲染 harness（VITE_DEV_TOOLS）。**真实浏览器冒烟通过**：隔离冒烟库 + media_sync 落盘真实 mp3 + 真实 headless Chrome——媒体端点 Range 206、loadedmetadata/seeking 事件、完整渲染管线截图；冒烟抓到并修复 root.tsx 缺 QueryClientProvider 的真实缺陷。headless 下 seeked/出声播放未完成确认（如实记录，留给有头浏览器/M2.3）。vitest 80 passed。
+- **M2.2 Commit 4 作答持久化与反馈闭环（2026-11-16）**：练习固定 Release 恢复、服务端草稿 hydrate、800ms 自动保存与 `row_version` 冲突处理、最小 localStorage 待重试记录、整组未答确认/提交锁定、即时/统一反馈请求门控、完成/提前结束及结果页三态复盘已接通；修复恢复后自动保存漏绑 `sessionUnitId` 的真实缺陷。目标测试 6 passed；前端全量 97 passed；typecheck 与 production build（含 SCSS、SSG/SPA 产物检查）通过。测试进程仍有 happy-dom 卸载未完成 fetch 的 `ECONNREFUSED/AbortError` stderr 噪声，不影响退出码，后续测试基础设施清理。
 ## 未开始（按依赖顺序）
 
 1. M2.2 Commit 2–4：学习首页/试卷目录 → Canonical 渲染器（含音频）→ 作答闭环与反馈（实施计划、ADR-0007、后端契约与媒体接口均已就绪）。
