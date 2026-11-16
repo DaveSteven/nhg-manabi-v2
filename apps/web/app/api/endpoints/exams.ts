@@ -3,10 +3,10 @@ import { parseDto } from "../dto/exam";
 import {
   ExamOutlineSchema,
   ExamSummarySchema,
-  LayerCatalogEntrySchema,
+  ExamLayersSchema,
   type ExamOutline,
   type ExamSummary,
-  type LayerCatalogEntry,
+  type ExamLayers,
 } from "../dto/exam";
 import { PublicUnitSchema, type PublicUnit } from "../dto/unit";
 
@@ -20,9 +20,9 @@ export function getExamOutline(examId: string, signal?: AbortSignal): Promise<Ex
     .then((p) => parseDto(ExamOutlineSchema, `GET /api/exams/${examId}`, p));
 }
 
-export function getExamLayers(examId: string, signal?: AbortSignal): Promise<LayerCatalogEntry[]> {
+export function getExamLayers(examId: string, signal?: AbortSignal): Promise<ExamLayers> {
   return apiFetch(`/api/exams/${encodeURIComponent(examId)}/layers`, { signal })
-    .then((p) => parseDto(LayerCatalogEntrySchema.array(),
+    .then((p) => parseDto(ExamLayersSchema,
       `GET /api/exams/${examId}/layers`, p));
 }
 

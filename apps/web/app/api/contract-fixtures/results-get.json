@@ -1,0 +1,84 @@
+{
+  "body": {
+    "answered_accuracy": 0.0,
+    "correct_count": 0,
+    "finished_at": "2026-11-16T04:54:48.444863+00:00",
+    "questions": [
+      {
+        "chosen_option_id": "JLPTGO-N2-E2E-EX-ly-01-u01-q01-o1",
+        "correct_option_id": "JLPTGO-N2-E2E-EX-ly-01-u01-q01-o2",
+        "is_correct": false,
+        "printed_number": "1",
+        "question_id": "JLPTGO-N2-E2E-EX-ly-01-u01-q01",
+        "question_position": 1,
+        "skipped": false,
+        "unit_id": "JLPTGO-N2-E2E-EX-ly-01-u01",
+        "unit_position": 1
+      },
+      {
+        "chosen_option_id": null,
+        "correct_option_id": "JLPTGO-N2-E2E-EX-ly-02-u01-q01-o1",
+        "is_correct": null,
+        "printed_number": "46",
+        "question_id": "JLPTGO-N2-E2E-EX-ly-02-u01-q01",
+        "question_position": 1,
+        "skipped": true,
+        "unit_id": "JLPTGO-N2-E2E-EX-ly-02-u01",
+        "unit_position": 2
+      },
+      {
+        "chosen_option_id": null,
+        "correct_option_id": "JLPTGO-N2-E2E-EX-ly-02-u01-q02-o2",
+        "is_correct": null,
+        "printed_number": "47",
+        "question_id": "JLPTGO-N2-E2E-EX-ly-02-u01-q02",
+        "question_position": 2,
+        "skipped": true,
+        "unit_id": "JLPTGO-N2-E2E-EX-ly-02-u01",
+        "unit_position": 2
+      },
+      {
+        "chosen_option_id": null,
+        "correct_option_id": "JLPTGO-N2-E2E-EX-ly-02-u01-q03-o3",
+        "is_correct": null,
+        "printed_number": "48",
+        "question_id": "JLPTGO-N2-E2E-EX-ly-02-u01-q03",
+        "question_position": 3,
+        "skipped": true,
+        "unit_id": "JLPTGO-N2-E2E-EX-ly-02-u01",
+        "unit_position": 2
+      },
+      {
+        "chosen_option_id": null,
+        "correct_option_id": "JLPTGO-N2-E2E-EX-ly-02-u01-q04-o4",
+        "is_correct": null,
+        "printed_number": "49",
+        "question_id": "JLPTGO-N2-E2E-EX-ly-02-u01-q04",
+        "question_position": 4,
+        "skipped": true,
+        "unit_id": "JLPTGO-N2-E2E-EX-ly-02-u01",
+        "unit_position": 2
+      },
+      {
+        "chosen_option_id": null,
+        "correct_option_id": "JLPTGO-N2-E2E-EX-ly-02-u01-q05-o1",
+        "is_correct": null,
+        "printed_number": "50",
+        "question_id": "JLPTGO-N2-E2E-EX-ly-02-u01-q05",
+        "question_position": 5,
+        "skipped": true,
+        "unit_id": "JLPTGO-N2-E2E-EX-ly-02-u01",
+        "unit_position": 2
+      }
+    ],
+    "score_rate": 0.0,
+    "scoring_method": "all_questions",
+    "scoring_version": "1",
+    "session_id": "1ac12cca-5ea3-4f44-90fa-2634b2868cd6",
+    "skipped_count": 5,
+    "total_count": 6,
+    "wrong_count": 1
+  },
+  "endpoint": "GET results",
+  "schema": "ResultsResponseSchema"
+}

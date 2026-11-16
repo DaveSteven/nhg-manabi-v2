@@ -1,0 +1,125 @@
+{
+  "body": {
+    "conversion_status": "complete",
+    "id": "JLPTGO-N2-E2E-EX-ly-01-u01",
+    "kind": "single",
+    "label": null,
+    "layer_id": "JLPTGO-N2-E2E-EX-ly-01",
+    "materials": [],
+    "position": 1,
+    "question_type_id": "e2e_vocab_reading",
+    "questions": [
+      {
+        "conversion_status": "complete",
+        "id": "JLPTGO-N2-E2E-EX-ly-01-u01-q01",
+        "options": [
+          {
+            "content": {
+              "blocks": [
+                {
+                  "children": [
+                    {
+                      "text": "選択肢1",
+                      "type": "text"
+                    }
+                  ],
+                  "type": "paragraph"
+                }
+              ],
+              "format": "jlptgo-richtext-v1"
+            },
+            "id": "JLPTGO-N2-E2E-EX-ly-01-u01-q01-o1",
+            "position": 1
+          },
+          {
+            "content": {
+              "blocks": [
+                {
+                  "children": [
+                    {
+                      "text": "選択肢2",
+                      "type": "text"
+                    }
+                  ],
+                  "type": "paragraph"
+                }
+              ],
+              "format": "jlptgo-richtext-v1"
+            },
+            "id": "JLPTGO-N2-E2E-EX-ly-01-u01-q01-o2",
+            "position": 2
+          },
+          {
+            "content": {
+              "blocks": [
+                {
+                  "children": [
+                    {
+                      "text": "選択肢3",
+                      "type": "text"
+                    }
+                  ],
+                  "type": "paragraph"
+                }
+              ],
+              "format": "jlptgo-richtext-v1"
+            },
+            "id": "JLPTGO-N2-E2E-EX-ly-01-u01-q01-o3",
+            "position": 3
+          },
+          {
+            "content": {
+              "blocks": [
+                {
+                  "children": [
+                    {
+                      "text": "選択肢4",
+                      "type": "text"
+                    }
+                  ],
+                  "type": "paragraph"
+                }
+              ],
+              "format": "jlptgo-richtext-v1"
+            },
+            "id": "JLPTGO-N2-E2E-EX-ly-01-u01-q01-o4",
+            "position": 4
+          }
+        ],
+        "position": 1,
+        "printed_number": "1",
+        "prompt": {
+          "blocks": [
+            {
+              "children": [
+                {
+                  "text": "彼は",
+                  "type": "text"
+                },
+                {
+                  "marks": [
+                    "underline"
+                  ],
+                  "text": "経験",
+                  "type": "text"
+                },
+                {
+                  "text": "が豊富だ。（改訂）",
+                  "type": "text"
+                }
+              ],
+              "type": "paragraph"
+            }
+          ],
+          "format": "jlptgo-richtext-v1"
+        },
+        "question_type_id": "e2e_vocab_reading",
+        "slot_id": null
+      }
+    ],
+    "release_id": "606352bc-845d-4019-84b2-6a65def6c1be",
+    "slot_ids": []
+  },
+  "endpoint": "GET /api/releases/{rid}/units/{uid}",
+  "schema": "PublicUnitSchema"
+}

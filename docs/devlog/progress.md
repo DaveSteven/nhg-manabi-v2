@@ -32,6 +32,7 @@
 - **M2.2 Commit 3 Canonical 渲染器（2026-11-16）**：RichText v1 白名单安全渲染（零 dangerouslySetInnerHTML、未知节点安全降级、slot 对 unit.slot_ids 完整性校验）、中性 view model（printed_number 透传、prompt=null 合法）、A/B 双文与衬线阅读排版、固定底部音频 dock（播放/拖动/缓冲/失败态，safe-area 预留）、dev 渲染 harness（VITE_DEV_TOOLS）。**真实浏览器冒烟通过**：隔离冒烟库 + media_sync 落盘真实 mp3 + 真实 headless Chrome——媒体端点 Range 206、loadedmetadata/seeking 事件、完整渲染管线截图；冒烟抓到并修复 root.tsx 缺 QueryClientProvider 的真实缺陷。headless 下 seeked/出声播放未完成确认（如实记录，留给有头浏览器/M2.3）。vitest 80 passed。
 - **M2.2 Commit 4 作答持久化与反馈闭环（2026-11-16）**：练习固定 Release 恢复、服务端草稿 hydrate、800ms 自动保存与 `row_version` 冲突处理、最小 localStorage 待重试记录、整组未答确认/提交锁定、即时/统一反馈请求门控、完成/提前结束及结果页三态复盘已接通；修复恢复后自动保存漏绑 `sessionUnitId` 的真实缺陷。目标测试 6 passed；前端全量 97 passed；typecheck 与 production build（含 SCSS、SSG/SPA 产物检查）通过。测试进程仍有 happy-dom 卸载未完成 fetch 的 `ECONNREFUSED/AbortError` stderr 噪声，不影响退出码，后续测试基础设施清理。
 - **M2.2 Commit 5 / M2.3 首轮端到端验收（2026-11-16）**：隔离库 `<DB>_e2e` + 合成 N2 形态卷（词汇单题/文法問題9 5 slot/读解 3 Unit/听力真实 mp3）走完整发布门槛；对真实 uvicorn 的 API 验收 36/36 + 版本阶段 6/6（刷新恢复、重复提交、skip≠wrong、end 模式封存、跨账号 404、新 release 不影响旧 session）；真实浏览器走通恢复→草稿→刷新恢复→未答确认→提交锁定→即时反馈→结果页、cloze 与听力渲染。联调发现并修复前端 DTO 缺陷（submit 内嵌 feedback 无 `feedback_mode`），新增回归测试；前端 98 passed，后端 103 passed + 2 skipped。**未完成**：真实 N2 题库、多浏览器/多视口、听力出声/拖动确认、SSG 部署验收、视觉走查（见 devlog）。
+- **前端契约夹具（2026-11-16）**：18 份真实后端响应固化为夹具并由 vitest 用应用 DTO 解析（21 项契约测试）；立刻发现并修复 `/layers` 响应被误建模为数组的漂移。前端 119 passed，build 通过。错误响应与真实题库边缘形态未覆盖。
 ## 未开始（按依赖顺序）
 
 1. M2.2 Commit 2–4：学习首页/试卷目录 → Canonical 渲染器（含音频）→ 作答闭环与反馈（实施计划、ADR-0007、后端契约与媒体接口均已就绪）。

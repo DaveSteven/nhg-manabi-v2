@@ -1,0 +1,13 @@
+{
+  "body": {
+    "answered_count": 1,
+    "idempotent": false,
+    "release_id": "606352bc-845d-4019-84b2-6a65def6c1be",
+    "session_unit_id": "487316f3-bf23-4527-bdea-029d00ae931e",
+    "skipped_count": 0,
+    "state": "submitted",
+    "unit_id": "JLPTGO-N2-E2E-EX-ly-01-u01"
+  },
+  "endpoint": "POST submit (end mode)",
+  "schema": "SubmitResultSchema"
+}

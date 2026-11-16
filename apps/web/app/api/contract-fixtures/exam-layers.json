@@ -1,0 +1,131 @@
+{
+  "body": {
+    "exam_id": "JLPTGO-N2-E2E-EX",
+    "level": "N2",
+    "month": 12,
+    "release_id": "606352bc-845d-4019-84b2-6a65def6c1be",
+    "revision": 2,
+    "sections": [
+      {
+        "layers": [
+          {
+            "display_label": "問題1",
+            "instruction": {
+              "blocks": [
+                {
+                  "children": [
+                    {
+                      "text": "問題1 合成指示文。",
+                      "type": "text"
+                    }
+                  ],
+                  "type": "paragraph"
+                }
+              ],
+              "format": "jlptgo-richtext-v1"
+            },
+            "layer_id": "JLPTGO-N2-E2E-EX-ly-01",
+            "position": 1,
+            "question_type_id": "e2e_vocab_reading",
+            "unit_count": 1
+          }
+        ],
+        "position": 1,
+        "section_id": "JLPTGO-N2-E2E-EX-sec-vocabulary",
+        "subject": "vocabulary",
+        "title": "文字・語彙"
+      },
+      {
+        "layers": [
+          {
+            "display_label": "問題9",
+            "instruction": {
+              "blocks": [
+                {
+                  "children": [
+                    {
+                      "text": "問題9 合成指示文。",
+                      "type": "text"
+                    }
+                  ],
+                  "type": "paragraph"
+                }
+              ],
+              "format": "jlptgo-richtext-v1"
+            },
+            "layer_id": "JLPTGO-N2-E2E-EX-ly-02",
+            "position": 1,
+            "question_type_id": "e2e_grammar_cloze",
+            "unit_count": 1
+          }
+        ],
+        "position": 2,
+        "section_id": "JLPTGO-N2-E2E-EX-sec-grammar",
+        "subject": "grammar",
+        "title": "文法"
+      },
+      {
+        "layers": [
+          {
+            "display_label": "問題11",
+            "instruction": {
+              "blocks": [
+                {
+                  "children": [
+                    {
+                      "text": "問題11 合成指示文。",
+                      "type": "text"
+                    }
+                  ],
+                  "type": "paragraph"
+                }
+              ],
+              "format": "jlptgo-richtext-v1"
+            },
+            "layer_id": "JLPTGO-N2-E2E-EX-ly-03",
+            "position": 1,
+            "question_type_id": "e2e_reading_mid",
+            "unit_count": 3
+          }
+        ],
+        "position": 3,
+        "section_id": "JLPTGO-N2-E2E-EX-sec-reading",
+        "subject": "reading",
+        "title": "読解"
+      },
+      {
+        "layers": [
+          {
+            "display_label": "課題1",
+            "instruction": {
+              "blocks": [
+                {
+                  "children": [
+                    {
+                      "text": "課題1 合成指示文。",
+                      "type": "text"
+                    }
+                  ],
+                  "type": "paragraph"
+                }
+              ],
+              "format": "jlptgo-richtext-v1"
+            },
+            "layer_id": "JLPTGO-N2-E2E-EX-ly-04",
+            "position": 1,
+            "question_type_id": "e2e_listening_task",
+            "unit_count": 1
+          }
+        ],
+        "position": 4,
+        "section_id": "JLPTGO-N2-E2E-EX-sec-listening",
+        "subject": "listening",
+        "title": "聴解"
+      }
+    ],
+    "title": "E2E 合成卷 N2（非真实内容）",
+    "year": 2099
+  },
+  "endpoint": "GET /api/exams/{id}/layers",
+  "schema": "ExamLayersSchema"
+}

@@ -1,0 +1,17 @@
+{
+  "body": {
+    "drafts": [
+      {
+        "chosen_option_id": "JLPTGO-N2-E2E-EX-ly-01-u01-q01-o1",
+        "question_id": "JLPTGO-N2-E2E-EX-ly-01-u01-q01",
+        "row_version": 1,
+        "session_unit_id": "de0e6e22-d989-4037-914c-f6b6bfe4fd79",
+        "unit_id": "JLPTGO-N2-E2E-EX-ly-01-u01",
+        "unit_position": 1,
+        "updated_at": "2026-11-16T04:54:48.307279+00:00"
+      }
+    ]
+  },
+  "endpoint": "GET drafts",
+  "schema": "DraftsListSchema"
+}

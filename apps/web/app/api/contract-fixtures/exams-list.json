@@ -1,0 +1,15 @@
+{
+  "body": [
+    {
+      "exam_id": "JLPTGO-N2-E2E-EX",
+      "level": "N2",
+      "month": 12,
+      "release_id": "606352bc-845d-4019-84b2-6a65def6c1be",
+      "revision": 2,
+      "title": "E2E 合成卷 N2（非真实内容）",
+      "year": 2099
+    }
+  ],
+  "endpoint": "GET /api/exams",
+  "schema": "ExamSummaryList"
+}

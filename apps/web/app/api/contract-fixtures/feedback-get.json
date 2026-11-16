@@ -1,0 +1,41 @@
+{
+  "body": {
+    "feedback_mode": "immediate",
+    "questions": [
+      {
+        "chosen_option_id": "JLPTGO-N2-E2E-EX-ly-01-u01-q01-o1",
+        "correct_option_id": "JLPTGO-N2-E2E-EX-ly-01-u01-q01-o2",
+        "explanations": [],
+        "is_correct": false,
+        "position": 1,
+        "printed_number": "1",
+        "question_id": "JLPTGO-N2-E2E-EX-ly-01-u01-q01",
+        "skipped": false
+      }
+    ],
+    "release_id": "606352bc-845d-4019-84b2-6a65def6c1be",
+    "unit_explanations": [
+      {
+        "content": {
+          "blocks": [
+            {
+              "children": [
+                {
+                  "text": "解析：「経験」读作けいけん。（改訂）",
+                  "type": "text"
+                }
+              ],
+              "type": "paragraph"
+            }
+          ],
+          "format": "jlptgo-richtext-v1"
+        },
+        "kind": "analysis",
+        "language": "zh-CN"
+      }
+    ],
+    "unit_id": "JLPTGO-N2-E2E-EX-ly-01-u01"
+  },
+  "endpoint": "GET feedback",
+  "schema": "FeedbackPayloadSchema"
+}

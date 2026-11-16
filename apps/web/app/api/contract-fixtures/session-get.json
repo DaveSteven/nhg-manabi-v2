@@ -1,0 +1,43 @@
+{
+  "body": {
+    "config": {
+      "requested_units": [
+        {
+          "release_id": "606352bc-845d-4019-84b2-6a65def6c1be",
+          "unit_id": "JLPTGO-N2-E2E-EX-ly-01-u01"
+        },
+        {
+          "release_id": "606352bc-845d-4019-84b2-6a65def6c1be",
+          "unit_id": "JLPTGO-N2-E2E-EX-ly-02-u01"
+        }
+      ]
+    },
+    "created_at": "2026-11-16T04:54:48.228084+00:00",
+    "ended_at": null,
+    "feedback_mode": "immediate",
+    "id": "1ac12cca-5ea3-4f44-90fa-2634b2868cd6",
+    "mode": "practice",
+    "state": "in_progress",
+    "units": [
+      {
+        "id": "de0e6e22-d989-4037-914c-f6b6bfe4fd79",
+        "position": 1,
+        "release_id": "606352bc-845d-4019-84b2-6a65def6c1be",
+        "state": "pending",
+        "submitted_at": null,
+        "unit_id": "JLPTGO-N2-E2E-EX-ly-01-u01"
+      },
+      {
+        "id": "d69bd51e-95f7-4c68-abcf-ee8b3e107eab",
+        "position": 2,
+        "release_id": "606352bc-845d-4019-84b2-6a65def6c1be",
+        "state": "pending",
+        "submitted_at": null,
+        "unit_id": "JLPTGO-N2-E2E-EX-ly-02-u01"
+      }
+    ],
+    "version": 1
+  },
+  "endpoint": "GET /api/practice/sessions/{id}",
+  "schema": "PracticeSessionSchema"
+}

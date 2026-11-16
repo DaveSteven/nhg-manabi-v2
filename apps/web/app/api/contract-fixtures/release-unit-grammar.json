@@ -1,0 +1,536 @@
+{
+  "body": {
+    "conversion_status": "complete",
+    "id": "JLPTGO-N2-E2E-EX-ly-02-u01",
+    "kind": "cloze",
+    "label": null,
+    "layer_id": "JLPTGO-N2-E2E-EX-ly-02",
+    "materials": [
+      {
+        "asset_id": null,
+        "content": {
+          "blocks": [
+            {
+              "children": [
+                {
+                  "text": "日本の夏は",
+                  "type": "text"
+                },
+                {
+                  "children": [
+                    {
+                      "text": "（46）",
+                      "type": "text"
+                    }
+                  ],
+                  "slot_id": "JLPTGO-N2-E2E-EX-ly-02-u01-s01",
+                  "type": "slot"
+                },
+                {
+                  "text": "暑いが、",
+                  "type": "text"
+                },
+                {
+                  "children": [
+                    {
+                      "text": "（47）",
+                      "type": "text"
+                    }
+                  ],
+                  "slot_id": "JLPTGO-N2-E2E-EX-ly-02-u01-s02",
+                  "type": "slot"
+                },
+                {
+                  "text": "過ごしやすい。",
+                  "type": "text"
+                }
+              ],
+              "type": "paragraph"
+            },
+            {
+              "children": [
+                {
+                  "children": [
+                    {
+                      "text": "（48）",
+                      "type": "text"
+                    }
+                  ],
+                  "slot_id": "JLPTGO-N2-E2E-EX-ly-02-u01-s03",
+                  "type": "slot"
+                },
+                {
+                  "text": "、",
+                  "type": "text"
+                },
+                {
+                  "children": [
+                    {
+                      "text": "（49）",
+                      "type": "text"
+                    }
+                  ],
+                  "slot_id": "JLPTGO-N2-E2E-EX-ly-02-u01-s04",
+                  "type": "slot"
+                },
+                {
+                  "text": "ことで、",
+                  "type": "text"
+                },
+                {
+                  "children": [
+                    {
+                      "text": "（50）",
+                      "type": "text"
+                    }
+                  ],
+                  "slot_id": "JLPTGO-N2-E2E-EX-ly-02-u01-s05",
+                  "type": "slot"
+                },
+                {
+                  "text": "。（改訂）",
+                  "type": "text"
+                }
+              ],
+              "type": "paragraph"
+            }
+          ],
+          "format": "jlptgo-richtext-v1"
+        },
+        "id": "JLPTGO-N2-E2E-EX-ly-02-u01-m01",
+        "kind": "passage",
+        "language": "ja-JP",
+        "role": "primary"
+      }
+    ],
+    "position": 1,
+    "question_type_id": "e2e_grammar_cloze",
+    "questions": [
+      {
+        "conversion_status": "complete",
+        "id": "JLPTGO-N2-E2E-EX-ly-02-u01-q01",
+        "options": [
+          {
+            "content": {
+              "blocks": [
+                {
+                  "children": [
+                    {
+                      "text": "選択肢1",
+                      "type": "text"
+                    }
+                  ],
+                  "type": "paragraph"
+                }
+              ],
+              "format": "jlptgo-richtext-v1"
+            },
+            "id": "JLPTGO-N2-E2E-EX-ly-02-u01-q01-o1",
+            "position": 1
+          },
+          {
+            "content": {
+              "blocks": [
+                {
+                  "children": [
+                    {
+                      "text": "選択肢2",
+                      "type": "text"
+                    }
+                  ],
+                  "type": "paragraph"
+                }
+              ],
+              "format": "jlptgo-richtext-v1"
+            },
+            "id": "JLPTGO-N2-E2E-EX-ly-02-u01-q01-o2",
+            "position": 2
+          },
+          {
+            "content": {
+              "blocks": [
+                {
+                  "children": [
+                    {
+                      "text": "選択肢3",
+                      "type": "text"
+                    }
+                  ],
+                  "type": "paragraph"
+                }
+              ],
+              "format": "jlptgo-richtext-v1"
+            },
+            "id": "JLPTGO-N2-E2E-EX-ly-02-u01-q01-o3",
+            "position": 3
+          },
+          {
+            "content": {
+              "blocks": [
+                {
+                  "children": [
+                    {
+                      "text": "選択肢4",
+                      "type": "text"
+                    }
+                  ],
+                  "type": "paragraph"
+                }
+              ],
+              "format": "jlptgo-richtext-v1"
+            },
+            "id": "JLPTGO-N2-E2E-EX-ly-02-u01-q01-o4",
+            "position": 4
+          }
+        ],
+        "position": 1,
+        "printed_number": "46",
+        "prompt": null,
+        "question_type_id": "e2e_grammar_cloze",
+        "slot_id": "JLPTGO-N2-E2E-EX-ly-02-u01-s01"
+      },
+      {
+        "conversion_status": "complete",
+        "id": "JLPTGO-N2-E2E-EX-ly-02-u01-q02",
+        "options": [
+          {
+            "content": {
+              "blocks": [
+                {
+                  "children": [
+                    {
+                      "text": "選択肢1",
+                      "type": "text"
+                    }
+                  ],
+                  "type": "paragraph"
+                }
+              ],
+              "format": "jlptgo-richtext-v1"
+            },
+            "id": "JLPTGO-N2-E2E-EX-ly-02-u01-q02-o1",
+            "position": 1
+          },
+          {
+            "content": {
+              "blocks": [
+                {
+                  "children": [
+                    {
+                      "text": "選択肢2",
+                      "type": "text"
+                    }
+                  ],
+                  "type": "paragraph"
+                }
+              ],
+              "format": "jlptgo-richtext-v1"
+            },
+            "id": "JLPTGO-N2-E2E-EX-ly-02-u01-q02-o2",
+            "position": 2
+          },
+          {
+            "content": {
+              "blocks": [
+                {
+                  "children": [
+                    {
+                      "text": "選択肢3",
+                      "type": "text"
+                    }
+                  ],
+                  "type": "paragraph"
+                }
+              ],
+              "format": "jlptgo-richtext-v1"
+            },
+            "id": "JLPTGO-N2-E2E-EX-ly-02-u01-q02-o3",
+            "position": 3
+          },
+          {
+            "content": {
+              "blocks": [
+                {
+                  "children": [
+                    {
+                      "text": "選択肢4",
+                      "type": "text"
+                    }
+                  ],
+                  "type": "paragraph"
+                }
+              ],
+              "format": "jlptgo-richtext-v1"
+            },
+            "id": "JLPTGO-N2-E2E-EX-ly-02-u01-q02-o4",
+            "position": 4
+          }
+        ],
+        "position": 2,
+        "printed_number": "47",
+        "prompt": null,
+        "question_type_id": "e2e_grammar_cloze",
+        "slot_id": "JLPTGO-N2-E2E-EX-ly-02-u01-s02"
+      },
+      {
+        "conversion_status": "complete",
+        "id": "JLPTGO-N2-E2E-EX-ly-02-u01-q03",
+        "options": [
+          {
+            "content": {
+              "blocks": [
+                {
+                  "children": [
+                    {
+                      "text": "選択肢1",
+                      "type": "text"
+                    }
+                  ],
+                  "type": "paragraph"
+                }
+              ],
+              "format": "jlptgo-richtext-v1"
+            },
+            "id": "JLPTGO-N2-E2E-EX-ly-02-u01-q03-o1",
+            "position": 1
+          },
+          {
+            "content": {
+              "blocks": [
+                {
+                  "children": [
+                    {
+                      "text": "選択肢2",
+                      "type": "text"
+                    }
+                  ],
+                  "type": "paragraph"
+                }
+              ],
+              "format": "jlptgo-richtext-v1"
+            },
+            "id": "JLPTGO-N2-E2E-EX-ly-02-u01-q03-o2",
+            "position": 2
+          },
+          {
+            "content": {
+              "blocks": [
+                {
+                  "children": [
+                    {
+                      "text": "選択肢3",
+                      "type": "text"
+                    }
+                  ],
+                  "type": "paragraph"
+                }
+              ],
+              "format": "jlptgo-richtext-v1"
+            },
+            "id": "JLPTGO-N2-E2E-EX-ly-02-u01-q03-o3",
+            "position": 3
+          },
+          {
+            "content": {
+              "blocks": [
+                {
+                  "children": [
+                    {
+                      "text": "選択肢4",
+                      "type": "text"
+                    }
+                  ],
+                  "type": "paragraph"
+                }
+              ],
+              "format": "jlptgo-richtext-v1"
+            },
+            "id": "JLPTGO-N2-E2E-EX-ly-02-u01-q03-o4",
+            "position": 4
+          }
+        ],
+        "position": 3,
+        "printed_number": "48",
+        "prompt": null,
+        "question_type_id": "e2e_grammar_cloze",
+        "slot_id": "JLPTGO-N2-E2E-EX-ly-02-u01-s03"
+      },
+      {
+        "conversion_status": "complete",
+        "id": "JLPTGO-N2-E2E-EX-ly-02-u01-q04",
+        "options": [
+          {
+            "content": {
+              "blocks": [
+                {
+                  "children": [
+                    {
+                      "text": "選択肢1",
+                      "type": "text"
+                    }
+                  ],
+                  "type": "paragraph"
+                }
+              ],
+              "format": "jlptgo-richtext-v1"
+            },
+            "id": "JLPTGO-N2-E2E-EX-ly-02-u01-q04-o1",
+            "position": 1
+          },
+          {
+            "content": {
+              "blocks": [
+                {
+                  "children": [
+                    {
+                      "text": "選択肢2",
+                      "type": "text"
+                    }
+                  ],
+                  "type": "paragraph"
+                }
+              ],
+              "format": "jlptgo-richtext-v1"
+            },
+            "id": "JLPTGO-N2-E2E-EX-ly-02-u01-q04-o2",
+            "position": 2
+          },
+          {
+            "content": {
+              "blocks": [
+                {
+                  "children": [
+                    {
+                      "text": "選択肢3",
+                      "type": "text"
+                    }
+                  ],
+                  "type": "paragraph"
+                }
+              ],
+              "format": "jlptgo-richtext-v1"
+            },
+            "id": "JLPTGO-N2-E2E-EX-ly-02-u01-q04-o3",
+            "position": 3
+          },
+          {
+            "content": {
+              "blocks": [
+                {
+                  "children": [
+                    {
+                      "text": "選択肢4",
+                      "type": "text"
+                    }
+                  ],
+                  "type": "paragraph"
+                }
+              ],
+              "format": "jlptgo-richtext-v1"
+            },
+            "id": "JLPTGO-N2-E2E-EX-ly-02-u01-q04-o4",
+            "position": 4
+          }
+        ],
+        "position": 4,
+        "printed_number": "49",
+        "prompt": null,
+        "question_type_id": "e2e_grammar_cloze",
+        "slot_id": "JLPTGO-N2-E2E-EX-ly-02-u01-s04"
+      },
+      {
+        "conversion_status": "complete",
+        "id": "JLPTGO-N2-E2E-EX-ly-02-u01-q05",
+        "options": [
+          {
+            "content": {
+              "blocks": [
+                {
+                  "children": [
+                    {
+                      "text": "選択肢1",
+                      "type": "text"
+                    }
+                  ],
+                  "type": "paragraph"
+                }
+              ],
+              "format": "jlptgo-richtext-v1"
+            },
+            "id": "JLPTGO-N2-E2E-EX-ly-02-u01-q05-o1",
+            "position": 1
+          },
+          {
+            "content": {
+              "blocks": [
+                {
+                  "children": [
+                    {
+                      "text": "選択肢2",
+                      "type": "text"
+                    }
+                  ],
+                  "type": "paragraph"
+                }
+              ],
+              "format": "jlptgo-richtext-v1"
+            },
+            "id": "JLPTGO-N2-E2E-EX-ly-02-u01-q05-o2",
+            "position": 2
+          },
+          {
+            "content": {
+              "blocks": [
+                {
+                  "children": [
+                    {
+                      "text": "選択肢3",
+                      "type": "text"
+                    }
+                  ],
+                  "type": "paragraph"
+                }
+              ],
+              "format": "jlptgo-richtext-v1"
+            },
+            "id": "JLPTGO-N2-E2E-EX-ly-02-u01-q05-o3",
+            "position": 3
+          },
+          {
+            "content": {
+              "blocks": [
+                {
+                  "children": [
+                    {
+                      "text": "選択肢4",
+                      "type": "text"
+                    }
+                  ],
+                  "type": "paragraph"
+                }
+              ],
+              "format": "jlptgo-richtext-v1"
+            },
+            "id": "JLPTGO-N2-E2E-EX-ly-02-u01-q05-o4",
+            "position": 4
+          }
+        ],
+        "position": 5,
+        "printed_number": "50",
+        "prompt": null,
+        "question_type_id": "e2e_grammar_cloze",
+        "slot_id": "JLPTGO-N2-E2E-EX-ly-02-u01-s05"
+      }
+    ],
+    "release_id": "606352bc-845d-4019-84b2-6a65def6c1be",
+    "slot_ids": [
+      "JLPTGO-N2-E2E-EX-ly-02-u01-s01",
+      "JLPTGO-N2-E2E-EX-ly-02-u01-s02",
+      "JLPTGO-N2-E2E-EX-ly-02-u01-s03",
+      "JLPTGO-N2-E2E-EX-ly-02-u01-s04",
+      "JLPTGO-N2-E2E-EX-ly-02-u01-s05"
+    ]
+  },
+  "endpoint": "GET /api/releases/{rid}/units/{uid}",
+  "schema": "PublicUnitSchema"
+}

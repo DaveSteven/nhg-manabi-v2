@@ -61,6 +61,18 @@ export const LayerCatalogEntrySchema = OutlineLayerSchema.omit({
 });
 export type LayerCatalogEntry = z.infer<typeof LayerCatalogEntrySchema>;
 
+/**
+ * Actual GET /api/exams/{id}/layers body: the same sectioned outline as
+ * GET /api/exams/{id} but with per-layer unit_count instead of units
+ * (found by the contract fixtures; earlier modelled as a flat array).
+ */
+export const ExamLayersSchema = ExamSummarySchema.extend({
+  sections: z.array(OutlineSectionSchema.extend({
+    layers: z.array(LayerCatalogEntrySchema),
+  })),
+});
+export type ExamLayers = z.infer<typeof ExamLayersSchema>;
+
 export class DtoParseError extends Error {
   readonly issues: string;
   constructor(endpoint: string, issues: string) {
