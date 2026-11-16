@@ -38,6 +38,11 @@ export function Popover({ open, anchorRef, onClose, minWidth, maxHeight,
     if (!el || !anchor) return;
 
     const place = () => {
+      // Measuring removes the height cap, which would collapse any inner
+      // scroll container back to the top — remember and restore positions.
+      const scrollers = Array.from(
+        el.querySelectorAll<HTMLElement>("[data-popover-scroll]"));
+      const saved = scrollers.map((n) => n.scrollTop);
       // measure the natural size first, then constrain
       el.style.maxHeight = "none";
       el.style.width = "max-content";
@@ -55,17 +60,25 @@ export function Popover({ open, anchorRef, onClose, minWidth, maxHeight,
       el.style.width = `${p.width}px`;
       el.style.maxHeight = `${p.maxHeight}px`;
       el.dataset.side = p.side;
+      scrollers.forEach((n, i) => { n.scrollTop = saved[i]!; });
+    };
+
+    // Page/ancestor scrolling moves the anchor, so re-place; scrolling the
+    // popover's own list must not (it is the user scrolling the options).
+    const onScroll = (e: Event) => {
+      if (e.target instanceof Node && el.contains(e.target)) return;
+      place();
     };
 
     place();
     window.addEventListener("resize", place);
-    window.addEventListener("scroll", place, true);
+    window.addEventListener("scroll", onScroll, true);
     const ro = typeof ResizeObserver !== "undefined"
       ? new ResizeObserver(place) : null;
     ro?.observe(el);
     return () => {
       window.removeEventListener("resize", place);
-      window.removeEventListener("scroll", place, true);
+      window.removeEventListener("scroll", onScroll, true);
       ro?.disconnect();
     };
   }, [open, anchorRef, minWidth, maxHeight]);

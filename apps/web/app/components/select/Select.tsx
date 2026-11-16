@@ -297,7 +297,7 @@ export function Select(props: SelectProps) {
                  onKeyDown={(e) => onKeyDown(e, true)} />
         ) : null}
         <div ref={listRef} id={listId} role="listbox" className="select-list"
-             data-nav={nav}
+             data-popover-scroll data-nav={nav}
              aria-label={props["aria-label"]}
              aria-labelledby={props["aria-labelledby"]}>
           {body()}

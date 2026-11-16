@@ -1,5 +1,6 @@
-# Select 与 Popover 组件规范 v1.1
+# Select 与 Popover 组件规范 v1.2
 
+> v1.2（2026-11-16）：悬停改为「边框变色、背景不变」，取代 v1.0 的暖灰背景。
 > v1.1（2026-11-16）：Trigger 改为胶囊风格；新增 Large 尺寸（备用，当前无页面使用）。首页顶栏等级选择使用默认尺寸（44px）。
 
 > 状态：2026-11-16 用户给出设计要求，本阶段落地。归属 `design-system.md` §9（按钮和交互状态）的表单控件部分，色彩/圆角/动效 Token 沿用该文档与 `tokens.scss`。
@@ -19,7 +20,7 @@
 | Popover | 圆角 16px，白底，轻阴影，内边距 8px，**最大高度 250px**（可用 `popoverMaxHeight` 调整），超出后列表内部滚动 |
 | Option Item | 高度 42px，圆角 10px，左右内边距 12px |
 | Selected | 浅樱底色 `#F6E8EC`，深樱文字，右侧对勾（不只靠颜色表达） |
-| Hover | 柔和暖灰背景（`--color-surface-subtle`），不使用明显彩色边框 |
+| Hover | **边框变为品牌色**（`--color-primary`），背景不变（不使用灰色底）；Trigger 与 Option 一致，Option 预留 1px 透明边框避免悬停时布局位移 |
 | Focus | 清晰的品牌色焦点环（2px，`--color-primary`，偏移 2px），Trigger 与键盘高亮项均可见 |
 | Animation | 160–200ms 淡入 + 轻微位移（4px）；`prefers-reduced-motion` 下取消 |
 

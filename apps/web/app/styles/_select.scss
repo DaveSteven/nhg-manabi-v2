@@ -19,7 +19,8 @@
   cursor: pointer;
   transition: border-color var(--motion-fast), background var(--motion-fast);
 
-  &:hover:not(:disabled) { background: var(--color-surface-subtle); }
+  /* hover: the border turns the brand colour; the fill stays white */
+  &:hover:not(:disabled) { border-color: var(--color-primary); }
   &:focus-visible {
     outline: 2px solid var(--color-primary);
     outline-offset: 2px;
@@ -161,14 +162,15 @@
   box-sizing: border-box;
   min-height: 42px;
   padding: 0 var(--space-3);
+  border: 1px solid transparent; /* reserved so hover doesn't shift layout */
   border-radius: 10px;
   color: var(--color-ink);
   font-size: var(--text-body);
   cursor: pointer;
   user-select: none;
 
-  /* hover / keyboard highlight: warm grey, no coloured border */
-  &.is-active { background: var(--color-surface-subtle); }
+  /* hover: border turns the brand colour, no grey fill */
+  &:hover:not(.is-disabled) { border-color: var(--color-primary); }
 
   /* selected: light sakura + deep sakura text + check (never colour only) */
   &.is-selected {

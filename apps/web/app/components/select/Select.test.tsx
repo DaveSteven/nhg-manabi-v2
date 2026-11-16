@@ -286,6 +286,29 @@ describe("Select · popover height", () => {
   });
 });
 
+describe("Select · popover scrolling", () => {
+  it("scrolling the option list does not re-place the popover; page scroll does", async () => {
+    const user = userEvent.setup();
+    const many = Array.from({ length: 30 }, (_, i) =>
+      ({ value: String(i), label: `Item ${i}` }));
+    render(<Harness items={many} />);
+    const rect = vi.spyOn(trigger(), "getBoundingClientRect");
+    await user.click(trigger());
+    const list = screen.getByRole("listbox");
+    const placedOnOpen = rect.mock.calls.length;
+    expect(placedOnOpen).toBeGreaterThan(0);
+
+    list.scrollTop = 120;
+    list.dispatchEvent(new Event("scroll"));
+    expect(rect.mock.calls.length).toBe(placedOnOpen); // no re-place
+    expect(list.scrollTop).toBe(120);
+
+    document.dispatchEvent(new Event("scroll")); // page scroll → anchor moved
+    expect(rect.mock.calls.length).toBeGreaterThan(placedOnOpen);
+    expect(list.scrollTop).toBe(120); // position kept across a re-place
+  });
+});
+
 describe("Select · grouped", () => {
   it("renders labelled groups; keyboard crosses groups", async () => {
     const user = userEvent.setup();
