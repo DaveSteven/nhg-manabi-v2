@@ -200,7 +200,7 @@ button {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .header-row { transition: none; }
+  .header-row, .topnav { transition: none; }
 }
 
 .brand {
@@ -248,7 +248,12 @@ button {
   backdrop-filter: blur(8px);
   box-shadow: var(--shadow-card);
   overflow-x: auto;
+  transition: box-shadow var(--motion-normal) ease;
 }
+
+/* stuck: the header-row capsule already floats, so the nav pill drops its own shadow */
+.site-header.is-stuck .topnav { box-shadow: none; }
+
 
 .topnav-link {
   display: inline-flex;

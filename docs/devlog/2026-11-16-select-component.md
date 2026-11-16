@@ -113,3 +113,7 @@
 - 测试：新增 1 例（滚动阈值 8px：3px 不触发、120px 触发、回 0 取消）；typecheck 通过；vitest 22 文件 / 202 passed；build 通过。容器内浏览器：静止态背景全透明；滚动 300px 后 `is-stuck`、背景 `rgba(255,255,255,0.78)`、模糊 14px、边框与阴影生效；两种状态下 header 高度均 98px、品牌 x 均 33，无布局位移；截图确认内容在半透明胶囊下滚动。
 - 未验证：过渡动画本身的观感（该浏览器窗格中 CSS 过渡不推进，只核对了起止状态的计算值）；375px 窄屏下多行折叠头部的胶囊观感；深色模式；Firefox/Safari 对 `backdrop-filter` 的表现（Firefox 已支持，旧版 Safari 需 `-webkit-` 前缀，未加）。
 - 规范冲突：design-system §3.1 写着「Logo 不与主导航强行包在同一胶囊容器内」「不使用通栏背景色」，已在 §3.1 末尾新增「吸顶态」小节说明仅吸顶态例外。
+
+## 续：吸顶态去掉 topnav 阴影（同日，用户指示）
+- `.site-header.is-stuck .topnav { box-shadow: none }`，并给 `.topnav` 加 `box-shadow` 的 220ms 过渡（`prefers-reduced-motion` 下关闭）；理由：外层吸顶胶囊已有浮层阴影，避免双层阴影。`design-system.md` 吸顶态表格新增「导航胶囊」一行。
+- 验证（容器内）：静止 `box-shadow` 为 `0 4px 18px rgba(43,43,51,.035)`；滚动 300px 后 `none`；回到顶部恢复。前端 202 passed，build 通过；纯样式改动，无新增断言；过渡观感同上未在该窗格验证。
