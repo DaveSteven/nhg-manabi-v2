@@ -36,6 +36,8 @@ export function toViewModel(unit: PublicUnit): VmContentUnit {
     language: m.language,
     content: m.content,
     imageAssetId: m.kind === "image" && m.asset_id ? m.asset_id : null,
+    imageUrl: m.kind === "image" && m.asset_id
+      ? releaseAssetUrl(unit.release_id, m.asset_id) : null,
     audio: m.kind === "audio"
       ? (m.asset_id
           ? { kind: "url" as const,

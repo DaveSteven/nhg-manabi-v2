@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { screen } from "@testing-library/react";
+import { fireEvent, screen } from "@testing-library/react";
 import { renderWithQuery } from "../../test/render";
 import { MaterialDisplay } from "./MaterialDisplay";
 import type { VmMaterial, VmUnit } from "./viewModel";
@@ -10,7 +10,7 @@ const unit: VmUnit = {
 };
 
 const base = { language: "ja-JP", content: null, imageAssetId: null,
-               audio: null };
+               imageUrl: null, audio: null };
 
 const passage: VmMaterial = {
   ...base, id: "m1", kind: "passage", role: "primary",
@@ -45,12 +45,31 @@ describe("MaterialDisplay", () => {
     expect(screen.getByText("comparison_b の文章")).toBeInTheDocument();
   });
 
-  it("renders image materials as labeled placeholders with asset ids", () => {
+  it("renders image materials as a real, enlargeable <img> from the release asset URL", () => {
     const image: VmMaterial = { ...base, id: "m-img", kind: "image",
-      role: "illustration", imageAssetId: "as-img" };
+      role: "illustration", imageAssetId: "as-img",
+      imageUrl: "/api/releases/r-1/assets/as-img" };
     renderWithQuery(<MaterialDisplay unit={unit} materials={[image]} />);
-    const placeholder = document.querySelector("[data-asset-id='as-img']");
-    expect(placeholder).toBeInTheDocument();
+    const img = screen.getByRole("img", { name: /题目图片/ });
+    expect(img).toHaveAttribute("src", "/api/releases/r-1/assets/as-img");
+    expect(img.closest("a")).toHaveAttribute("href", "/api/releases/r-1/assets/as-img");
+    expect(document.querySelector("[data-asset-id='as-img']")).toBeInTheDocument();
+  });
+
+  it("image load failure shows an explicit message, never a silent blank", () => {
+    const image: VmMaterial = { ...base, id: "m-img", kind: "image",
+      role: "illustration", imageAssetId: "as-img",
+      imageUrl: "/api/releases/r-1/assets/as-img" };
+    renderWithQuery(<MaterialDisplay unit={unit} materials={[image]} />);
+    fireEvent.error(screen.getByRole("img", { name: /题目图片/ }));
+    expect(screen.getByRole("alert")).toHaveTextContent("图片加载失败");
+  });
+
+  it("image material without an asset renders an explicit unavailable state", () => {
+    const image: VmMaterial = { ...base, id: "m-img", kind: "image",
+      role: "illustration" };
+    renderWithQuery(<MaterialDisplay unit={unit} materials={[image]} />);
+    expect(screen.getByRole("alert")).toHaveTextContent("图片暂不可用");
   });
 
   it("audio materials without asset render explicit unavailable state", () => {

@@ -25,6 +25,8 @@ export interface VmMaterial {
   language: string | null;
   content: unknown; // jlptgo-richtext-v1 payload or null
   imageAssetId: string | null;
+  /** Release-scoped media URL for image materials (null: no asset). */
+  imageUrl: string | null;
   audio: VmAudioSource | null; // audio materials only
 }
 

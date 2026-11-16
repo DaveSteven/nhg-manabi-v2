@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { VmMaterial, VmUnit } from "./viewModel";
 import { RichText } from "./richtext/RichText";
 
@@ -51,13 +52,7 @@ export function MaterialDisplay({ unit, materials, onDiagnostic }: {
 
       {images.length > 0 ? (
         <div className="material-images">
-          {images.map((m) => (
-            <div key={m.id} className="richtext-image-placeholder"
-                 data-asset-id={m.imageAssetId ?? undefined}>
-              <div aria-hidden="true">🖼</div>
-              <span className="sr-only">图片材料（{m.imageAssetId ?? "无资产"}）</span>
-            </div>
-          ))}
+          {images.map((m) => <ImageMaterial key={m.id} material={m} />)}
         </div>
       ) : null}
 
@@ -69,6 +64,27 @@ export function MaterialDisplay({ unit, materials, onDiagnostic }: {
         </div>
       ))}
     </section>
+  );
+}
+
+/** Real image material (tables, figures). Click opens the full image so
+ * dense tables stay legible on narrow screens; failures are explicit. */
+function ImageMaterial({ material }: { material: VmMaterial }) {
+  const [failed, setFailed] = useState(false);
+  if (!material.imageUrl) {
+    return <p className="image-unavailable" role="alert">图片暂不可用</p>;
+  }
+  if (failed) {
+    return <p className="image-unavailable" role="alert">图片加载失败，请刷新重试。</p>;
+  }
+  return (
+    <figure className="material-image" data-asset-id={material.imageAssetId ?? undefined}>
+      <a href={material.imageUrl} target="_blank" rel="noopener noreferrer"
+         title="点击查看大图">
+        <img src={material.imageUrl} alt="题目图片（点击查看大图）"
+             loading="lazy" onError={() => setFailed(true)} />
+      </a>
+    </figure>
   );
 }
 
