@@ -15,19 +15,20 @@
 - 测试：55 个测试全部通过（review_sync 12、data_quality 3、播放兼容 2、publisher/API 7、导入器 20、迁移一致性 2、Schema 编译 3、健康检查 1、真实 PG 约束 5 等在内）。
 - **M2.1 Task 01–04（2026-11-16）**：开发前检查；题库查询 API 扩展（`GET /api/exams/{id}` 轮廓、`/layers` 目录、`GET /api/releases/{rid}/units/{uid}` 按 release 取 Unit，公开载荷零答案泄漏，draft 仍 404）；最小用户身份边界（`app/auth.py`，服务端解析 + fail-closed + dev_test 生产硬禁用，ADR-0006）；练习会话管理（`app/api/practice.py`：创建固定 release 绑定的单/多 Unit 会话、单活跃练习 409 冲突、恢复、跨账号 404 隔离、finish→ended_early 幂等且不生成虚假成绩）。测试增至 74 个全部通过。
 - **ADR-0007 用户端混合渲染策略（2026-11-16，纯文档）**：React Router Framework Mode + SSG（品牌/内容页）+ SPA（学习系统），第一阶段禁用运行时 SSR，不引入 Next.js/Node SSR 服务。原建议编号 0005/0006 已被占用，顺延为 0007（M2 计划 Task 09 引用已修正）。`frontend-spec.md` 新增「页面渲染策略」章节为实现规范（页面分类、SSG/SPA 规范、SEO/多语言、静态部署路由规则、验收清单、SSR 升级条件）。两份并行起草的 ADR 已合并为单一 `ADR-0007-hybrid-rendering-strategy.md`。原「Task 09 前先写混合渲染 ADR」提前满足（实现仍在 M2.2）。无代码改动、未运行测试。
+- **M2.1 Task 05–08（2026-11-16）**：答案草稿管理（`row_version` 乐观锁，409 带当前版本，旧请求不可覆盖新数据，清除/恢复/冻结齐全）；Unit 正式提交（**单事务整组提交 + 服务端判题**：会话行先锁、单元行后锁，并发/重复提交幂等返回存储结果且零重复作答行；非法选项整组回滚可重试；未答 = NULL/NULL ≠ 错误；无答案键拒绝判题）；反馈权限（正确答案/解析只经 feedback 端点门控下发——immediate 提交后开放该 Unit，end 模式会话正式结束前零泄漏含提交响应体）；练习结果（全部提交 → completed + 同事务 `study_results`，DB CHECK 保证 correct+wrong+skipped=total；有未提交 → ended_early 保留已提交答案且不生成成绩；结果含逐题复盘与 score_rate/answered_accuracy）。测试增至 87 个全部通过（新增 study_flow 13）。已知边界：Idempotency-Key 头未实现（域级幂等替代）、`user_question_progress` 留待 M3。
 
 ## 进行中（当前开发阶段）
 
-- **M2 核心学习流程**（计划见 `docs/development/M2-core-learning-flow.md`）：FastAPI 作答引擎 → React 学习页面 → 端到端验收。M2.1 Task 01–04 已完成，下一步 Task 05–08（草稿管理、Unit 正式提交、反馈权限控制、练习结果）。
+- **M2 核心学习流程**（计划见 `docs/development/M2-core-learning-flow.md`）：FastAPI 作答引擎 → React 学习页面 → 端到端验收。**M2.1 全部完成（Task 01–08）**，下一步 M2.2 Task 09–11（React 学习页面）。
+- **M2.2 前端实施准备（2026-11-16）**：新增 `docs/development/M2.2-frontend-implementation.md`，已明确 React Router Framework Mode SSG+SPA、学习首页、试卷目录、Canonical Unit/RichText/听力渲染、草稿与提交反馈、自动恢复及测试验收。可先实施工程/只读页面/renderer；答题闭环现在可直接对接 Task 05–08 已落地的 API（见下）与集成测试。`apps/web` 当前仍只有 README，未创建 React 工程。
 
 ## 未开始（按依赖顺序）
 
-1. M2.1 Task 05–08（草稿、提交、反馈权限、结果）。
-2. M2.2 React 学习页面（Task 09–11；混合渲染 ADR-0007 已就绪）。
-3. 运行真实 Agent 校验（按 contract 批量产出五套题库结果 → sync → 解锁 promote）；N4 4 个确证字幕越界待人工重对时间轴（当前为 open blocking，阻止 N4 发布）。
-4. N5/N3/N2/N1 逐包执行 `python -m app.data_quality sync`（M1.6 机制已就绪，按任务要求未自动全量跑）。
-5. 发布快照不可变的 DB 触发器 / restricted DB role。
-6. 认证/用户体系（当前内部 API 仅共享令牌；M2 Task 03 仅做最小身份边界）。
+1. M2.2 React 学习页面（Task 09–11；实施计划、ADR-0007 与后端作答 API 契约均已就绪）。
+2. 运行真实 Agent 校验（按 contract 批量产出五套题库结果 → sync → 解锁 promote）；N4 4 个确证字幕越界待人工重对时间轴（当前为 open blocking，阻止 N4 发布）。
+3. N5/N3/N2/N1 逐包执行 `python -m app.data_quality sync`（M1.6 机制已就绪，按任务要求未自动全量跑）。
+4. 发布快照不可变的 DB 触发器 / restricted DB role。
+5. 认证/用户体系（当前内部 API 仅共享令牌；M2 Task 03 仅做最小身份边界）。
 
 ## 已知缺口 / 风险
 

@@ -147,6 +147,28 @@ def staged_and_published(pg_engine, clean_publish):
 
 
 @pytest.fixture()
+def clean_study(pg_engine):
+    """Wipe the study domain between tests (isolated test DB only).
+
+    study_* rows are NOT covered by clean_publish; leftover in-progress
+    sessions would otherwise trip the one-active-practice rule. Non-autouse:
+    study test modules wrap it in a module-level autouse fixture.
+    """
+    import sqlalchemy as sa
+
+    def wipe():
+        with pg_engine.begin() as conn:
+            for table in ("study_answer_drafts", "study_submitted_answers",
+                          "study_session_units", "study_results",
+                          "study_phase_runs", "study_sessions",
+                          "user_question_progress", "user_favorites"):
+                conn.execute(sa.text(f"DELETE FROM {table}"))
+    wipe()
+    yield
+    wipe()
+
+
+@pytest.fixture()
 def published_release(pg_engine, staged_and_published):
     """Walk the fixture release through the full publish gate to 'published'.
 
