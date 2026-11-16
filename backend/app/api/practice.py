@@ -581,6 +581,8 @@ def submit_session_unit(
         if unit["feedback_mode"] == "immediate":
             payload["feedback"] = _build_unit_feedback(
                 conn, unit["release_id"], unit["unit_id"], session_unit_id)
+            # Same shape as GET /feedback (which also carries the mode).
+            payload["feedback"]["feedback_mode"] = unit["feedback_mode"]
     return payload
 
 

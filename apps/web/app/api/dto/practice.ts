@@ -102,10 +102,7 @@ export type FeedbackQuestion = z.infer<typeof FeedbackQuestionSchema>;
 export const FeedbackPayloadSchema = z.strictObject({
   unit_id: z.string(),
   release_id: z.string(),
-  // GET /feedback includes it; the copy embedded in a submit response does
-  // not (found in M2.3 live-server run). Nothing reads it: the session
-  // carries the authoritative feedback_mode.
-  feedback_mode: FeedbackModeSchema.optional(),
+  feedback_mode: FeedbackModeSchema,
   questions: z.array(FeedbackQuestionSchema),
   unit_explanations: z.array(ExplanationSchema),
 });

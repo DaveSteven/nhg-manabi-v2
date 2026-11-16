@@ -12,16 +12,16 @@
         }
       ]
     },
-    "created_at": "2026-11-16T04:54:48.228084+00:00",
-    "ended_at": "2026-11-16T04:54:48.444863+00:00",
+    "created_at": "2026-11-16T05:02:57.040977+00:00",
+    "ended_at": "2026-11-16T05:02:57.233188+00:00",
     "feedback_mode": "immediate",
-    "id": "1ac12cca-5ea3-4f44-90fa-2634b2868cd6",
+    "id": "06e49d2d-9c46-4b2b-acd9-20936b0d32c7",
     "idempotent": false,
     "mode": "practice",
     "results": {
       "answered_accuracy": 0.0,
       "correct_count": 0,
-      "finished_at": "2026-11-16T04:54:48.444863+00:00",
+      "finished_at": "2026-11-16T05:02:57.233188+00:00",
       "questions": [
         {
           "chosen_option_id": "JLPTGO-N2-E2E-EX-ly-01-u01-q01-o1",
@@ -100,19 +100,19 @@
     "state": "completed",
     "units": [
       {
-        "id": "de0e6e22-d989-4037-914c-f6b6bfe4fd79",
+        "id": "3dcb354c-49df-4cba-89b6-60bd014dcdb8",
         "position": 1,
         "release_id": "606352bc-845d-4019-84b2-6a65def6c1be",
         "state": "submitted",
-        "submitted_at": "2026-11-16T04:54:48.344403+00:00",
+        "submitted_at": "2026-11-16T05:02:57.147280+00:00",
         "unit_id": "JLPTGO-N2-E2E-EX-ly-01-u01"
       },
       {
-        "id": "d69bd51e-95f7-4c68-abcf-ee8b3e107eab",
+        "id": "057e9bcd-f385-4381-be2e-8bd15773ba1f",
         "position": 2,
         "release_id": "606352bc-845d-4019-84b2-6a65def6c1be",
         "state": "submitted",
-        "submitted_at": "2026-11-16T04:54:48.413955+00:00",
+        "submitted_at": "2026-11-16T05:02:57.204492+00:00",
         "unit_id": "JLPTGO-N2-E2E-EX-ly-02-u01"
       }
     ],

@@ -1,5 +1,6 @@
 import { Link, useSearchParams } from "react-router";
 import type { ExamSummary } from "../../api/dto/exam";
+import { describeLoadError } from "../../api/errors";
 import { useExamList } from "./useExamCatalog";
 import { examTitle, examRoute } from "./viewModels";
 
@@ -46,11 +47,9 @@ export function ExamListView() {
       {query.isPending ? (
         <p role="status">加载中…</p>
       ) : query.error ? (
-        query.error.status === 401 ? (
-          <p role="status">未登录，无法查看试卷目录。</p>
-        ) : (
-          <p role="alert">加载失败，请稍后重试。</p>
-        )
+        <p role={query.error.status === 401 ? "status" : "alert"}>
+          {describeLoadError(query.error, "试卷目录")}
+        </p>
       ) : data.length === 0 ? (
         <p>暂无已发布试卷。</p>
       ) : filtered.length === 0 ? (

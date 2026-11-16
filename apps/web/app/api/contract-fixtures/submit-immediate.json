@@ -2,6 +2,7 @@
   "body": {
     "answered_count": 1,
     "feedback": {
+      "feedback_mode": "immediate",
       "questions": [
         {
           "chosen_option_id": "JLPTGO-N2-E2E-EX-ly-01-u01-q01-o1",
@@ -39,7 +40,7 @@
     },
     "idempotent": false,
     "release_id": "606352bc-845d-4019-84b2-6a65def6c1be",
-    "session_unit_id": "de0e6e22-d989-4037-914c-f6b6bfe4fd79",
+    "session_unit_id": "3dcb354c-49df-4cba-89b6-60bd014dcdb8",
     "skipped_count": 0,
     "state": "submitted",
     "unit_id": "JLPTGO-N2-E2E-EX-ly-01-u01"

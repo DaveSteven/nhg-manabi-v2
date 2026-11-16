@@ -20,6 +20,14 @@ describe("TopNav", () => {
       .toHaveAttribute("href", "/study/exams");
   });
 
+  it("首页 is active only on /study exactly, not on child routes", () => {
+    renderRoutes([{ path: "study", Component: StudyLayout,
+                    children: [{ path: "exams", Component: () => <p>exams</p> }] }],
+                 "/study/exams");
+    expect(screen.getByText("首页").closest("a")).not.toHaveClass("active");
+    expect(screen.getByText("历年试卷").closest("a")).toHaveClass("active");
+  });
+
   it("marks unimplemented entries as aria-disabled 暂未开放", () => {
     renderRoutes([{ path: "study", Component: StudyLayout }], "/study");
     for (const name of ["专项练习", "我的学习"]) {

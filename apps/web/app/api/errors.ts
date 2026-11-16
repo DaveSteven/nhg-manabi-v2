@@ -94,3 +94,17 @@ export function networkError(cause: unknown): ApiError {
   return new ApiError(0, "network_error",
     cause instanceof Error ? cause.message : "network error");
 }
+
+/**
+ * User-facing wording for a failed read (catalog/list pages). Distinguishes
+ * "service unreachable" (network error / 5xx — what a missing or crashed
+ * backend looks like) from sign-in and generic failures, so a developer or
+ * user is not told only "try again later".
+ */
+export function describeLoadError(err: { status: number; code: string }, what: string): string {
+  if (err.status === 401) return `未登录，无法加载${what}。`;
+  if (err.code === "network_error" || err.status >= 500 || err.status === 0) {
+    return `无法连接学习服务，${what}暂时无法加载。请确认服务已启动后重试。`;
+  }
+  return `${what}加载失败，请稍后重试。`;
+}

@@ -111,6 +111,7 @@ describe("practice DTOs", () => {
       feedback: {
         unit_id: "u01",
         release_id: "r-uuid",
+        feedback_mode: "immediate",
         questions: [{
           question_id: "q02",
           position: 2,
@@ -160,22 +161,21 @@ describe("practice DTOs", () => {
       { ...broken, session_id: "s" })).not.toThrow();
   });
 
-  it("feedback payload: feedback_mode optional (submit-embedded copy omits it; GET includes it) — M2.3 live-server finding", () => {
+  it("feedback payload requires feedback_mode (same shape in submit and GET)", () => {
     const base = {
       unit_id: "u01", release_id: "r-uuid", questions: [],
       unit_explanations: [],
     };
-    expect(() => parseDto(FeedbackPayloadSchema, "submit feedback", base)).not.toThrow();
     expect(() => parseDto(FeedbackPayloadSchema, "GET feedback",
       { ...base, feedback_mode: "immediate" })).not.toThrow();
-    expect(() => parseDto(FeedbackPayloadSchema, "GET feedback",
-      { ...base, feedback_mode: "bogus" })).toThrow();
+    expect(() => parseDto(FeedbackPayloadSchema, "GET feedback", base)).toThrow();
   });
 
   it("accepts the feedback payload shape", () => {
     const feedback = {
       unit_id: "u01",
       release_id: "r-uuid",
+      feedback_mode: "end",
       questions: [{
         question_id: "q01",
         position: 1,

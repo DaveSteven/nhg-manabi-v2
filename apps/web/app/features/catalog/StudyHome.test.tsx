@@ -84,7 +84,7 @@ describe("StudyHome", () => {
       HttpResponse.json({ detail: "boom" }, { status: 500 })));
     renderHome(qc);
     const alert = await screen.findByRole("alert");
-    expect(alert).toHaveTextContent("试卷目录加载失败");
+    expect(alert).toHaveTextContent("无法连接学习服务");
   });
 
   it("shows an explicit empty state for an empty catalog", async () => {

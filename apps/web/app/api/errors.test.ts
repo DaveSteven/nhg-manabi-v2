@@ -56,3 +56,17 @@ describe("normalizeErrorBody", () => {
     expect(normalizeErrorBody(404, { detail: null }).code).toBe("not_found");
   });
 });
+
+describe("describeLoadError", () => {
+  it("separates sign-in, unreachable service and generic failure", async () => {
+    const { describeLoadError } = await import("./errors");
+    expect(describeLoadError({ status: 401, code: "unauthorized" }, "试卷目录"))
+      .toContain("未登录");
+    expect(describeLoadError({ status: 500, code: "server_error" }, "试卷目录"))
+      .toContain("无法连接学习服务");
+    expect(describeLoadError({ status: 0, code: "network_error" }, "试卷目录"))
+      .toContain("无法连接学习服务");
+    expect(describeLoadError({ status: 404, code: "not_found" }, "试卷目录"))
+      .toBe("试卷目录加载失败，请稍后重试。");
+  });
+});

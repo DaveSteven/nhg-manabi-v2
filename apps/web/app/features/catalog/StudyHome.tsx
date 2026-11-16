@@ -1,4 +1,5 @@
 import { Link } from "react-router";
+import { describeLoadError } from "../../api/errors";
 import { useCurrentSession, useExamList } from "./useExamCatalog";
 import { examTitle } from "./viewModels";
 
@@ -61,11 +62,9 @@ export function StudyHome() {
         {exams.isPending ? (
           <p role="status">试卷目录加载中…</p>
         ) : exams.error ? (
-          exams.error.status === 401 ? (
-            <p role="status">未登录，无法加载试卷目录。</p>
-          ) : (
-            <p role="alert">试卷目录加载失败，请稍后重试。</p>
-          )
+          <p role={exams.error.status === 401 ? "status" : "alert"}>
+            {describeLoadError(exams.error, "试卷目录")}
+          </p>
         ) : exams.data.length === 0 ? (
           <p>暂无已发布试卷。</p>
         ) : (

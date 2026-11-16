@@ -9,7 +9,7 @@ import { NavLink } from "react-router";
 export function TopNav() {
   return (
     <nav aria-label="主导航" className="topnav">
-      <NavLink to="/study" className="topnav-link">
+      <NavLink to="/study" end className="topnav-link">
         首页
       </NavLink>
       <button type="button" className="topnav-link topnav-unavailable"

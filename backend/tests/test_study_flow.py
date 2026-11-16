@@ -184,6 +184,12 @@ def test_submit_group_atomically_with_immediate_feedback(
     assert body["answered_count"] == 2 and body["skipped_count"] == 0
     assert body["idempotent"] is False
     fb = body["feedback"]
+    # Embedded feedback has the same shape as GET /feedback (contract).
+    assert fb["feedback_mode"] == "immediate"
+    got = client.get(
+        f"/api/practice/sessions/{session['id']}/units/{suid}/feedback",
+        headers=auth(USER_A)).json()
+    assert set(fb) == set(got)
     assert {q["question_id"]: q["is_correct"] for q in fb["questions"]} == {
         Q1: True, Q2: True}
     assert all(q["correct_option_id"] for q in fb["questions"])

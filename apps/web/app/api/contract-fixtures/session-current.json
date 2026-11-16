@@ -12,15 +12,15 @@
         }
       ]
     },
-    "created_at": "2026-11-16T04:54:48.228084+00:00",
+    "created_at": "2026-11-16T05:02:57.040977+00:00",
     "ended_at": null,
     "feedback_mode": "immediate",
-    "id": "1ac12cca-5ea3-4f44-90fa-2634b2868cd6",
+    "id": "06e49d2d-9c46-4b2b-acd9-20936b0d32c7",
     "mode": "practice",
     "state": "in_progress",
     "units": [
       {
-        "id": "de0e6e22-d989-4037-914c-f6b6bfe4fd79",
+        "id": "3dcb354c-49df-4cba-89b6-60bd014dcdb8",
         "position": 1,
         "release_id": "606352bc-845d-4019-84b2-6a65def6c1be",
         "state": "pending",
@@ -28,7 +28,7 @@
         "unit_id": "JLPTGO-N2-E2E-EX-ly-01-u01"
       },
       {
-        "id": "d69bd51e-95f7-4c68-abcf-ee8b3e107eab",
+        "id": "057e9bcd-f385-4381-be2e-8bd15773ba1f",
         "position": 2,
         "release_id": "606352bc-845d-4019-84b2-6a65def6c1be",
         "state": "pending",
