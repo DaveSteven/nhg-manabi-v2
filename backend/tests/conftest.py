@@ -82,6 +82,14 @@ def clean_publish(pg_engine):
 
     def wipe():
         with pg_engine.begin() as conn:
+            # Study-domain rows may reference the fixture release via
+            # study_session_units (FK fk_session_unit_snapshot); clear them
+            # (isolated test DB) before the release cascade.
+            for table in ("study_answer_drafts", "study_submitted_answers",
+                          "study_session_units", "study_results",
+                          "study_phase_runs", "study_sessions",
+                          "user_question_progress", "user_favorites"):
+                conn.execute(text(f"DELETE FROM {table}"))
             conn.execute(text(
                 "DELETE FROM import_records WHERE job_id IN"
                 " (SELECT id FROM import_jobs WHERE package_id = :p)"),
@@ -136,3 +144,28 @@ def staged_and_published(pg_engine, clean_publish):
         write_zip(make_records(), make_provenance(), path)
         stage_package(pg_engine, load_archive(Path(path))[0])
         return publish_package(pg_engine, PACKAGE_ID)
+
+
+@pytest.fixture()
+def published_release(pg_engine, staged_and_published):
+    """Walk the fixture release through the full publish gate to 'published'.
+
+    Marks answer keys human_reviewed and media verified *in the test DB
+    only*, records rights, then promotes. Returns the published release id.
+    """
+    from sqlalchemy import text
+
+    from app.publisher import confirm_rights, promote_release
+
+    release_id = staged_and_published["release_id"]
+    with pg_engine.begin() as conn:
+        conn.execute(text(
+            "UPDATE release_answer_keys SET review_status = 'human_reviewed'"
+            " WHERE release_id = :r"), {"r": release_id})
+        conn.execute(text(
+            "UPDATE media_assets SET availability = 'verified'"
+            " WHERE id IN ('JLPTGO-N5-TEST-EX-as001',"
+            " 'JLPTGO-N5-TEST-EX-as002')"))
+    confirm_rights(pg_engine, EXAM_ID, reviewer_id="legal")
+    promote_release(pg_engine, release_id, reviewer_id="reviewer-1")
+    return release_id

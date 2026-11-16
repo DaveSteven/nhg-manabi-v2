@@ -13,19 +13,20 @@
 - **M1.5 内容清洗审计与字幕时间轴**：原始 HTML 属性全量清单（A/B/C 分类）；Canonical 残留扫描零发现；字幕时间轴覆盖率 100%（1202 cue，143 Unit 全部配对音频，基准=Unit 音频）；越界 21 经 ffprobe 实测校对——17 个编码 padding 级可解释、4 个确证问题（N4 末段 cue 超出真实音频 ≤1282ms）待人工重对；大间隔 20 标 needs_review 固化回归；逐段播放数据兼容性测试通过；五包重转内容字节级一致（内容哈希零变化）；转换器 +0.1.1（属性审计）、验证器增强（缺失 vs 0、大间隔、时长越界）。
 - **M1.6 审核与数据校验稳定化**：Alembic 0003（`content_issues` 表 + `content_reviews.sequence` 确定性顺序 + blocking 必须关联 Issue 的 CHECK）；`review_state.py` 按 sequence 的状态解析与显式 `resolve_issue`；Agent pass 不再能清除未解决争议；发布答案回查按 Unit 输入哈希过滤（旧哈希结论不跨版本泄漏）；promote 新增「当前哈希存在 open blocking 记录拒绝发布」门槛；`data_quality.py` 把验证器异常（cue 越界/缺失/非法/大间隔、材料分组等）幂等同步为可查询数据质量记录，重校验自动 resolved；N4 真实包已同步（20 条，4 个确证字幕越界 open blocking 可查询，幅度与 ffprobe 审计吻合）；ADR-0005。
 - 测试：55 个测试全部通过（review_sync 12、data_quality 3、播放兼容 2、publisher/API 7、导入器 20、迁移一致性 2、Schema 编译 3、健康检查 1、真实 PG 约束 5 等在内）。
+- **M2.1 Task 01–04（2026-11-16）**：开发前检查；题库查询 API 扩展（`GET /api/exams/{id}` 轮廓、`/layers` 目录、`GET /api/releases/{rid}/units/{uid}` 按 release 取 Unit，公开载荷零答案泄漏，draft 仍 404）；最小用户身份边界（`app/auth.py`，服务端解析 + fail-closed + dev_test 生产硬禁用，ADR-0006）；练习会话管理（`app/api/practice.py`：创建固定 release 绑定的单/多 Unit 会话、单活跃练习 409 冲突、恢复、跨账号 404 隔离、finish→ended_early 幂等且不生成虚假成绩）。测试增至 74 个全部通过。
 
-## 进行中
+## 进行中（当前开发阶段）
 
-- 无。
+- **M2 核心学习流程**（计划见 `docs/development/M2-core-learning-flow.md`）：FastAPI 作答引擎 → React 学习页面 → 端到端验收。M2.1 Task 01–04 已完成，下一步 Task 05–08（草稿管理、Unit 正式提交、反馈权限控制、练习结果）。
 
 ## 未开始（按依赖顺序）
 
-1. 运行真实 Agent 校验（按 contract 批量产出五套题库结果 → sync → 解锁 promote）；N4 4 个确证字幕越界待人工重对时间轴（当前为 open blocking，阻止 N4 发布）。
+1. M2.1 Task 05–08（草稿、提交、反馈权限、结果）。
+2. M2.2 React 学习页面（Task 09–11；Task 09 前先写混合渲染 ADR）。
+3. 运行真实 Agent 校验（按 contract 批量产出五套题库结果 → sync → 解锁 promote）；N4 4 个确证字幕越界待人工重对时间轴（当前为 open blocking，阻止 N4 发布）。
 2. N5/N3/N2/N1 逐包执行 `python -m app.data_quality sync`（M1.6 机制已就绪，按任务要求未自动全量跑）。
 3. 发布快照不可变的 DB 触发器 / restricted DB role。
-4. 认证/用户体系（当前内部 API 仅共享令牌）。
-5. 作答 API（Session/Unit 提交、计分、自动保存恢复）。
-6. React 前端（四学科首页、专项练习、历年试卷、我的学习）。
+4. 认证/用户体系（当前内部 API 仅共享令牌；M2 Task 03 仅做最小身份边界）。
 
 ## 已知缺口 / 风险
 
