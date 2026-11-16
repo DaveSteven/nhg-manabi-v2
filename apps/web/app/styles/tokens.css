@@ -1,0 +1,47 @@
+/* 樱与墨 (Sakura & Ink) design tokens — docs/design/design-system.md.
+   Values are normative; components must reference tokens, never raw hex. */
+:root {
+  /* color */
+  --color-canvas: #faf7f2;
+  --color-paper: #ffffff;
+  --color-ink: #2b2b33;
+  --color-muted: #7a7580;
+  --color-border: #e6e3e0;
+  --color-primary: #b94968;
+  --color-primary-strong: #93354f;
+  --color-primary-soft: #fbe3ea;
+  --color-success: #2f7d4f;
+  --color-danger: #c73e3a;
+  --color-warning: #b98a1e;
+
+  /* spacing (4px base) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  /* radius */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+
+  /* typography */
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto,
+    "Noto Sans JP", "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+  --font-serif-reading: "Hiragino Mincho ProN", "Yu Mincho", "Noto Serif JP",
+    serif;
+  --text-aux: 12px;
+  --text-body: 15px;
+  --text-question: 17px;
+  --text-heading: 22px;
+
+  /* layout */
+  --content-max: 1180px;
+  --touch-min: 44px;
+
+  /* audio dock (fixed bottom player) + safe area reserve */
+  --audio-dock-height: 64px;
+}

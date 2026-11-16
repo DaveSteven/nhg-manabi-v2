@@ -21,13 +21,15 @@
 
 ## 进行中（当前开发阶段）
 
-- **M2 核心学习流程**（计划见 `docs/development/M2-core-learning-flow.md`）：FastAPI 作答引擎 → React 学习页面 → 端到端验收。**M2.1 全部完成（Task 01–08）**，下一步 M2.2 Task 09–11（React 学习页面）。
-- **M2.2 前端实施准备（2026-11-16）**：新增 `docs/development/M2.2-frontend-implementation.md`，已明确 React Router Framework Mode SSG+SPA、学习首页、试卷目录、Canonical Unit/RichText/听力渲染、草稿与提交反馈、自动恢复及测试验收。可先实施工程/只读页面/renderer；答题闭环现在可直接对接 Task 05–08 已落地的 API（见下）与集成测试。`apps/web` 当前仍只有 README，未创建 React 工程。
+- **M2 核心学习流程**（计划见 `docs/development/M2-core-learning-flow.md`）：FastAPI 作答引擎 → React 学习页面 → 端到端验收。**M2.1 全部完成（Task 01–08）**；M2.2 进行中：**Commit A（媒体前置）与 Commit 1（前端脚手架）已完成**，下一步 Commit 2（学习首页与试卷目录）。
+- **M2.2 前端实施准备（2026-11-16）**：新增 `docs/development/M2.2-frontend-implementation.md`，已明确 React Router Framework Mode SSG+SPA、学习首页、试卷目录、Canonical Unit/RichText/听力渲染、草稿与提交反馈、自动恢复及测试验收。
+- **M2.2 Commit A 媒体前置（2026-11-16）**：Alembic `0004` `media_storage` 映射表；`python -m app.media_sync` 独立同步步骤（SHA-256 内容寻址、校验后原子落盘、幂等/自修复/失败诊断）；`GET /api/releases/{rid}/assets/{aid}` 四重门槛公开媒体接口（统一 404、RFC 9110 Range、历史 release 可读）；迁移升级/回滚验证通过；回归 103 passed + 2 skipped（环境性 skip）。接口契约已写入 M2.2 计划 §6/§8；真实样本同步与浏览器冒烟待执行。
+- **M2.2 Commit 1 前端脚手架（2026-11-16）**：pnpm workspace + `apps/web`（React Router 7 Framework Mode，`ssr:false` + `prerender:["/"]`，`entry.server.tsx` 仅构建期 prerender 用，无运行时 Node SSR）；樱与墨 tokens 与全局样式；四项顶导航（未实现入口「暂未开放」）；API adapter（zod strictObject DTO，拒绝 cues/答案字段泄漏；三种后端错误形状归一化；dev_test token）；Vite dev proxy `/api`→8001（不加 CORS）；构建验收脚本（预渲染品牌 HTML、noindex SPA fallback、凭据泄漏扫描）。typecheck 通过；vitest 37 passed；`pnpm build` 含产物检查通过。品牌页为最小占位，真实文案待设计输入。
 - **Claude 项目开发入口与分支流程（2026-11-16）**：根目录 `CLAUDE.md` 与 `.claude/skills/nhg-manabi-development/SKILL.md` 强制 Claude Code 先读取 `AGENTS.md`，再执行文档路由、工作树保护、测试真实性与收尾要求；日常开发/提交统一使用 `develop`，`main` 仅记录成功上线状态，只有上线验收完成并获用户明确确认后才合并。
 
 ## 未开始（按依赖顺序）
 
-1. M2.2 React 学习页面（Task 09–11；实施计划、ADR-0007 与后端作答 API 契约均已就绪）。
+1. M2.2 Commit 2–4：学习首页/试卷目录 → Canonical 渲染器（含音频）→ 作答闭环与反馈（实施计划、ADR-0007、后端契约与媒体接口均已就绪）。
 2. 管理端安全引入与首条纵向流程（ADR-0008；固定上游版本 → 移除 Clerk/演示内容 → Import Job 列表/详情；不阻塞当前 M2.2）。
 3. 运行真实 Agent 校验（按 contract 批量产出五套题库结果 → sync → 解锁 promote）；N4 4 个确证字幕越界待人工重对时间轴（当前为 open blocking，阻止 N4 发布）。
 4. N5/N3/N2/N1 逐包执行 `python -m app.data_quality sync`（M1.6 机制已就绪，按任务要求未自动全量跑）。

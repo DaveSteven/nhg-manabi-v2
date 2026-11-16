@@ -1,0 +1,14 @@
+{
+  "name": "nhg-manabi-v2",
+  "private": true,
+  "packageManager": "pnpm@12.21.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "pnpm --filter web dev",
+    "build": "pnpm --filter web build",
+    "test:web": "pnpm --filter web test",
+    "test:api": "cd backend && python -m pytest"
+  }
+}

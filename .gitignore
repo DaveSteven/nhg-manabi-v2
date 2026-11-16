@@ -24,3 +24,7 @@ data/samples/N5/
 
 # Controlled v2 media storage (populated by app.media_sync)
 data/v2-media/
+
+# Frontend build & generated types
+apps/web/build/
+apps/web/.react-router/
