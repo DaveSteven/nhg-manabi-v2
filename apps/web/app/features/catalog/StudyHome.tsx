@@ -3,6 +3,7 @@ import { Link } from "react-router";
 import { describeLoadError } from "../../api/errors";
 import type { ExamSummary } from "../../api/dto/exam";
 import type { PracticeSession } from "../../api/dto/practice";
+import { useLevel } from "../auth/useLevel";
 import { useCurrentSession, useExamList } from "./useExamCatalog";
 import { examRoute } from "./viewModels";
 
@@ -141,6 +142,10 @@ export function StudyHome() {
   const sessionState = useCurrentSession();
   const exams = useExamList();
   const examList = exams.data ?? [];
+  // Target level (signed-in profile, or the guest's stored choice) filters
+  // the home exam entry; the continue card still sees the full catalog.
+  const { level } = useLevel();
+  const levelExams = level ? examList.filter((e) => e.level === level) : examList;
 
   return (
     <div className="study-home">
@@ -175,6 +180,12 @@ export function StudyHome() {
       <section aria-label="历年试卷入口" className="exam-entry">
         <div className="section-head">
           <h2>历年试卷</h2>
+          {level ? (
+            <Link className="level-chip" to="/study/account"
+                  aria-label={`备考等级 ${level}，前往用户中心修改`}>
+              {level}
+            </Link>
+          ) : null}
           <p className="section-hint">按年份进行完整练习，熟悉考试形式</p>
           <Link className="section-more" to="/study/exams">
             查看全部<span aria-hidden="true"> →</span>
@@ -186,11 +197,13 @@ export function StudyHome() {
           <p role={exams.error.status === 401 ? "status" : "alert"}>
             {describeLoadError(exams.error, "试卷目录")}
           </p>
-        ) : examList.length === 0 ? (
-          <p>暂无已发布试卷。</p>
+        ) : levelExams.length === 0 ? (
+          <p>{level && examList.length > 0
+            ? `暂无 ${level} 已发布试卷，可在「查看全部」中选择其他等级。`
+            : "暂无已发布试卷。"}</p>
         ) : (
           <ul className="exam-quick-list">
-            {[...examList]
+            {[...levelExams]
               .sort((a, b) => b.year - a.year || b.month - a.month)
               .slice(0, 3)
               .map((e) => (

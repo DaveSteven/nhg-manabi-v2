@@ -1,11 +1,12 @@
 import { beforeAll, afterAll, afterEach, describe, expect, it } from "vitest";
-import { screen } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 import { server } from "../../test/mocks/server";
 import { createQueryClient } from "../../api/queryClient";
 import { renderRoutes } from "../../test/render";
 import StudyLayout from "../../routes/study";
 import { StudyHome } from "./StudyHome";
+import { authStore } from "../auth/authStore";
 
 const session = {
   id: "s-1",
@@ -25,7 +26,11 @@ const session = {
 };
 
 beforeAll(() => server.listen());
-afterEach(() => server.resetHandlers());
+afterEach(() => {
+  server.resetHandlers();
+  authStore.clear();
+  window.localStorage.clear();
+});
 afterAll(() => server.close());
 
 function renderHome(queryClient?: ReturnType<typeof createQueryClient>) {
@@ -133,5 +138,50 @@ describe("StudyHome", () => {
     expect(screen.queryByText("2021年")).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: /查看全部/ }))
       .toHaveAttribute("href", "/study/exams");
+  });
+
+  describe("target level filter on the home exam entry", () => {
+    const exam = (id: string, level: string, year: number) => ({
+      exam_id: id, level, month: 7, release_id: `r-${id}`, revision: 1,
+      title: `${level} ${year}`, year,
+    });
+    const USER = { id: "u1", email: "a@example.com", display_name: "小明",
+                   current_level: "N2" as const, avatar: null };
+
+    it("shows only the signed-in student's level, with a level chip", async () => {
+      server.use(http.get(`*/api/exams`, () => HttpResponse.json([
+        exam("a", "N1", 2025), exam("b", "N2", 2024), exam("c", "N2", 2023),
+        exam("d", "N5", 2022),
+      ])));
+      authStore.setSession("tok", USER);
+      renderHome();
+      const entry = await screen.findByRole("region", { name: "历年试卷入口" });
+      expect(await within(entry).findByText("2024年")).toBeInTheDocument();
+      expect(within(entry).getByText("2023年")).toBeInTheDocument();
+      expect(within(entry).queryByText("2025年")).not.toBeInTheDocument();
+      expect(within(entry).queryByText("2022年")).not.toBeInTheDocument();
+      expect(within(entry).getByRole("link", { name: /备考等级 N2/ }))
+        .toHaveAttribute("href", "/study/account");
+    });
+
+    it("explains an empty level instead of showing other levels", async () => {
+      server.use(http.get(`*/api/exams`, () => HttpResponse.json([
+        exam("a", "N1", 2025),
+      ])));
+      authStore.setSession("tok", USER);
+      renderHome();
+      expect(await screen.findByText(/暂无 N2 已发布试卷/)).toBeInTheDocument();
+      expect(screen.queryByText("2025年")).not.toBeInTheDocument();
+    });
+
+    it("without a level, shows the latest exams of all levels and no chip", async () => {
+      server.use(http.get(`*/api/exams`, () => HttpResponse.json([
+        exam("a", "N1", 2025), exam("b", "N2", 2024),
+      ])));
+      renderHome();
+      expect(await screen.findByText("2025年")).toBeInTheDocument();
+      expect(screen.getByText("2024年")).toBeInTheDocument();
+      expect(screen.queryByRole("link", { name: /备考等级/ })).not.toBeInTheDocument();
+    });
   });
 });
