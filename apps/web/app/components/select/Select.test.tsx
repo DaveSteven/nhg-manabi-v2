@@ -215,6 +215,22 @@ describe("Select · single", () => {
   });
 });
 
+describe("Select · width", () => {
+  it("follows the content by default and honours an explicit width", () => {
+    const { rerender } = render(
+      <Select aria-label="w" value="a" items={[{ value: "a", label: "A" }]}
+              onChange={() => {}} />);
+    const t = screen.getByRole("combobox", { name: "w" });
+    expect(t.style.width).toBe("");
+    rerender(<Select aria-label="w" width={240} value="a"
+                     items={[{ value: "a", label: "A" }]} onChange={() => {}} />);
+    expect(screen.getByRole("combobox", { name: "w" }).style.width).toBe("240px");
+    rerender(<Select aria-label="w" width="100%" value="a"
+                     items={[{ value: "a", label: "A" }]} onChange={() => {}} />);
+    expect(screen.getByRole("combobox", { name: "w" }).style.width).toBe("100%");
+  });
+});
+
 describe("Select · grouped", () => {
   it("renders labelled groups; keyboard crosses groups", async () => {
     const user = userEvent.setup();

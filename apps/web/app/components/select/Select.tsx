@@ -36,6 +36,8 @@ export interface SelectProps {
   emptyText?: string;
   className?: string;
   popoverMinWidth?: number;
+  /** Trigger width; omit to follow the content. */
+  width?: number | string;
   "aria-label"?: string;
   "aria-labelledby"?: string;
 }
@@ -88,7 +90,7 @@ export function Select(props: SelectProps) {
   const {
     value, onChange, items, size = "default", placeholder = "请选择",
     disabled = false, searchable = false, searchPlaceholder = "搜索",
-    emptyText = "无匹配项", className, popoverMinWidth,
+    emptyText = "无匹配项", className, popoverMinWidth = 120, width,
   } = props;
   const uid = useId();
   const listId = `${uid}-list`;
@@ -267,6 +269,7 @@ export function Select(props: SelectProps) {
               aria-label={props["aria-label"]}
               aria-labelledby={props["aria-labelledby"]}
               disabled={disabled}
+              style={width === undefined ? undefined : { width }}
               onClick={() => { setNav("pointer"); if (open) close(false); else openList(); }}
               onKeyDown={(e) => onKeyDown(e, false)}>
         <span className={label === undefined

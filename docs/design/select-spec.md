@@ -27,6 +27,8 @@
 
 禁用态：Trigger 与 Option 降低不透明度，Option 不可聚焦选中；`aria-disabled` 暴露给辅助技术。
 
+**宽度**：Trigger 未设置 `width` 时跟随内容宽度（无最小宽度）；需要固定或撑满时通过 `width` 指定（数字为 px，或 `100%`）。Popover 宽度不小于 Trigger 与 120px 中的较大者，并随最宽选项扩展。
+
 ## 3. Popover 与 Modal 是不同组件
 
 | | Popover（本组件） | Modal（对话框） |
