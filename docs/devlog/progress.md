@@ -21,6 +21,7 @@
 
 ## 进行中（当前开发阶段）
 
+- **前端 SCSS 规范补充（2026-11-16）**：学生端前端新增明确工程要求——新增或修改样式统一使用 SCSS，组件局部样式优先 `.module.scss`，共享 token/reset/基础样式使用职责明确的全局 `.scss` 入口；现有 CSS 留待相关实现任务随改随迁。本次仅更新规范，尚未安装 `sass` 或迁移现有样式。
 - **M2 核心学习流程**（计划见 `docs/development/M2-core-learning-flow.md`）：FastAPI 作答引擎 → React 学习页面 → 端到端验收。**M2.1 全部完成（Task 01–08）**；M2.2 进行中：**Commit A、1、2、3 已完成**，下一步 Commit 4（作答持久化与反馈闭环）。
 - **M2.2 前端实施准备（2026-11-16）**：新增 `docs/development/M2.2-frontend-implementation.md`，已明确 React Router Framework Mode SSG+SPA、学习首页、试卷目录、Canonical Unit/RichText/听力渲染、草稿与提交反馈、自动恢复及测试验收。
 - **M2.2 Commit A 媒体前置（2026-11-16）**：Alembic `0004` `media_storage` 映射表；`python -m app.media_sync` 独立同步步骤（SHA-256 内容寻址、校验后原子落盘、幂等/自修复/失败诊断）；`GET /api/releases/{rid}/assets/{aid}` 四重门槛公开媒体接口（统一 404、RFC 9110 Range、历史 release 可读）；迁移升级/回滚验证通过；回归 103 passed + 2 skipped（环境性 skip）。接口契约已写入 M2.2 计划 §6/§8；真实样本同步与浏览器冒烟待执行。

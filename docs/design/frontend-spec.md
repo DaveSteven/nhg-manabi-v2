@@ -5,6 +5,7 @@
 ## 前端工程方向
 
 - React + TypeScript + Vite；渲染与路由采用 React Router Framework Mode（见下文「页面渲染策略」），数据请求和轻状态库按模块需要选择。旧版用 React Router/TanStack Query/Zustand 证明相关模式可行，但 v2 **不强制复刻其版本或文件结构**。
+- 前端样式统一使用 SCSS 编写：组件局部样式优先采用 `.module.scss`，全局设计 token、reset 与跨页面基础样式使用职责明确的 `.scss` 入口；禁止新增普通 `.css` 业务样式或依赖无边界的全局选择器覆盖。现有 CSS 在后续相关实现任务中随改随迁，不为本条规范单独做无验收价值的大规模重写。
 - API 和视图模型明确分层；服务端是题库、正式答案及 Session 的权威事实源。客户端可保存可丢弃的草稿加速缓存，不得把 localStorage 当正式答题结果。
 - 公开题库 API 要区分预览/作答/提交/复盘的响应结构；严格遵守答案可见性，不把 `answer_key` 塞在用户端静态数据里再“CSS 隐藏”。
 - RichText 由安全受控 renderer 识别 `jlptgo-richtext-v1`，不直接 `dangerouslySetInnerHTML` 渲染未清理源 HTML；正确支持 ruby、underline、cloze slot、block、image placeholder。

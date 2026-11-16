@@ -17,6 +17,7 @@
 ## React / TypeScript
 
 - TypeScript 严格类型检查（建议），业务 schema 与 API DTO 分层；数据请求状态与 UI 本地状态分开。
+- 样式使用 SCSS：组件样式优先放在 `.module.scss`，全局 token/reset/基础样式放在职责明确的 `.scss` 入口；新增或修改业务样式不得继续写入普通 `.css` 文件。共享变量、mixin 和 function 应集中管理，避免复制值或扩大全局选择器作用域。
 - UI 不根据旧版 `question_type=23` 数值或上游 objectId 决定显示逻辑；依赖 Canonical 语义 `unit.kind`、`question_type_id`。
 - 富文本组件只支持受控 RichText；键盘和触控目标符合设计规范；默认不滥用全局样式覆盖。
 - 学生界面与管理员权限入口分开；共享组件不共享未经授权的数据。
