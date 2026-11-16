@@ -5,7 +5,6 @@ import type { ExamSummary } from "../../api/dto/exam";
 import type { PracticeSession } from "../../api/dto/practice";
 import { useCurrentSession, useExamList } from "./useExamCatalog";
 import { examRoute } from "./viewModels";
-import blossomUrl from "../../assets/home-blossom.webp";
 
 /** Page header copy per design-system.md v1.1 §5.2 + the confirmed home
  * UI reference (docs/design/JLPT GO 2.0 首页.png). */
@@ -145,8 +144,6 @@ export function StudyHome() {
 
   return (
     <div className="study-home">
-      <img src={blossomUrl} alt="" aria-hidden="true" className="home-decor" />
-
       <header className="home-header">
         <p className="home-eyebrow">JLPT GO 2.0</p>
         <h1>{PAGE_TITLE}</h1>

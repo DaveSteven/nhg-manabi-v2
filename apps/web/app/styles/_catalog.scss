@@ -10,33 +10,8 @@ h1 { font-size: var(--text-heading); }
 h2 { font-size: var(--text-question); }
 
 .study-home {
-  position: relative;
   display: grid;
   gap: var(--space-8);
-}
-
-/* Blossom decoration: the page's single main decorative area (v1.1 §5.3).
-   Transparent cutout (docs/design 稿件) so no mask is needed; purely
-   presentational — hidden from AT, no events, removable without breaking
-   layout, hidden on small screens. */
-.home-decor {
-  position: absolute;
-  top: calc(-1 * var(--space-6) - 12px);
-  right: 0;
-  width: min(600px, 46vw);
-  height: auto;
-  pointer-events: none;
-  user-select: none;
-  z-index: 0;
-}
-
-.study-home > :not(.home-decor) {
-  position: relative;
-  z-index: 1;
-}
-
-@media (max-width: 767px) {
-  .home-decor { display: none; }
 }
 
 /* Page header: short title + one-line guidance, no marketing hero. */
