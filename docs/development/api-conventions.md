@@ -26,6 +26,7 @@
 - 失败响应统一 machine code + human-readable message + optional details/request_id，不能把堆栈泄漏给用户。
 - 401 未认证、403 未授权、404 不可访问/不存在、409 并发会话/版本冲突、422 校验失败；上传大小与限流另定。
 - 管理端使用单独权限（至少内容校验/发布角色），校验 Agent 不应拥有直接发布权限。
+- 管理端认证（ADR-0009）：`POST /api/admin/auth/login` 换取不透明 Bearer 令牌（12 小时绝对过期，可撤回，库内只存 SHA-256）；缺失/无效/过期令牌 401，角色不足 403（viewer ⊂ reviewer ⊂ publisher）；登录失败一律同一 401 响应，连续 5 次失败锁定 15 分钟；无 dev_test 旁路，学生令牌与管理员令牌互不通用。审核/发布记录的 `reviewer_id` 由服务端写为 `admin:<id>`，不接受客户端传入。
 
 ## 并发和幂等
 

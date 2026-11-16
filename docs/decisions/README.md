@@ -22,6 +22,7 @@
 | P-016 | M2 作答域 `user_id` 由服务端认证上下文解析；默认 fail-closed；`dev_test` 测试身份机制在生产环境硬禁用；暂不建 users 表 | 已确认（ADR-0006） | 见 ADR-0006；正式认证接入时只替换 `get_current_user_id` |
 | P-017 | 用户端前端采用 React Router Framework Mode + SSG（品牌/内容页）+ SPA（学习系统）；第一阶段禁用运行时 SSR，不引入 Next.js 或 Node SSR 服务 | 已确认（ADR-0007） | 见 ADR-0007；影响 apps/web 与前端/部署配置；迁移全站 SSR 或 Next.js 须新 ADR |
 | P-018 | 独立管理端 `apps/admin` 采用 `satnaing/shadcn-admin` 作为工程/UI 基础，保留上游默认主题，不套用学生端「樱与墨」配色 | 已确认（ADR-0008） | 固定并审查上游 commit/tag；移除 Clerk/示例数据；FastAPI 权限与发布规则仍是事实源 |
+| P-019 | 管理员使用独立的 `admin_users`/`admin_sessions` 表，角色 viewer ⊂ reviewer ⊂ publisher；无 dev 旁路，命令行创建；审核人由服务端注入 | 已确认（ADR-0009） | 学生与管理员身份隔离；QA Agent 无管理账号；MFA/SSO/口令找回不在范围 |
 
 ## 尚未定稿的重点
 
@@ -41,3 +42,4 @@
 - `ADR-0006-minimal-user-identity-boundary.md`
 - `ADR-0007-hybrid-rendering-strategy.md`
 - `ADR-0008-shadcn-admin-foundation.md`
+- `ADR-0009-admin-identity-table.md`
