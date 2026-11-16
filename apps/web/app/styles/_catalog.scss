@@ -331,18 +331,21 @@ h2 { font-size: var(--text-question); }
   font-variant-numeric: tabular-nums;
 }
 
+/* Two equal columns (7月 | 12月): every capsule is a block filling its cell, so
+   a lone 7月 lines up with the 7月 of the other rows. */
 .exam-chips {
   list-style: none;
   margin: 0;
   padding: 0;
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-3);
 }
 
-/* Capsule card */
+/* Capsule card (block, full width of its column) */
 .exam-chip {
-  display: inline-flex;
+  display: flex;
+  justify-content: flex-start; /* text left-aligned, count pushed to the right */
   align-items: center;
   gap: var(--space-2);
   min-height: 44px;
@@ -364,6 +367,17 @@ h2 { font-size: var(--text-question); }
   }
   &:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
 }
+
+.exam-chip-count {
+  margin-left: auto;
+  color: var(--color-text-muted);
+  font-size: 13px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.exam-chip:hover .exam-chip-count { color: inherit; }
 
 .exam-chip-level {
   padding: 1px var(--space-2);

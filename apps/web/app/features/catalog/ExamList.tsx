@@ -26,6 +26,11 @@ export function ExamListView() {
   const yearItems = [{ value: "", label: "全部" },
     ...years.map((y) => ({ value: String(y), label: `${y}` }))];
   const filtered = byLevel.filter((e) => !year || String(e.year) === year);
+  // Month columns come from the data (no hardcoded 7月/12月): when at most 4
+  // distinct months exist and no row has two exams in the same month, each
+  // capsule sits in its month's column so e.g. a lone 12月 lines up with the
+  // other rows' 12月. Otherwise capsules simply flow into two columns.
+  const months = [...new Set(filtered.map((e) => e.month))].sort((a, b) => a - b);
   // newest year first; within a year: 7月, 12月 … (month ascending, then level)
   const rows = years
     .map((y) => ({
@@ -34,6 +39,9 @@ export function ExamListView() {
         .sort((a, b) => a.month - b.month || a.level.localeCompare(b.level)),
     }))
     .filter((r) => r.items.length > 0);
+  const aligned = months.length >= 1 && months.length <= 4 &&
+    rows.every((r) => new Set(r.items.map((e) => e.month)).size === r.items.length);
+  const columns = aligned ? months.length : 2;
 
   return (
     <section aria-label="历年试卷目录">
@@ -65,16 +73,22 @@ export function ExamListView() {
           {rows.map(({ year: y, items }) => (
             <li key={y} className="exam-year-row" aria-label={`${y}年`}>
               <span className="exam-year" aria-hidden="true">{y}</span>
-              <ul className="exam-chips">
+              <ul className="exam-chips"
+                  style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}>
                 {items.map((e: ExamSummary) => (
-                  <li key={e.exam_id}>
+                  <li key={e.exam_id}
+                      style={aligned ? { gridColumn: months.indexOf(e.month) + 1 }
+                        : undefined}>
                     <Link className="exam-chip" to={examRoute(e.exam_id)}
-                          aria-label={examTitle(e)}
+                          aria-label={`${examTitle(e)}，${e.question_count} 题`}
                           title={e.title === examTitle(e) ? undefined : e.title}>
                       <span>{e.month}月</span>
                       {level ? null : (
                         <span className="exam-chip-level">{e.level}</span>
                       )}
+                      <span className="exam-chip-count" aria-hidden="true">
+                        {e.question_count} 题
+                      </span>
                     </Link>
                   </li>
                 ))}

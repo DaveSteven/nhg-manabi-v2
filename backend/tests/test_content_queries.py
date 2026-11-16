@@ -35,6 +35,8 @@ def test_exam_outline_structure_and_no_leaks(pg_engine, published_release,
     exams = client.get("/api/exams").json()
     assert [e["exam_id"] for e in exams] == [EXAM_ID]
     assert exams[0]["release_id"] == published_release
+    # list count == sum of the outline's per-unit counts (cloze 2 + single 1)
+    assert exams[0]["question_count"] == 3
 
     outline = client.get(f"/api/exams/{EXAM_ID}")
     assert outline.status_code == 200
@@ -47,6 +49,7 @@ def test_exam_outline_structure_and_no_leaks(pg_engine, published_release,
         [CLOZE_UNIT, SINGLE_UNIT])
     counts = {u["unit_id"]: u["question_count"] for u in units}
     assert counts[CLOZE_UNIT] == 2 and counts[SINGLE_UNIT] == 1
+    assert sum(counts.values()) == exams[0]["question_count"]
     assert all(u["position"] >= 1 for u in units)
 
     flat = json.dumps(outline, ensure_ascii=False)

@@ -114,11 +114,21 @@ def _load_unit_payload(conn, release_id: str, unit_id: str,
 
 @router.get("/api/exams")
 def list_public_exams() -> list[dict]:
-    """Published exams only; nothing internal leaks here."""
+    """Published exams only; nothing internal leaks here.
+
+    question_count = questions in the practiceable units of the release.
+    """
     with get_engine().connect() as conn:
         rows = conn.execute(text(
             "SELECT c.exam_id, r.id AS release_id, r.revision,"
-            " e.level, e.year, e.month, e.title"
+            " e.level, e.year, e.month, e.title,"
+            # same visibility rule as the outline: questions of practiceable
+            # (complete) units only, so the number matches what a student can do
+            " (SELECT count(*) FROM release_questions q"
+            "  JOIN release_units u ON u.release_id = q.release_id"
+            "   AND u.unit_id = q.unit_id"
+            "  WHERE q.release_id = r.id AND u.conversion_status = 'complete')"
+            "   AS question_count"
             " FROM exam_current_releases c"
             " JOIN exam_releases r ON r.id = c.release_id"
             " JOIN exam_catalogs e ON e.id = c.exam_id"

@@ -8,7 +8,7 @@ import {
 } from "./exam";
 
 /** Fixture mirrors the real GET /api/exams row shape (content.py:115-127). */
-const examSummary = {
+const examHead = {
   exam_id: "JLPTGO-N2-2018-12",
   release_id: "0f0e0d0c-0b0a-4948-8276-111122223333",
   revision: 3,
@@ -18,8 +18,11 @@ const examSummary = {
   title: "2018年12月 N2",
 };
 
+/** The list row adds the practiceable question count to the head. */
+const examSummary = { ...examHead, question_count: 96 };
+
 const outline = {
-  ...examSummary,
+  ...examHead,
   sections: [
     {
       section_id: "sec-1",

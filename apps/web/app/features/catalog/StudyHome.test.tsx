@@ -77,6 +77,7 @@ describe("StudyHome", () => {
         year: 2024,
         month: 12,
         title: "2024年12月 N2",
+        question_count: 96,
       }])),
     );
     renderHome();
@@ -127,6 +128,7 @@ describe("StudyHome", () => {
       year,
       month: 12,
       title: `${year}年12月 N2`,
+      question_count: 96,
     })).slice(0, 4);
     server.use(http.get(`*/api/exams`, () => HttpResponse.json(exams)));
     renderHome();
@@ -143,7 +145,7 @@ describe("StudyHome", () => {
   describe("target level filter on the home exam entry", () => {
     const exam = (id: string, level: string, year: number) => ({
       exam_id: id, level, month: 7, release_id: `r-${id}`, revision: 1,
-      title: `${level} ${year}`, year,
+      title: `${level} ${year}`, year, question_count: 96,
     });
     const USER = { id: "u1", email: "a@example.com", display_name: "小明",
                    current_level: "N2" as const, avatar: null };

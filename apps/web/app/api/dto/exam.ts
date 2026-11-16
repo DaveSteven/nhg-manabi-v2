@@ -8,7 +8,8 @@ import { z } from "zod";
  * validates jlptgo-richtext-v1 separately.
  */
 
-export const ExamSummarySchema = z.strictObject({
+/** Exam identity shared by the list row, the outline and the layer catalog. */
+const ExamHeadSchema = z.strictObject({
   exam_id: z.string(),
   release_id: z.string(),
   revision: z.number().int(),
@@ -16,6 +17,12 @@ export const ExamSummarySchema = z.strictObject({
   year: z.number().int(),
   month: z.number().int(),
   title: z.string(),
+});
+
+/** GET /api/exams row: the head plus the practiceable question count. */
+export const ExamSummarySchema = ExamHeadSchema.extend({
+  /** Questions in the practiceable units of the current release. */
+  question_count: z.number().int(),
 });
 export type ExamSummary = z.infer<typeof ExamSummarySchema>;
 
@@ -48,7 +55,7 @@ export const OutlineSectionSchema = z.strictObject({
 });
 export type OutlineSection = z.infer<typeof OutlineSectionSchema>;
 
-export const ExamOutlineSchema = ExamSummarySchema.extend({
+export const ExamOutlineSchema = ExamHeadSchema.extend({
   sections: z.array(OutlineSectionSchema),
 });
 export type ExamOutline = z.infer<typeof ExamOutlineSchema>;
@@ -66,7 +73,7 @@ export type LayerCatalogEntry = z.infer<typeof LayerCatalogEntrySchema>;
  * GET /api/exams/{id} but with per-layer unit_count instead of units
  * (found by the contract fixtures; earlier modelled as a flat array).
  */
-export const ExamLayersSchema = ExamSummarySchema.extend({
+export const ExamLayersSchema = ExamHeadSchema.extend({
   sections: z.array(OutlineSectionSchema.extend({
     layers: z.array(LayerCatalogEntrySchema),
   })),
