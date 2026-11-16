@@ -16,7 +16,7 @@ describe("TopNav", () => {
     expect(nav).toBeInTheDocument();
     // two links + two disabled entries
     expect(screen.getByText("首页").closest("a")).toHaveAttribute("href", "/study");
-    expect(screen.getByText("历年试卷").closest("a"))
+    expect(screen.getByText("试卷").closest("a"))
       .toHaveAttribute("href", "/study/exams");
   });
 
@@ -25,19 +25,19 @@ describe("TopNav", () => {
                     children: [{ path: "exams", Component: () => <p>exams</p> }] }],
                  "/study/exams");
     expect(screen.getByText("首页").closest("a")).not.toHaveClass("active");
-    expect(screen.getByText("历年试卷").closest("a")).toHaveClass("active");
+    expect(screen.getByText("试卷").closest("a")).toHaveClass("active");
   });
 
   it("marks unimplemented entries as aria-disabled 暂未开放", () => {
     renderRoutes([{ path: "study", Component: StudyLayout }], "/study");
-    for (const name of ["专项练习", "我的学习"]) {
+    for (const name of ["专项", "学习"]) {
       const btn = screen.getByText(name).closest("button");
       expect(btn).toHaveAttribute("aria-disabled", "true");
     }
     // accessible names carry the 暂未开放 hint via sr-only text
-    expect(screen.getByRole("button", { name: /专项练习\s*（暂未开放）/ }))
+    expect(screen.getByRole("button", { name: /专项\s*（暂未开放）/ }))
       .toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /我的学习\s*（暂未开放）/ }))
+    expect(screen.getByRole("button", { name: /学习\s*（暂未开放）/ }))
       .toBeInTheDocument();
   });
 });

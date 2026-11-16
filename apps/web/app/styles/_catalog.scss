@@ -10,8 +10,111 @@ h1 { font-size: var(--text-heading); }
 h2 { font-size: var(--text-question); }
 
 .study-home {
+  position: relative;
   display: grid;
   gap: var(--space-8);
+}
+
+/* Blossom decoration: the page's single main decorative area (v1.1 §5.3).
+   Transparent cutout (docs/design 稿件) so no mask is needed; purely
+   presentational — hidden from AT, no events, removable without breaking
+   layout, hidden on small screens. */
+.home-decor {
+  position: absolute;
+  top: calc(-1 * var(--space-6) - 12px);
+  right: 0;
+  width: min(600px, 46vw);
+  height: auto;
+  pointer-events: none;
+  user-select: none;
+  z-index: 0;
+}
+
+.study-home > :not(.home-decor) {
+  position: relative;
+  z-index: 1;
+}
+
+@media (max-width: 767px) {
+  .home-decor { display: none; }
+}
+
+/* Page header: short title + one-line guidance, no marketing hero. */
+.home-header {
+  max-width: 34em;
+
+  h1 {
+    font-size: 26px;
+    font-weight: 700;
+    margin: var(--space-2) 0;
+
+    @media (min-width: 768px) { font-size: 33px; }
+  }
+}
+
+.home-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: 0;
+  color: var(--color-primary);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+
+  &::after {
+    content: "";
+    width: 48px;
+    height: 1px;
+    background: var(--color-primary);
+    opacity: 0.4;
+  }
+}
+
+.home-subtitle {
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+/* Section heading: accent bar + title + hint, optional trailing link. */
+.section-head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+
+  h2 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+    font-size: 20px;
+    font-weight: 700;
+
+    &::before {
+      content: "";
+      width: 4px;
+      height: 18px;
+      border-radius: 2px;
+      background: var(--color-primary);
+    }
+  }
+}
+
+.section-hint {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 14px;
+}
+
+.section-more {
+  margin-left: auto;
+  color: var(--color-primary);
+  font-size: 14px;
+  text-decoration: none;
+
+  &:hover { text-decoration: underline; }
 }
 
 .primary-link,
@@ -19,28 +122,75 @@ h2 { font-size: var(--text-question); }
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: var(--space-2);
   min-height: var(--touch-min);
   padding: 0 var(--space-6);
   border: none;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-pill);
   background: var(--color-primary);
   color: #fff;
   font-size: var(--text-body);
   text-decoration: none;
   cursor: pointer;
+  transition: background var(--motion-fast);
 
-  &:hover { background: var(--color-primary-strong); }
+  &:hover { background: var(--color-primary-hover); }
   &:disabled { opacity: 0.5; cursor: wait; }
 }
 
+/* Continue-practice card: highest-priority action (v1.1 §6.3). */
 .continue-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
   padding: var(--space-4) var(--space-6);
-  border-left: 3px solid var(--color-primary);
+  border-radius: var(--radius-lg);
 
-  h2 { margin-bottom: var(--space-2); }
+  h2 {
+    margin: 2px 0;
+    font-size: 18px;
+  }
+
+  @media (max-width: 599px) {
+    flex-wrap: wrap;
+
+    .continue-info { flex-basis: calc(100% - 68px); }
+    .primary-link { flex: 1; }
+  }
 }
 
-/* Four-subject entries: first visual focus of the home page. */
+.continue-icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+
+  svg { width: 22px; height: 22px; }
+}
+
+.continue-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.continue-eyebrow {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+.continue-meta {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 14px;
+}
+
+/* Four-subject entries: first visual focus of the home page (v1.1 §6.2).
+   Per-subject decorative accents stay small-area and low-saturation. */
 .subject-grid {
   display: grid;
   grid-template-columns: 1fr;
@@ -51,34 +201,137 @@ h2 { font-size: var(--text-question); }
 }
 
 .subject-card {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: var(--space-1);
-  min-height: 112px;
+  min-height: 148px;
   padding: var(--space-4) var(--space-6);
+  overflow: hidden;
   text-align: left;
   font: inherit;
   color: var(--color-ink);
   cursor: not-allowed;
 
-  &[aria-disabled="true"] { background: var(--color-canvas); }
+  /* soft corner accent */
+  &::after {
+    content: "";
+    position: absolute;
+    right: -24px;
+    bottom: -24px;
+    width: 104px;
+    height: 104px;
+    border-radius: 50%;
+    opacity: 0.55;
+    pointer-events: none;
+  }
+
+  &[aria-disabled="true"] { cursor: not-allowed; }
+
+  &.subject-vocabulary::after { background: var(--accent-sakura-soft); }
+  &.subject-grammar::after { background: var(--accent-lavender-soft); }
+  &.subject-reading::after { background: var(--accent-matcha-soft); }
+  &.subject-listening::after { background: var(--accent-apricot-soft); }
+}
+
+.subject-icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--space-2);
+
+  svg { width: 22px; height: 22px; }
+
+  .subject-vocabulary & { background: var(--accent-sakura-soft); color: var(--accent-sakura); }
+  .subject-grammar & { background: var(--accent-lavender-soft); color: var(--accent-lavender); }
+  .subject-reading & { background: var(--accent-matcha-soft); color: var(--accent-matcha); }
+  .subject-listening & { background: var(--accent-apricot-soft); color: var(--accent-apricot); }
 }
 
 .subject-label {
-  font-size: var(--text-heading);
+  font-size: 18px;
   font-weight: 600;
 }
 
-.subject-hint { color: var(--color-muted); }
+.subject-hint { color: var(--color-text-secondary); }
 
 .subject-status {
   margin-top: auto;
   font-size: var(--text-aux);
-  color: var(--color-muted);
+  color: var(--color-text-muted);
 }
 
-.exam-entry-list,
+.subject-arrow {
+  position: absolute;
+  right: var(--space-4);
+  bottom: var(--space-4);
+  color: var(--color-text-muted);
+}
+
+/* 历年试卷 quick entries: compact cards, year is the primary visual. */
+.exam-quick-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: 1fr;
+
+  @media (min-width: 720px) { grid-template-columns: repeat(2, 1fr); }
+  @media (min-width: 1100px) { grid-template-columns: repeat(3, 1fr); }
+}
+
+.exam-quick {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  color: var(--color-ink);
+  text-decoration: none;
+  transition: transform var(--motion-fast), box-shadow var(--motion-fast);
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-floating);
+  }
+}
+
+.exam-quick-icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--color-surface-subtle);
+  color: var(--color-primary);
+
+  svg { width: 20px; height: 20px; }
+}
+
+.exam-quick-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.exam-quick-year {
+  display: block;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.exam-quick-meta {
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+.exam-quick .chevron {
+  color: var(--color-text-muted);
+}
+
 .exam-list {
   list-style: none;
   margin: 0 0 var(--space-4);
@@ -86,8 +339,6 @@ h2 { font-size: var(--text-question); }
   display: grid;
   gap: var(--space-2);
 }
-
-.exam-entry-list li { padding: var(--space-1) 0; }
 
 .exam-filters {
   display: flex;
@@ -100,7 +351,7 @@ h2 { font-size: var(--text-question); }
     padding: 0 var(--space-3);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-sm);
-    background: var(--color-paper);
+    background: var(--color-surface);
     font: inherit;
   }
 }
@@ -115,12 +366,17 @@ h2 { font-size: var(--text-question); }
 
 .exam-level {
   min-width: 3em;
-  padding: 0 var(--space-2);
-  border-radius: var(--radius-sm);
+  padding: 2px var(--space-3);
+  border-radius: var(--radius-pill);
   background: var(--color-primary-soft);
-  color: var(--color-primary-strong);
+  color: var(--color-primary-hover);
   font-weight: 600;
   text-align: center;
+}
+
+.exam-quick .exam-level {
+  flex-shrink: 0;
+  align-self: center;
 }
 
 .exam-title { flex: 1; min-width: 12em; }
@@ -138,7 +394,7 @@ h2 { font-size: var(--text-question); }
     padding: 0 var(--space-3);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-sm);
-    background: var(--color-paper);
+    background: var(--color-surface);
     font: inherit;
   }
 }
@@ -149,8 +405,8 @@ h2 { font-size: var(--text-question); }
 .layer-block {
   margin-bottom: var(--space-2);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-paper);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
 }
 
 .layer-toggle {
@@ -172,7 +428,7 @@ h2 { font-size: var(--text-question); }
   margin-left: auto;
   font-size: var(--text-aux);
   font-weight: normal;
-  color: var(--color-muted);
+  color: var(--color-text-secondary);
 }
 
 .unit-list {
@@ -191,7 +447,7 @@ h2 { font-size: var(--text-question); }
 }
 
 .unit-label { flex: 1; min-width: 8em; }
-.unit-meta { color: var(--color-muted); font-size: var(--text-aux); }
+.unit-meta { color: var(--color-text-secondary); font-size: var(--text-aux); }
 
 .not-available { padding: var(--space-4) var(--space-6); }
 
@@ -205,9 +461,9 @@ h2 { font-size: var(--text-question); }
 .material-image {
   margin: 0 0 var(--space-4);
   padding: var(--space-2);
-  background: var(--color-paper);
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-card);
   max-width: 44em;
 
   a { display: block; }
@@ -225,6 +481,6 @@ h2 { font-size: var(--text-question); }
 .image-unavailable {
   padding: var(--space-4);
   border: 1px dashed var(--color-danger);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-card);
   color: var(--color-danger);
 }

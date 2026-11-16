@@ -38,9 +38,11 @@ function renderHome(queryClient?: ReturnType<typeof createQueryClient>) {
 }
 
 describe("StudyHome", () => {
-  it("renders four subject entries as the first visual focus", async () => {
+  it("renders the page header and four subject entries", async () => {
     renderHome();
-    const grid = await screen.findByRole("region", { name: "四学科入口" });
+    expect(screen.getByRole("heading", { level: 1 }))
+      .toHaveTextContent("开始今天的日语练习");
+    const grid = await screen.findByRole("region", { name: "专项练习入口" });
     expect(grid).toBeInTheDocument();
     for (const label of ["文字词汇", "文法", "读解", "听力"]) {
       expect(screen.getByText(label)).toBeInTheDocument();
@@ -55,12 +57,31 @@ describe("StudyHome", () => {
     expect(card).toBeInTheDocument();
     const link = screen.getByRole("link", { name: "继续练习" });
     expect(link).toHaveAttribute("href", "/study/practice/s-1");
-    expect(screen.getByText(/组已提交/).textContent).toContain("1");
+    expect(screen.getByText(/已提交 1 \/ 2 组/).textContent).toContain("1");
+  });
+
+  it("labels the continue card with the exam bound to the session release", async () => {
+    server.use(
+      http.get(`*/api/practice/sessions/current`, () =>
+        HttpResponse.json(session)),
+      http.get(`*/api/exams`, () => HttpResponse.json([{
+        exam_id: "N2-2024-12",
+        release_id: "r",
+        revision: 1,
+        level: "N2",
+        year: 2024,
+        month: 12,
+        title: "2024年12月 N2",
+      }])),
+    );
+    renderHome();
+    await screen.findByRole("region", { name: "继续上次练习" });
+    expect(screen.getByText("N2 · 2024年12月试卷")).toBeInTheDocument();
   });
 
   it("quietly omits the continue card when no session is active (404 is not an error)", async () => {
     renderHome();
-    await screen.findByRole("region", { name: "四学科入口" });
+    await screen.findByRole("region", { name: "专项练习入口" });
     expect(screen.queryByRole("region", { name: "继续上次练习" }))
       .not.toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
@@ -70,7 +91,7 @@ describe("StudyHome", () => {
     server.use(http.get(`*/api/practice/sessions/current`, () =>
       HttpResponse.json({ detail: "bearer token required" }, { status: 401 })));
     renderHome();
-    await screen.findByRole("region", { name: "四学科入口" });
+    await screen.findByRole("region", { name: "专项练习入口" });
     expect(screen.queryByRole("region", { name: "继续上次练习" }))
       .not.toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
@@ -90,5 +111,27 @@ describe("StudyHome", () => {
   it("shows an explicit empty state for an empty catalog", async () => {
     renderHome();
     expect(await screen.findByText("暂无已发布试卷。")).toBeInTheDocument();
+  });
+
+  it("renders compact quick entries for the first three exams", async () => {
+    const exams = [2024, 2023, 2022, 2021].map((year, i) => ({
+      exam_id: `N2-${year}-12`,
+      release_id: `rel-${year}`,
+      revision: 1,
+      level: "N2",
+      year,
+      month: 12,
+      title: `${year}年12月 N2`,
+    })).slice(0, 4);
+    server.use(http.get(`*/api/exams`, () => HttpResponse.json(exams)));
+    renderHome();
+    await screen.findByText("2022年");
+    const links = screen.getAllByRole("link", { name: /202\d年/ });
+    expect(links).toHaveLength(3);
+    expect(links[0]).toHaveAttribute("href", "/study/exams/N2-2024-12");
+    expect(screen.getByText("2022年")).toBeInTheDocument();
+    expect(screen.queryByText("2021年")).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /查看全部/ }))
+      .toHaveAttribute("href", "/study/exams");
   });
 });
