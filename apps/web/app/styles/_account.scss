@@ -14,6 +14,7 @@
   background: var(--accent-sakura);
 
   img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  transition: transform var(--motion-fast);
 }
 
 .user-avatar-md { width: 40px; height: 40px; font-size: 17px; }
@@ -29,12 +30,16 @@
 .account-avatar-button {
   display: grid;
   place-items: center;
-  width: var(--touch-min);
-  height: var(--touch-min);
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
   text-decoration: none;
 
-  &:hover .user-avatar { box-shadow: var(--shadow-floating); }
+  /* larger than the generic md avatar; picture avatars drop border + fill */
+  .user-avatar { width: 52px; height: 52px; font-size: 22px; }
+  .user-avatar-img { border: none; background: transparent; overflow: visible; }
+
+  &:hover .user-avatar { box-shadow: none; transform: scale(1.06); }
   &:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
 }
 

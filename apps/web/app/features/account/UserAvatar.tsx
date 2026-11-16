@@ -19,7 +19,7 @@ export function UserAvatar({ user, size = "md" }: {
   const cls = `user-avatar user-avatar-${size}`;
   if (url) {
     return (
-      <span className={cls} aria-hidden="true">
+      <span className={`${cls} user-avatar-img`} aria-hidden="true">
         <img src={url} alt="" draggable={false} />
       </span>
     );
