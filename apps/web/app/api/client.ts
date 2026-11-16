@@ -9,6 +9,30 @@ export interface ApiRequest {
 }
 
 /**
+ * Abort bridging without passing the signal to fetch. Reason: in jsdom
+ * test environments the AbortSignal comes from a different realm than the
+ * fetch implementation (Node/undici), which rejects foreign signal
+ * instances. Racing the abort keeps identical observable behavior —
+ * AbortError on abort — and is realm-safe. The underlying request may
+ * continue briefly after abort; its result is discarded.
+ */
+function fetchWithAbort(url: string, init: RequestInit,
+                        signal: AbortSignal | undefined): Promise<Response> {
+  if (!signal) return fetch(url, init);
+  let abortReject: (() => void) | undefined;
+  const aborted = new Promise<never>((_, reject) => {
+    abortReject = () =>
+      reject(new DOMException("The operation was aborted.", "AbortError"));
+  });
+  const onAbort = () => abortReject!();
+  signal.addEventListener("abort", onAbort, { once: true });
+  return Promise.race([
+    fetch(url, init).finally(() => signal.removeEventListener("abort", onAbort)),
+    aborted,
+  ]);
+}
+
+/**
  * Thin JSON fetch wrapper. Non-2xx responses always throw a normalized
  * ApiError; 2xx returns the parsed JSON body (or null when empty).
  * Endpoint modules (app/api/endpoints/*) own path construction and DTO
@@ -20,14 +44,18 @@ export async function apiFetch(path: string, request: ApiRequest = {}): Promise<
   if (token) headers.Authorization = `Bearer ${token}`;
   if (request.body !== undefined) headers["Content-Type"] = "application/json";
 
+  // Same-origin by default: resolve relative paths against the current
+  // origin (Vite dev proxy / production static-host proxy / tests).
+  const base = API_BASE ||
+    (typeof window !== "undefined" ? window.location.origin : "");
+
   let response: Response;
   try {
-    response = await fetch(`${API_BASE}${path}`, {
+    response = await fetchWithAbort(`${base}${path}`, {
       method: request.method ?? "GET",
       headers,
       body: request.body !== undefined ? JSON.stringify(request.body) : undefined,
-      signal: request.signal,
-    });
+    }, request.signal);
   } catch (cause) {
     if (cause instanceof DOMException && cause.name === "AbortError") throw cause;
     throw networkError(cause);

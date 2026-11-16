@@ -23,10 +23,11 @@ export function renderWithQuery(ui: ReactElement,
 
 /**
  * Render a route tree at a URL (route smoke / integration tests), wrapped
- * in a fresh QueryClient.
+ * in a fresh QueryClient. Pass `queryClient` to override defaults (e.g.
+ * retry:false for error-path tests that must settle immediately).
  */
-export function renderRoutes(routes: RouteObject[], url = "/") {
-  const queryClient = createQueryClient();
+export function renderRoutes(routes: RouteObject[], url = "/",
+                             queryClient = createQueryClient()) {
   const tree: RouteObject[] = [
     {
       element: (

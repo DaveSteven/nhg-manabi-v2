@@ -18,8 +18,11 @@ export default defineConfig({
     },
   },
   test: {
-    environment: "jsdom",
+    environment: "happy-dom",
     setupFiles: ["./app/test/setup.ts"],
     css: false,
+    environmentOptions: {
+      happyDom: { url: "http://localhost/" },
+    },
   },
 });
