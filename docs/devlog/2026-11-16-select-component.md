@@ -25,3 +25,8 @@
 - 搜索项过多（上千）时无虚拟化；当前最大场景为约 20 个年份。
 - Select 目前仅 Single/Grouped/Searchable 在画廊与测试中使用，应用内尚无分组或搜索的真实用例。
 - 测试学生等级已改回 N5。
+
+## 续：胶囊风格与 Large 尺寸（同日，用户指示）
+- Select Trigger 全部改为胶囊（`--radius-pill`）；新增 `size="large"`（52px、16px 字号，与 52px 头像同高），首页顶栏等级选择改用 Large；Compact(36)/默认(44) 保留且同为胶囊。Popover 16px 圆角、Option 10px 圆角不变。`select-spec.md` 升至 v1.1，尺寸表增 Large。
+- 测试：typecheck 通过；vitest 21 文件 / 184 passed（纯样式改动，未新增断言）；`pnpm build` 通过；容器内浏览器目检首页顶栏 Large 胶囊 + 弹层。
+- 未测：375px 下 Large 选择器与头像在顶栏的换行表现；画廊页新增 Large 示例但未逐一目检其余胶囊变体。

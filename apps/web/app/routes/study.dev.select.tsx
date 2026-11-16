@@ -30,6 +30,9 @@ export default function SelectGallery() {
       <h1>Select 组件</h1>
       <div className="select-field"><span id="g1">Single</span>
         <Select aria-labelledby="g1" value={a} items={LEVELS} onChange={setA} /></div>
+      <div className="select-field"><span id="g2l">Large</span>
+        <Select size="large" aria-labelledby="g2l" value={e} items={LEVELS}
+                onChange={setE} /></div>
       <div className="select-field"><span id="g2">Compact</span>
         <Select size="compact" aria-labelledby="g2" value={e} items={LEVELS}
                 onChange={setE} /></div>

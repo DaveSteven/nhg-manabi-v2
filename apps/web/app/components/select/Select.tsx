@@ -28,7 +28,7 @@ export interface SelectProps {
   value: string;
   onChange: (value: string) => void;
   items: SelectItems;
-  size?: "default" | "compact";
+  size?: "default" | "compact" | "large";
   placeholder?: string;
   disabled?: boolean;
   searchable?: boolean;
@@ -259,6 +259,7 @@ export function Select(props: SelectProps) {
       <button ref={triggerRef} type="button" role="combobox"
               className={["select-trigger",
                 size === "compact" ? "select-trigger--compact" : "",
+                size === "large" ? "select-trigger--large" : "",
                 open ? "is-open" : "", className ?? ""].filter(Boolean).join(" ")}
               aria-haspopup="listbox" aria-expanded={open}
               aria-controls={open ? listId : undefined}
