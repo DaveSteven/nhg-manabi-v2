@@ -117,3 +117,8 @@
 ## 续：吸顶态去掉 topnav 阴影（同日，用户指示）
 - `.site-header.is-stuck .topnav { box-shadow: none }`，并给 `.topnav` 加 `box-shadow` 的 220ms 过渡（`prefers-reduced-motion` 下关闭）；理由：外层吸顶胶囊已有浮层阴影，避免双层阴影。`design-system.md` 吸顶态表格新增「导航胶囊」一行。
 - 验证（容器内）：静止 `box-shadow` 为 `0 4px 18px rgba(43,43,51,.035)`；滚动 300px 后 `none`；回到顶部恢复。前端 202 passed，build 通过；纯样式改动，无新增断言；过渡观感同上未在该窗格验证。
+
+## 续：吸顶态 topnav 背景透明，取消吸顶后渐变回白色（同日，用户指示）
+- `.topnav` 的背景改为 `background-color`，过渡 `background-color / box-shadow / backdrop-filter` 220ms `ease`，与 `.header-row` 完全相同；`.site-header.is-stuck .topnav` 背景透明、无阴影、`blur(0)`。取消吸顶（回到顶部）后背景渐变回 `rgba(255,255,255,0.92)` + 浅阴影 + `blur(8px)`，两层外壳同步交替。`design-system.md` 吸顶态表格的「导航胶囊」行同步。
+- 验证（容器内）：静止 `nav bg=rgba(255,255,255,.92)`、blur 8px、浅阴影，`row bg` 透明；吸顶 `nav bg` 透明、blur 0、无阴影，`row bg=rgba(255,255,255,.78)`；滚回顶部恢复。两元素计算出的 `transition-duration` 均为 0.22s、timing 均为 `ease`；截图确认吸顶时导航只剩当前项的粉色高亮，其余项无底。前端 202 passed，build 通过；纯样式改动无新增断言。
+- 未验证：过渡的实际观感（该窗格中 CSS 过渡不推进，只核对了起止值与 duration/timing）；吸顶态下非当前导航项的文字对比度（在 78% 白的胶囊上，目视可读，未做对比度测量）。
