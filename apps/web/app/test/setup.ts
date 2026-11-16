@@ -1,6 +1,11 @@
-import "@testing-library/jest-dom/vitest";
-import { afterEach } from "vitest";
+import * as jestDomMatchers from "@testing-library/jest-dom/matchers";
+import { afterEach, expect } from "vitest";
 import { cleanup } from "@testing-library/react";
+
+// Register jest-dom matchers on THIS package's vitest `expect`. The package's
+// "/vitest" entry imports whichever vitest it can resolve, which became the
+// wrong major once apps/admin (vitest 4) joined the workspace.
+expect.extend(jestDomMatchers);
 
 // Node 26 exposes an incomplete experimental localStorage global unless
 // --localstorage-file is provided. Pin tests to a deterministic in-memory
