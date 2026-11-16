@@ -3,6 +3,7 @@
 Usage:
     python -m app.publisher_cli publish JLPTGO-N2-2018-12-r1 [--reviewer id] [--notes ...]
     python -m app.publisher_cli promote <release_id> --reviewer id [--notes ...]
+    python -m app.publisher_cli confirm-rights <exam_id> --reviewer id [--notes ...]
 """
 import argparse
 import json
@@ -10,7 +11,7 @@ import sys
 
 from app.db.engine import get_engine
 from app.importer.errors import ImportError_ as CanonicalImportError
-from app.publisher import promote_release, publish_package
+from app.publisher import confirm_rights, promote_release, publish_package
 
 
 def main(argv: list[str] | None = None) -> int:
