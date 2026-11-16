@@ -1,6 +1,6 @@
 # Select 与 Popover 组件规范 v1.1
 
-> v1.1（2026-11-16）：Trigger 改为胶囊风格；新增 Large 尺寸，首页顶栏等级选择使用 Large。
+> v1.1（2026-11-16）：Trigger 改为胶囊风格；新增 Large 尺寸（备用，当前无页面使用）。首页顶栏等级选择使用默认尺寸（44px）。
 
 > 状态：2026-11-16 用户给出设计要求，本阶段落地。归属 `design-system.md` §9（按钮和交互状态）的表单控件部分，色彩/圆角/动效 Token 沿用该文档与 `tokens.scss`。
 > 本阶段范围：**Select Trigger、Single Select、Grouped Select、Searchable Select 及配套 Popover**。多选、可创建选项、虚拟滚动不在本阶段。
@@ -15,7 +15,7 @@
 |---|---|
 | Select Trigger（默认） | 高度 44px，**胶囊圆角（999px）**，白色背景，轻边框，右侧下拉箭头 |
 | Compact Select | 高度 36px，胶囊，用于工具栏、密集筛选 |
-| Large Select | 高度 52px，胶囊，字号 16px，用于首页顶栏等醒目位置（与 52px 头像对齐） |
+| Large Select | 高度 52px，胶囊，字号 16px，用于需要强调的位置（备用，当前未使用） |
 | Popover | 圆角 16px，白底，轻阴影，内边距 8px |
 | Option Item | 高度 42px，圆角 10px，左右内边距 12px |
 | Selected | 浅樱底色 `#F6E8EC`，深樱文字，右侧对勾（不只靠颜色表达） |
@@ -80,6 +80,6 @@ type SelectGroup  = { label: string; options: SelectOption[] };
 
 ## 7. 验收
 
-- 视觉：尺寸/圆角/选中/悬停/焦点/动效与 §2 一致；Large 在顶栏与头像同高且不撑高导航行。
+- 视觉：尺寸/圆角/选中/悬停/焦点/动效与 §2 一致；顶栏的默认尺寸选择器不撑高导航行。
 - 行为：§4 键盘与关闭规则；Modal 内 `Esc` 只关 Popover；祖先 `overflow:hidden` 不裁剪；窄视口与靠近底边时翻转/夹紧。
 - 工程：定位逻辑为纯函数并有单元测试；Select 全变体有交互测试；现有页面的原生 `<select>` 全部替换。
