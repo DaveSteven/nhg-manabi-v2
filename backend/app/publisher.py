@@ -331,6 +331,78 @@ def publish_package(engine: Engine, package_id: str,
             "revision": next_rev, "idempotent": False}
 
 
+class ReleaseStateError(PublishError):
+    """A withdraw/restore request that the release's current state forbids."""
+
+    def __init__(self, code: str, message: str):
+        super().__init__(message)
+        self.code = code
+
+
+def withdraw_release(engine: Engine, release_id: str, admin_reviewer_id: str,
+                     reason: str | None = None) -> dict:
+    """下架: a published release stops being served everywhere.
+
+    Every public exit (catalog, outline, release units, media, new sessions)
+    already requires state='published', so flipping the state and clearing
+    the current pointer closes them all. Snapshot rows and students' own
+    study records are untouched, and the action is reversible
+    (``restore_release``). The decision is recorded, never overwritten.
+    """
+    with engine.begin() as conn:
+        row = conn.execute(text(
+            "SELECT id, exam_id, content_hash, state FROM exam_releases"
+            " WHERE id = :r FOR UPDATE"), {"r": release_id}).first()
+        if row is None:
+            raise ReleaseStateError("not_found", f"release {release_id} not found")
+        if row.state != "published":
+            raise ReleaseStateError(
+                "not_published", f"release is {row.state}, only published releases can be withdrawn")
+        conn.execute(text("UPDATE exam_releases SET state = 'withdrawn' WHERE id = :r"),
+                     {"r": release_id})
+        conn.execute(text(
+            "DELETE FROM exam_current_releases WHERE exam_id = :e AND release_id = :r"),
+            {"e": row.exam_id, "r": release_id})
+        conn.execute(text(
+            "INSERT INTO publication_decisions (id, exam_id, candidate_content_hash,"
+            " decision, reviewer_id, notes) VALUES (:id, :e, :h, 'withdrawn', :who, :n)"),
+            {"id": uuid.uuid4(), "e": row.exam_id, "h": row.content_hash,
+             "who": admin_reviewer_id, "n": reason})
+    return {"release_id": str(release_id), "exam_id": row.exam_id, "state": "withdrawn"}
+
+
+def restore_release(engine: Engine, release_id: str, admin_reviewer_id: str) -> dict:
+    """上架: undo a withdrawal. Refuses when the exam already has a current
+    release (restoring must never silently displace a newer one)."""
+    with engine.begin() as conn:
+        row = conn.execute(text(
+            "SELECT id, exam_id, content_hash, state FROM exam_releases"
+            " WHERE id = :r FOR UPDATE"), {"r": release_id}).first()
+        if row is None:
+            raise ReleaseStateError("not_found", f"release {release_id} not found")
+        if row.state != "withdrawn":
+            raise ReleaseStateError(
+                "not_withdrawn", f"release is {row.state}, only withdrawn releases can be restored")
+        current = conn.execute(text(
+            "SELECT release_id FROM exam_current_releases WHERE exam_id = :e"),
+            {"e": row.exam_id}).first()
+        if current is not None:
+            raise ReleaseStateError(
+                "exam_has_current_release",
+                "this exam already has a current release; withdraw it first")
+        conn.execute(text("UPDATE exam_releases SET state = 'published' WHERE id = :r"),
+                     {"r": release_id})
+        conn.execute(text(
+            "INSERT INTO exam_current_releases (exam_id, release_id, changed_at)"
+            " VALUES (:e, :r, now())"), {"e": row.exam_id, "r": release_id})
+        conn.execute(text(
+            "INSERT INTO publication_decisions (id, exam_id, candidate_content_hash,"
+            " decision, reviewer_id, notes) VALUES (:id, :e, :h, 'restored', :who, NULL)"),
+            {"id": uuid.uuid4(), "e": row.exam_id, "h": row.content_hash,
+             "who": admin_reviewer_id})
+    return {"release_id": str(release_id), "exam_id": row.exam_id, "state": "published"}
+
+
 def auto_publish_package(engine: Engine, package_id: str,
                          reviewer_id: str = "system:auto-publish") -> dict:
     """ADR-0010 policy 'auto': create the release snapshot and publish it

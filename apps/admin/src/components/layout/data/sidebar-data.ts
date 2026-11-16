@@ -1,4 +1,4 @@
-import { Command, LayoutDashboard } from 'lucide-react'
+import { Command, FileText, LayoutDashboard } from 'lucide-react'
 import { type SidebarData } from '../types'
 
 /** Static shell data. The signed-in admin is read from the auth store. */
@@ -7,7 +7,10 @@ export const sidebarData: Omit<SidebarData, 'user'> = {
   navGroups: [
     {
       title: '常规',
-      items: [{ title: '首页', url: '/', icon: LayoutDashboard }],
+      items: [
+        { title: '首页', url: '/', icon: LayoutDashboard },
+        { title: '试卷管理', url: '/exams', icon: FileText },
+      ],
     },
   ],
 }

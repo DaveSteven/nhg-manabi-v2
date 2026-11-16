@@ -57,3 +57,71 @@ export function describeLoginError(error: unknown): string {
   }
   return '登录失败，请稍后重试。'
 }
+
+// ---- exam / release management (ADR-0010) ---------------------------------
+
+const releaseSchema = z.strictObject({
+  id: z.string(),
+  revision: z.number().int(),
+  state: z.string(),
+  is_current: z.boolean(),
+  published_at: z.string().nullable(),
+})
+
+const publicationSchema = z.strictObject({
+  decision: z.string(),
+  reviewer_id: z.string().nullable(),
+  note: z.unknown(),
+  decided_at: z.string(),
+})
+
+export const adminExamSchema = z.strictObject({
+  exam_id: z.string(),
+  level: z.string(),
+  year: z.number().int(),
+  month: z.number().int(),
+  title: z.string(),
+  status: z.enum(['published', 'withdrawn', 'unpublished']),
+  release: releaseSchema.nullable(),
+  counts: z.strictObject({
+    units: z.number().int(),
+    hidden_units: z.number().int(),
+    questions: z.number().int(),
+    unverified_answer_keys: z.number().int(),
+  }),
+  publication: publicationSchema.nullable(),
+})
+export type AdminExam = z.infer<typeof adminExamSchema>
+
+export async function listAdminExams(): Promise<AdminExam[]> {
+  const res = await api.get('/api/admin/exams')
+  return z.strictObject({ exams: z.array(adminExamSchema) }).parse(res.data).exams
+}
+
+export async function withdrawRelease(releaseId: string, reason: string) {
+  await api.post(`/api/admin/releases/${encodeURIComponent(releaseId)}/withdraw`, {
+    reason: reason.trim() || null,
+  })
+}
+
+export async function restoreRelease(releaseId: string) {
+  await api.post(`/api/admin/releases/${encodeURIComponent(releaseId)}/restore`)
+}
+
+/** Message for a failed release action, using the server's stable error code. */
+export function describeReleaseError(error: unknown): string {
+  if (error instanceof AxiosError) {
+    const code = (error.response?.data as { detail?: { code?: string } } | undefined)
+      ?.detail?.code
+    if (code === 'not_published') return '该版本当前不是已发布状态，请刷新列表。'
+    if (code === 'not_withdrawn') return '该版本当前不是已下架状态，请刷新列表。'
+    if (code === 'exam_has_current_release') {
+      return '这套试卷已有正在发布的版本，请先下架它再恢复旧版本。'
+    }
+    if (error.response?.status === 401) return '登录已过期，请重新登录。'
+    if (error.response?.status === undefined || error.response.status >= 500) {
+      return '无法连接管理服务，请稍后重试。'
+    }
+  }
+  return '操作失败，请稍后重试。'
+}
