@@ -231,3 +231,37 @@ class TestMediaSync:
 
 def engine_connect(engine):
     return engine.connect()
+
+
+# ---- additional real-world formats found importing the full N1-N5 set -------
+
+class TestExtraFormats:
+    def test_sniff_mp4_audio_and_webp(self, tmp_path):
+        from app.media_sync import sniff_mime
+        m4a = tmp_path / "a.bin"
+        m4a.write_bytes(b"\x00\x00\x00\x20ftypM4A \x00\x00\x00\x00" + b"x" * 20)
+        iso = tmp_path / "b.bin"
+        iso.write_bytes(b"\x00\x00\x00\x20ftypisom\x00\x00\x02\x00" + b"x" * 20)
+        webp = tmp_path / "c.bin"
+        webp.write_bytes(b"RIFF\x80>\x00\x00WEBPVP8 " + b"x" * 20)
+        assert sniff_mime(m4a) == "audio/mp4"
+        assert sniff_mime(iso) == "audio/mp4"
+        assert sniff_mime(webp) == "image/webp"
+
+    def test_sniff_does_not_confuse_other_riff_or_video_brands(self, tmp_path):
+        from app.media_sync import sniff_mime
+        wav = tmp_path / "w.bin"
+        wav.write_bytes(b"RIFF\x24\x00\x00\x00WAVEfmt " + b"x" * 20)
+        avif = tmp_path / "v.bin"
+        avif.write_bytes(b"\x00\x00\x00\x1cftypavif\x00\x00\x00\x00" + b"x" * 20)
+        assert sniff_mime(wav) is None
+        assert sniff_mime(avif) is None
+
+    def test_storage_extensions(self):
+        from app.api.media import _EXT_BY_MIME
+        from app.media_sync import storage_ext
+        assert storage_ext("audio/mp4") == ".m4a"
+        assert storage_ext("image/webp") == ".webp"
+        # writer and the serving API must agree, or stored files 404.
+        for mime in ("audio/mpeg", "image/png", "image/jpeg", "audio/mp4", "image/webp"):
+            assert _EXT_BY_MIME[mime] == storage_ext(mime)

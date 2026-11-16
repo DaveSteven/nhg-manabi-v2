@@ -84,6 +84,8 @@ _EXT_BY_MIME = {
     "audio/mpeg": ".mp3",
     "image/png": ".png",
     "image/jpeg": ".jpg",
+    "audio/mp4": ".m4a",
+    "image/webp": ".webp",
 }
 
 

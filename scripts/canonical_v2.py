@@ -21,6 +21,7 @@ import re
 import shutil
 import subprocess
 from collections import Counter
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from html import unescape
 from html.parser import HTMLParser
@@ -1573,12 +1574,89 @@ N2_BASELINE = {
 }
 
 
+@dataclass(frozen=True)
+class ExamSource:
+    level: str
+    object_id: str
+    year: int
+    month: int
+    path: Path
+
+    @property
+    def package_id(self) -> str:
+        return f"JLPTGO-{self.level}-{self.year}-{self.month:02d}-r1"
+
+
+def discover_exams(data_dir: Path) -> list[ExamSource]:
+    """All raw exam directories under data_dir/N1..N5, sorted by
+    (level, year, month). A second scrape of the same (level, year, month)
+    is skipped deterministically (first directory name wins) and, like
+    unreadable metadata, recorded in ``discover_exams.last_problems`` so the
+    caller can report it instead of silently dropping an exam."""
+    found: dict[tuple[str, int, int], ExamSource] = {}
+    problems: list[dict] = []
+    for level in ("N1", "N2", "N3", "N4", "N5"):
+        level_dir = data_dir / level
+        if not level_dir.is_dir():
+            continue
+        for d in sorted(p for p in level_dir.iterdir() if p.is_dir()):
+            try:
+                meta = json.loads((d / "metadata.json").read_text(encoding="utf-8"))
+                key = (level, int(meta["year"]), int(meta["month"]))
+            except (OSError, ValueError, KeyError, TypeError) as e:
+                problems.append({"level": level, "object_id": d.name,
+                                 "reason": "unreadable_metadata", "detail": str(e)})
+                continue
+            if key in found:
+                problems.append({"level": level, "object_id": d.name,
+                                 "reason": "duplicate_exam",
+                                 "detail": f"same exam as {found[key].object_id}"})
+                continue
+            found[key] = ExamSource(level, d.name, key[1], key[2], d)
+    discover_exams.last_problems = problems
+    return sorted(found.values(), key=lambda e: (e.level, e.year, e.month))
+
+
+discover_exams.last_problems = []
+
+
+def convert_all(data_dir: Path, output_dir: Path, *, skip_existing: bool = True) -> dict:
+    """Convert every discovered exam. Per-exam failures are captured, not
+    fatal. Existing package directories are left untouched (so previously
+    verified packages are never rewritten) unless skip_existing=False."""
+    report = {"converted": [], "skipped_existing": [], "failed": [],
+              "discovery_problems": []}
+    for e in discover_exams(data_dir):
+        out_dir = output_dir / e.package_id
+        if skip_existing and out_dir.exists():
+            report["skipped_existing"].append(e.package_id)
+            continue
+        try:
+            result = Converter(e.path, out_dir).convert()
+            report["converted"].append(
+                {"package_id": e.package_id, "counts": result.get("counts")})
+        except Exception as exc:  # noqa: BLE001 - batch must continue
+            report["failed"].append({"package_id": e.package_id,
+                                     "error": f"{type(exc).__name__}: {exc}"})
+            shutil.rmtree(out_dir, ignore_errors=True)  # no half-written package
+    report["discovery_problems"] = list(discover_exams.last_problems)
+    return report
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--data-dir", type=Path, default=Path(__file__).parent / "data")
     parser.add_argument("--output-dir", type=Path, default=Path(__file__).parent / "data" / "normalized_v2")
     parser.add_argument("--level", action="append", help="restrict to one level; repeatable")
+    parser.add_argument("--all", action="store_true",
+                        help="convert EVERY exam found under data-dir/N1..N5 "
+                             "(skips packages that already exist)")
     args = parser.parse_args()
+
+    if args.all:
+        print(json.dumps(convert_all(args.data_dir, args.output_dir),
+                         ensure_ascii=False, indent=2))
+        return
 
     summary = {}
     for level, oid in SELECTIONS.items():

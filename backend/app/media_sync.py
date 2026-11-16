@@ -54,6 +54,8 @@ _MIME_EXT = {
     "audio/mpeg": ".mp3",
     "image/png": ".png",
     "image/jpeg": ".jpg",
+    "audio/mp4": ".m4a",
+    "image/webp": ".webp",
 }
 
 _DURATION_TOLERANCE_MS = 2000  # encoder padding allowance (M1.5: ≤1282ms seen)
@@ -102,6 +104,13 @@ def sniff_mime(path: Path) -> str | None:
         return "audio/mpeg"
     if len(head) >= 2 and head[0] == 0xFF and (head[1] & 0xE0) == 0xE0:
         return "audio/mpeg"
+    # ISO base media: size(4) 'ftyp' brand(4). Only audio brands (M4A/isom/mp42);
+    # video/image brands such as avif/heic must not be accepted as audio.
+    if len(head) >= 12 and head[4:8] == b"ftyp" and head[8:12] in (
+            b"M4A ", b"isom", b"mp42", b"mp41", b"iso2", b"M4B "):
+        return "audio/mp4"
+    if len(head) >= 12 and head[0:4] == b"RIFF" and head[8:12] == b"WEBP":
+        return "image/webp"
     return None
 
 
