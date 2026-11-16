@@ -21,3 +21,6 @@ data/samples/N2/
 data/samples/N3/
 data/samples/N4/
 data/samples/N5/
+
+# Controlled v2 media storage (populated by app.media_sync)
+data/v2-media/
