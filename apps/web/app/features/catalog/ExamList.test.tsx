@@ -38,7 +38,19 @@ describe("ExamList", () => {
     expect(screen.getByText("2019年7月 N1")).toBeInTheDocument();
   });
 
-  it("filters by level and year via URL search params", async () => {
+  it("has no level filter, only a year filter", async () => {
+    useExamsHandler();
+    renderRoutes(
+      [{ path: "study", Component: StudyLayout,
+         children: [{ path: "exams", Component: ExamListPage }] }],
+      "/study/exams",
+    );
+    await screen.findByText("2018年12月 N2");
+    expect(screen.queryByRole("combobox", { name: "等级" })).not.toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "年份" })).toBeInTheDocument();
+  });
+
+  it("filters by year via the URL search params", async () => {
     const user = userEvent.setup();
     useExamsHandler();
     const rendered = renderRoutes(
@@ -47,49 +59,45 @@ describe("ExamList", () => {
       "/study/exams",
     );
     await screen.findByText("2018年12月 N2");
-
-    await chooseOption(user, "等级", "N5");
+    await chooseOption(user, "年份", "2019");
+    expect(rendered.router.state.location.search).toBe("?year=2019");
+    expect(screen.getByText("2019年7月 N1")).toBeInTheDocument();
     expect(screen.queryByText("2018年12月 N2")).not.toBeInTheDocument();
-    expect(screen.getByText("2018年7月 N5")).toBeInTheDocument();
-    expect(rendered.router.state.location.search).toBe("?level=N5");
-
-    await chooseOption(user, "年份", "2018");
-    expect(rendered.router.state.location.search).toContain("year=2018");
-
-    // year=2018 + level=N5 → still the N5 2018-07 exam
-    expect(screen.getByText("2018年7月 N5")).toBeInTheDocument();
-    // level=N2 with year=2018 → the N2 2018-12 exam matches again
-    await chooseOption(user, "等级", "N2");
+    // back to 全部 removes the param
+    await chooseOption(user, "年份", "全部");
+    expect(rendered.router.state.location.search).toBe("");
     expect(screen.getByText("2018年12月 N2")).toBeInTheDocument();
-    // level=N1 with year=2018 → no match at all
-    await chooseOption(user, "等级", "N1");
-    expect(screen.getByText("没有符合条件的试卷。")).toBeInTheDocument();
   });
 
-  it("seeds the level preference once, and an explicit 全部 survives reload", async () => {
+  it("follows the target level: only that level's exams and years are offered", async () => {
     const user = userEvent.setup();
     useExamsHandler();
     window.localStorage.setItem("jlptgo.level", "N5");
-    // first visit: preference seeds the URL (replace, not push)
-    const rendered = renderRoutes(
+    renderRoutes(
       [{ path: "study", Component: StudyLayout,
          children: [{ path: "exams", Component: ExamListPage }] }],
       "/study/exams",
     );
     await screen.findByText("2018年7月 N5");
-    expect(rendered.router.state.location.search).toBe("?level=N5");
     expect(screen.queryByText("2018年12月 N2")).not.toBeInTheDocument();
+    expect(screen.queryByText("2019年7月 N1")).not.toBeInTheDocument();
+    // the year list only contains N5's years (2018), not N1's 2019
+    await user.click(screen.getByRole("combobox", { name: "年份" }));
+    const options = screen.getAllByRole("option").map((o) => o.textContent);
+    expect(options).toEqual(["全部", "2018"]);
+    window.localStorage.removeItem("jlptgo.level");
+  });
 
-    // explicit 全部 writes ?level= and must NOT re-seed on a fresh mount
-    await chooseOption(user, "等级", "全部");
-    expect(screen.getByText("2018年12月 N2")).toBeInTheDocument();
+  it("explains a target level with no published exams", async () => {
+    server.use(http.get(`*/api/exams`, () => HttpResponse.json([exams[2]])));
+    window.localStorage.setItem("jlptgo.level", "N4");
     renderRoutes(
       [{ path: "study", Component: StudyLayout,
          children: [{ path: "exams", Component: ExamListPage }] }],
-      "/study/exams?level=",
+      "/study/exams",
     );
-    await screen.findByText("2018年12月 N2");
-    expect(screen.getByText("2019年7月 N1")).toBeInTheDocument();
+    expect(await screen.findByText(/暂无 N4 已发布试卷/)).toBeInTheDocument();
+    expect(screen.queryByText("2019年7月 N1")).not.toBeInTheDocument();
     window.localStorage.removeItem("jlptgo.level");
   });
 

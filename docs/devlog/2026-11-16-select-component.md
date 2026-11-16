@@ -59,3 +59,8 @@
 - 过程发现：第一版同时设置了标准的 `scrollbar-width/scrollbar-color` 和 `::-webkit-scrollbar`，Chrome 在设置标准属性后会忽略 WebKit 伪元素，实测列表 `offsetWidth-clientWidth=0`（macOS 叠加滚动条，样式未生效）。改为只在 `@supports not selector(::-webkit-scrollbar)`（Firefox）下使用标准属性后，实测宽度 8px，滚动条滑块可见。
 - 测试：placement 新增 3 例、Select 新增 2 例，并更新原「靠近底部翻转」用例的高度期望（300→250）；typecheck 通过；vitest 21 文件 / 192 passed；`pnpm build` 通过。容器内真实页面（年份筛选 17 项）：popover 实高 250px，列表 790px 内容在 232px 内滚动，滚动条可见。
 - 未验证：Firefox 的 `scrollbar-color` 近似效果、Safari、深色模式、触屏滚动。
+
+## 续：历年试卷页去掉等级筛选（同日，用户指示）
+- `/study/exams` 只保留「年份」筛选；等级跟随备考等级（登录读资料、访客读本地偏好，顶栏选择器可切换），未设置等级则显示全部。年份选项只含当前等级有的年份；该等级无试卷时提示「暂无 N? 已发布试卷，可在右上角切换备考等级」。旧链接中的 `?level=` 被忽略；删除了「首次把偏好种入 URL」的逻辑。`page-structure.md` 与 M2.2 计划表同步。
+- 取舍：访客没有顶栏等级选择器，因此只能看到全部等级（或此前本地存过的偏好）；如需访客也能按等级筛选，需要另行决定入口。
+- 测试：ExamList 测试改写为 5 例（无等级筛选、年份筛选与参数清理、跟随等级且年份选项只含该等级、该等级无试卷提示、链接）；typecheck 通过；vitest 21 文件 / 194 passed。容器内浏览器：页面只有年份筛选，旧 `?level=N1` 被忽略，改顶栏等级后列表随之变化。测试学生等级已改回 N5。
