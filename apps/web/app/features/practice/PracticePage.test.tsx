@@ -44,7 +44,7 @@ const PUBLIC_UNIT = {
   ],
 };
 const FEEDBACK = {
-  unit_id: "u-1", release_id: "r-1", feedback_mode: "immediate",
+  unit_id: "u-1", release_id: "r-1",
   questions: [
     { question_id: "q1", position: 1, printed_number: "1",
       chosen_option_id: "o1", correct_option_id: "o1", is_correct: true,
