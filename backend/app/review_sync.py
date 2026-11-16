@@ -29,6 +29,8 @@ from sqlalchemy.engine import Engine
 
 from app.importer.errors import ImportError_ as CanonicalImportError
 from app.publisher import _load_staged_package
+from app.review_state import (RULE_VERSION_REVIEW, latest_review,
+                              open_issues, raise_issue)
 
 ANSWER_PASS = "pass"
 ANSWER_BLOCKING = {"needs_review", "blocked", "not_checked"}
@@ -140,20 +142,30 @@ def sync_agent_reviews(engine: Engine, package_id: str,
             unit_verdict = result.get("status")
 
             # Unit-level gate evidence (blocks promote when needs_review/blocked).
+            # Blocking verdicts raise a trackable issue; the review row links it.
+            unit_status = ("needs_review" if unit_verdict in UNIT_BLOCKING
+                           else "agent_verified" if unit_verdict == ANSWER_PASS
+                           else "needs_review")
+            unit_issue_id = None
+            if unit_status in UNIT_BLOCKING:
+                unit_issue_id = raise_issue(
+                    conn, "agent_review", "agent_unit_flag", "unit", unit_id,
+                    current_input["content_hash"], "blocking",
+                    RULE_VERSION_REVIEW,
+                    {"unit_status": unit_verdict, "job_id": job_id,
+                     "review_run_id": run_id})["id"]
             conn.execute(text(
                 "INSERT INTO content_reviews (id, record_type, canonical_id,"
                 " content_hash, reviewer_type, reviewer_id, review_status,"
-                " evidence, checked_at)"
+                " evidence, checked_at, issue_id)"
                 " VALUES (:id, 'unit', :cid, :chash, 'agent', :rid, :status,"
-                " CAST(:ev AS jsonb), :at)"
+                " CAST(:ev AS jsonb), :at, :iid)"
                 " ON CONFLICT ON CONSTRAINT uq_content_review_identity DO NOTHING"),
                 {"id": uuid.uuid4(), "cid": unit_id,
                  "chash": current_input["content_hash"], "rid": reviewer_id,
-                 "status": ("needs_review" if unit_verdict in UNIT_BLOCKING
-                            else "agent_verified" if unit_verdict == ANSWER_PASS
-                            else "needs_review"),
+                 "status": unit_status,
                  "ev": json.dumps(agent_meta, ensure_ascii=False),
-                 "at": _checked_at(result)})
+                 "at": _checked_at(result), "iid": unit_issue_id})
 
             for q in result.get("questions", []):
                 qid = q.get("question_id")
@@ -197,22 +209,45 @@ def sync_agent_reviews(engine: Engine, package_id: str,
                                                "option": independent, **agent_meta}, result)
                         continue
                     if independent is not None and independent != staged_option:
-                        # Agent proposes a different valid option: record, no verify.
+                        # Agent proposes a different valid option: record, no
+                        # verification — and a trackable issue a human resolves.
+                        issue = raise_issue(
+                            conn, "agent_review", "agent_proposed_answer",
+                            "answer_key", qid,
+                            current_input["content_hash"], "blocking",
+                            RULE_VERSION_REVIEW,
+                            {"proposed_option": independent,
+                             "staged_option": staged_option, **agent_meta})
                         _record(conn, qid, current_input["content_hash"], reviewer_id,
                                 "needs_review",
                                 {"proposed_option": independent,
-                                 "staged_option": staged_option, **agent_meta}, result)
+                                 "staged_option": staged_option,
+                                 "issue_id": issue["id"], **agent_meta}, result,
+                                issue_id=issue["id"])
                         continue
-                    conflict = conn.execute(text(
-                        "SELECT review_status FROM content_reviews"
-                        " WHERE record_type = 'answer_key' AND canonical_id = :cid"
-                        " AND content_hash = :chash AND reviewer_type = 'human'"
-                        " ORDER BY checked_at DESC LIMIT 1"),
-                        {"cid": qid, "chash": current_input["content_hash"]}).scalar()
-                    if conflict == "disputed":
+                    # An ordinary Agent pass never auto-clears an unresolved
+                    # dispute: open blocking issues on this exact content
+                    # dominate, regardless of how many passes follow.
+                    open_blocking = open_issues(conn, "answer_key", qid,
+                                                current_input["content_hash"],
+                                                severity="blocking")
+                    if open_blocking:
+                        intercepted.append({"unit_id": unit_id, "question_id": qid,
+                                            "reason": "open_issue",
+                                            "issues": [str(i.id) for i in open_blocking]})
+                        _record(conn, qid, current_input["content_hash"], reviewer_id,
+                                "unverified",
+                                {"conflict": "open_issue",
+                                 "issues": [str(i.id) for i in open_blocking],
+                                 **agent_meta}, result)
+                        continue
+                    dispute = latest_review(conn, "answer_key", qid,
+                                            current_input["content_hash"],
+                                            reviewer_type="human")
+                    if dispute is not None and dispute.review_status == "disputed":
                         intercepted.append({"unit_id": unit_id, "question_id": qid,
                                             "reason": "human_conflict",
-                                            "human_status": conflict})
+                                            "human_status": dispute.review_status})
                         _record(conn, qid, current_input["content_hash"], reviewer_id,
                                 "unverified",
                                 {"conflict": "human_disputed", **agent_meta}, result)
@@ -233,10 +268,20 @@ def sync_agent_reviews(engine: Engine, package_id: str,
                             {"r": release.id, "q": qid})
                 else:
                     # needs_review / blocked / not_checked / proposed_change:
-                    # evidence only, never a verification.
+                    # evidence only, never a verification. Explicit blocking
+                    # verdicts raise a trackable issue.
+                    blocking = verdict in ANSWER_BLOCKING
+                    issue_id = None
+                    if blocking:
+                        issue_id = raise_issue(
+                            conn, "agent_review", "agent_answer_flag",
+                            "answer_key", qid, current_input["content_hash"],
+                            "blocking", RULE_VERSION_REVIEW,
+                            {"agent_answer": verdict, **agent_meta})["id"]
                     _record(conn, qid, current_input["content_hash"], reviewer_id,
-                            "needs_review" if verdict in ANSWER_BLOCKING else "unverified",
-                            {"agent_answer": verdict, **agent_meta}, result)
+                            "needs_review" if blocking else "unverified",
+                            {"agent_answer": verdict, **agent_meta}, result,
+                            issue_id=issue_id)
 
     return {
         "ok": True,
@@ -262,18 +307,19 @@ def _checked_at(result: dict):
 
 
 def _record(conn, canonical_id: str, content_hash: str, reviewer_id: str,
-            status: str, evidence: dict, result: dict) -> None:
+            status: str, evidence: dict, result: dict,
+            issue_id: str | None = None) -> None:
     conn.execute(text(
         "INSERT INTO content_reviews (id, record_type, canonical_id,"
         " content_hash, reviewer_type, reviewer_id, review_status,"
-        " evidence, checked_at)"
+        " evidence, checked_at, issue_id)"
         " VALUES (:id, 'answer_key', :cid, :chash, 'agent', :rid, :status,"
-        " CAST(:ev AS jsonb), :at)"
+        " CAST(:ev AS jsonb), :at, :iid)"
         " ON CONFLICT ON CONSTRAINT uq_content_review_identity DO NOTHING"),
         {"id": uuid.uuid4(), "cid": canonical_id, "chash": content_hash,
          "rid": reviewer_id, "status": status,
          "ev": json.dumps(evidence, ensure_ascii=False),
-         "at": _checked_at(result)})
+         "at": _checked_at(result), "iid": issue_id})
 
 
 def load_results(path) -> list[dict]:

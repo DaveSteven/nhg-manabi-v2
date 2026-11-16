@@ -129,6 +129,16 @@ def publish_package(engine: Engine, package_id: str,
     exam_id = exam["id"]
     release_id = uuid.uuid4()
 
+    # Answer-key review evidence is bound to the per-unit input hash; compute
+    # it once for this staged content (same function the Agent sync binds to).
+    from app.review_sync import _build_input_for
+    unit_input_hash_by_question = {}
+    for u in package.records["units.jsonl"]:
+        unit_hash = _build_input_for(package, u["id"])["content_hash"]
+        for q in package.records["questions.jsonl"]:
+            if q["unit_id"] == u["id"]:
+                unit_input_hash_by_question[q["id"]] = unit_hash
+
     with engine.begin() as conn:
         next_rev = conn.execute(text(
             "SELECT COALESCE(MAX(revision), 0) + 1 FROM exam_releases"
@@ -267,14 +277,19 @@ def publish_package(engine: Engine, package_id: str,
                     {"r": release_id, "qid": q["id"], "aid": aid})
 
         for ak in package.records["answer_keys.private.jsonl"]:
-            # Review status authority is content_reviews (hash-bound evidence);
-            # staged payload status is only the initial default.
+            # Review status authority is content_reviews (hash-bound evidence,
+            # latest by insertion sequence); staged payload status is only the
+            # initial default. Evidence from OTHER content hashes never
+            # satisfies this candidate: each question's verdict must be bound
+            # to the unit-input hash of THIS staged content.
             reviewed = conn.execute(text(
                 "SELECT review_status FROM content_reviews"
                 " WHERE record_type = 'answer_key' AND canonical_id = :cid"
+                " AND content_hash = :chash"
                 " AND reviewer_type IN ('agent','human')"
-                " ORDER BY checked_at DESC LIMIT 1"),
-                {"cid": ak["question_id"]}).scalar()
+                " ORDER BY sequence DESC LIMIT 1"),
+                {"cid": ak["question_id"],
+                 "chash": unit_input_hash_by_question[ak["question_id"]]}).scalar()
             conn.execute(text(
                 "INSERT INTO release_answer_keys (release_id, question_id,"
                 " correct_option_id, revision, review_status)"
@@ -322,11 +337,15 @@ def promote_release(engine: Engine, release_id: str, reviewer_id: str,
 
     Hard gates (lightweight review workflow): every answer key carries a
     valid 'agent_verified' (hash-bound Agent evidence) or 'human_reviewed'
-    verdict; every unit conversion-complete AND not flagged needs_review/
-    blocked by Agent review on the current content hash; media verified; an
-    explicit rights confirmation decision recorded. Unreviewed or disputed
-    content is refused — it must not go public.
+    verdict; every unit conversion-complete AND not blocked by an open
+    blocking issue or a needs_review/blocked Agent verdict on the current
+    content hash (deterministic by review insertion sequence — a later
+    Agent pass never auto-clears an open issue); no open blocking issue of
+    any kind (incl. data-quality findings) on this content hash; media
+    verified; an explicit rights confirmation decision recorded. Unreviewed
+    or disputed content is refused — it must not go public.
     """
+    from app.review_state import latest_review, open_issues
     from app.review_sync import UNIT_BLOCKING, _build_input_for
 
     with engine.begin() as conn:
@@ -362,6 +381,8 @@ def promote_release(engine: Engine, release_id: str, reviewer_id: str,
                 "A/B splits); publishing refused")
 
         # Agent-flagged units on the current content hash block publishing.
+        # Latest verdict by insertion sequence; open blocking issues dominate
+        # regardless of any later Agent pass (pass never auto-clears).
         staged_job = conn.execute(text(
             "SELECT package_id FROM import_jobs WHERE content_hash = :h"
             " ORDER BY created_at DESC LIMIT 1"), {"h": release.content_hash}).first()
@@ -371,18 +392,39 @@ def promote_release(engine: Engine, release_id: str, reviewer_id: str,
             flagged = []
             for u in staged_pkg.records["units.jsonl"]:
                 unit_input = _build_input_for(staged_pkg, u["id"])
-                flagged_unit = conn.execute(text(
-                    "SELECT review_status FROM content_reviews"
-                    " WHERE record_type = 'unit' AND canonical_id = :cid"
-                    " AND content_hash = :chash AND reviewer_type = 'agent'"
-                    " ORDER BY checked_at DESC LIMIT 1"),
-                    {"cid": u["id"], "chash": unit_input["content_hash"]}).scalar()
-                if flagged_unit in UNIT_BLOCKING:
-                    flagged.append({"unit_id": u["id"], "status": flagged_unit})
+                unit_issues = open_issues(conn, "unit", u["id"],
+                                          unit_input["content_hash"],
+                                          severity="blocking")
+                if unit_issues:
+                    flagged.append({"unit_id": u["id"],
+                                    "reason": "open_issue",
+                                    "issues": [str(i.id) for i in unit_issues]})
+                    continue
+                unit_review = latest_review(conn, "unit", u["id"],
+                                            unit_input["content_hash"],
+                                            reviewer_type="agent")
+                if unit_review is not None and unit_review.review_status in UNIT_BLOCKING:
+                    flagged.append({"unit_id": u["id"],
+                                    "status": unit_review.review_status})
             if flagged:
                 raise PublishGateError(
                     f"{len(flagged)} unit(s) flagged needs_review/blocked by "
                     f"Agent review: {flagged}; publishing refused")
+
+        # Open blocking issues bound to this release's content hash (data-
+        # quality findings and any other structural/media anomalies) refuse
+        # promotion; warnings do not block but stay on record.
+        open_blocking = conn.execute(text(
+            "SELECT issue_code, canonical_id FROM content_issues"
+            " WHERE status = 'open' AND severity = 'blocking'"
+            " AND content_hash = :h LIMIT 20"),
+            {"h": release.content_hash}).fetchall()
+        if open_blocking:
+            raise PublishGateError(
+                f"{len(open_blocking)} unresolved blocking issue(s) on this "
+                f"content hash: "
+                f"{[{'code': r.issue_code, 'id': r.canonical_id} for r in open_blocking]}; "
+                "publishing refused")
 
         bad_media = conn.execute(text(
             "SELECT count(*) FROM release_units u"

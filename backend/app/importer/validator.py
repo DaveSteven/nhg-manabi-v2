@@ -265,6 +265,11 @@ def validate_package(package: CanonicalPackage) -> ValidationResult:
         if not isinstance(materials, list):
             vr.error("unit_materials", uloc, "materials must be a list")
             materials = []
+        # Unit material grouping: cue-bearing materials are timed against the
+        # unit's own audio; zero or multiple audio materials is a grouping
+        # anomaly to record, never to guess away.
+        audio_asset_ids = [m.get("asset_id") for m in materials
+                           if m.get("kind") == "audio" and m.get("asset_id")]
         seen_mat_pos: set[int] = set()
         seen_mat_ids: set[str] = set()
         has_media = False
@@ -320,6 +325,14 @@ def validate_package(package: CanonicalPackage) -> ValidationResult:
                                 vr.warning("cue_gap_large", cloc,
                                            f"{start - prev_end}ms gap after previous cue; needs review")
                             prev_end = end
+                if cues and not audio_asset_ids:
+                    vr.warning("material_grouping", mloc,
+                               "cue-bearing material has no paired unit"
+                               " audio; timeline cannot be anchored")
+                elif cues and len(audio_asset_ids) > 1:
+                    vr.warning("material_grouping", mloc,
+                               f"{len(audio_asset_ids)} audio materials in"
+                               " one unit; cue timeline anchor ambiguous")
             tfm = m.get("translated_from_material_id")
             if tfm is not None and tfm not in seen_mat_ids:
                 # forward reference allowed only if it appears later in the same unit
@@ -332,8 +345,6 @@ def validate_package(package: CanonicalPackage) -> ValidationResult:
         # relative to the unit audio (not the whole-exam file); when the audio
         # binary is verified with a known duration, an overrunning timeline is
         # a data-quality issue to review, not something to guess away.
-        audio_asset_ids = [m.get("asset_id") for m in materials
-                           if m.get("kind") == "audio" and m.get("asset_id")]
         for m in materials:
             cues = m.get("cues") or []
             ends = [c.get("end_ms") for c in cues

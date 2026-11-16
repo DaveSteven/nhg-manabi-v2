@@ -18,6 +18,7 @@
 | P-012 | React + TypeScript / FastAPI / PostgreSQL；模块化单体，Alembic 迁移 | 当前采用架构 | 不照搬 1.0 状态库或旧表 |
 | P-013 | 发布采用不可变 Release；每个跨卷抽样 Unit 保存自己的 release | 当前采用架构 | 旧答卷引用旧版本，不能静默重算 |
 | P-014 | AI 精读、支付、排行榜等非 2.0 首期默认需求 | 已确认边界 | 单独评审后才能加入 |
+| P-015 | 审核事件按 DB 插入顺序（sequence）定最终状态；阻断结论必须落可追踪 `content_issues`；Agent pass 不自动清除争议；结论严格绑定内容哈希；数据质量异常入库存档 | 已确认（ADR-0005） | 见 ADR-0005；blocking 未解决记录拒绝发布 |
 
 ## 尚未定稿的重点
 
@@ -33,3 +34,4 @@
 - `ADR-0002-canonical-unit.md`
 - `ADR-0003-submission-and-history.md`
 - `ADR-0004-content-releases.md`
+- `ADR-0005-review-event-ordering-and-issues.md`

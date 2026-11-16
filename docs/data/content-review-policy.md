@@ -1,5 +1,13 @@
 # 内容审核、发布与版本追溯规范
 
+## 审核事件顺序与可追踪 Issue（2026-11-16 起，ADR-0005）
+
+1. **确定性顺序**：审核事件的最终有效状态按 `content_reviews.sequence`（数据库插入顺序）判定，不按 `checked_at`。同一时间的多条记录由插入顺序唯一决定结论。
+2. **可追踪 Issue**：`needs_review`/`blocked`（DB CHECK 强制）、human `disputed`、验证器结构/媒体异常都落 `content_issues` 表；唯一键 `(issue_code, record_type, canonical_id, content_hash, rule_version)` 保证重复同步幂等。历史审核记录与 Issue 一律保留，不覆盖不删除。
+3. **pass 不清除争议**：同一内容哈希上存在 open blocking issue 时，普通 Agent `pass` 被拦截并记 `unverified` 证据；解除阻断必须 `resolve_issue`（关联原 Issue + 当前内容哈希 + 解决证据），或由数据质量重校验在新哈希上自动 resolved。
+4. **哈希绑定**：审核结论只对绑定内容哈希有效；答案状态回查按 Unit 输入哈希过滤。旧哈希结论不能覆盖新内容审核结果，也不能满足新候选版本的门槛。
+5. **数据质量记录**：验证器发现的字幕时间轴异常（cue 越界/缺失/非法/大间隔）、材料分组异常等经 `app/data_quality.py` 同步入库，绑定包内容哈希与规则版本；`severity=blocking` 的未解决记录使发布门槛拒绝（warning 留痕不阻断），按 Unit/题型/严重度可查询。
+
 ## 轻量化审核流程（2026-11-15 起，本地 Agent 校验优先）
 
 1. **Agent 校验**：QA Agent 按 `agent-validation-contract.md` 逐 Unit 审核；系统通过 `app/review_sync.py` 的 `build` 生成绑定 content_hash 的审核任务，Agent 结果经 `sync` 批量同步。

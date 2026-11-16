@@ -98,11 +98,16 @@ def clean_publish(pg_engine):
                 "DELETE FROM content_reviews WHERE canonical_id LIKE"
                 " 'JLPTGO-N5-TEST-EX-%'"))
             conn.execute(text(
+                "DELETE FROM content_issues WHERE canonical_id LIKE"
+                " 'JLPTGO-N5-TEST-EX-%'"))
+            conn.execute(text(
                 "DELETE FROM publication_decisions WHERE exam_id = :e"), {"e": EXAM_ID})
             conn.execute(text("DELETE FROM exam_releases WHERE exam_id = :e"), {"e": EXAM_ID})
             conn.execute(text(
                 "DELETE FROM question_registry WHERE exam_id = :e"), {"e": EXAM_ID})
-            conn.execute(text("DELETE FROM media_assets WHERE id = 'JLPTGO-N5-TEST-EX-as001'"))
+            conn.execute(text("DELETE FROM media_assets WHERE id IN"
+                              " ('JLPTGO-N5-TEST-EX-as001',"
+                              " 'JLPTGO-N5-TEST-EX-as002')"))
             conn.execute(text(
                 "DELETE FROM question_types t WHERE t.id IN"
                 " ('grammar_cloze', 'vocabulary_kanji_reading')"
