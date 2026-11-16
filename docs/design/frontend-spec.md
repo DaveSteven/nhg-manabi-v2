@@ -4,10 +4,167 @@
 
 ## 前端工程方向
 
-- React + TypeScript + Vite；路由、数据请求和轻状态库按模块需要选择。旧版用 React Router/TanStack Query/Zustand 证明相关模式可行，但 v2 **不强制复刻其版本或文件结构**。
+- React + TypeScript + Vite；渲染与路由采用 React Router Framework Mode（见下文「页面渲染策略」），数据请求和轻状态库按模块需要选择。旧版用 React Router/TanStack Query/Zustand 证明相关模式可行，但 v2 **不强制复刻其版本或文件结构**。
 - API 和视图模型明确分层；服务端是题库、正式答案及 Session 的权威事实源。客户端可保存可丢弃的草稿加速缓存，不得把 localStorage 当正式答题结果。
 - 公开题库 API 要区分预览/作答/提交/复盘的响应结构；严格遵守答案可见性，不把 `answer_key` 塞在用户端静态数据里再“CSS 隐藏”。
 - RichText 由安全受控 renderer 识别 `jlptgo-richtext-v1`，不直接 `dangerouslySetInnerHTML` 渲染未清理源 HTML；正确支持 ruby、underline、cloze slot、block、image placeholder。
+
+## 页面渲染策略（Rendering Strategy）
+
+### 技术决策
+
+JLPT GO 2.0 用户端采用 **React Router Framework Mode + SSG（Static Site Generation）+ SPA（Single Page Application）混合架构**。
+
+技术配置：
+
+- 前端：React + TypeScript + React Router Framework Mode
+- 渲染：`ssr: false`，对指定公开路由启用 `prerender`
+- 业务后端：FastAPI
+- 数据库：PostgreSQL
+- 部署：静态文件服务 + FastAPI API
+- 管理后台：独立 React SPA，不参与搜索引擎索引
+
+第一阶段不运行 Node.js SSR 服务，不引入 Next.js。
+
+### 页面分类与渲染模式
+
+| 页面类型 | 示例路由 | 渲染模式 | SEO |
+|---|---|---|---|
+| 品牌首页 | `/` | SSG | 是 |
+| 功能介绍 | `/features` | SSG | 是 |
+| JLPT 等级介绍 | `/jlpt/n2` | SSG | 是 |
+| 原创学习指南 | `/guides/:slug` | SSG | 是 |
+| 学习首页 | `/study` | SPA | 否 |
+| 专项练习 | `/study/practice/*` | SPA | 否 |
+| 历年试卷与答题 | `/study/exams/*` | SPA | 默认否 |
+| 完整模拟考试 | `/study/mock/*` | SPA | 否 |
+| 我的学习 | `/study/my-learning` | SPA | 否 |
+| 登录与注册 | `/login`、`/register` | SPA | 否 |
+| 管理后台 | 独立 Admin App | SPA | 否 |
+
+以上为路由组织建议。具体路径须与 `page-structure.md` 统一，不得在实现时产生重复入口。
+
+### 品牌首页与学习首页分离
+
+**品牌首页 `/`**
+
+面向尚未注册的访客及搜索引擎。
+
+主要职责：
+
+- 介绍 JLPT GO 的产品定位与价值。
+- 展示专项练习、历年试卷、学习分析等功能。
+- 提供 JLPT N5–N1 备考相关入口。
+- 引导访客开始学习或注册。
+- 承载原创学习内容和品牌传播。
+
+**学习首页 `/study`**
+
+面向实际使用平台的学习者。
+
+保持此前已确认的设计：
+
+- 文字词汇、文法、读解、听力四个主要入口。
+- 有未完成练习时显示「继续上次练习」。
+- 提供历年试卷入口。
+- 按实际学习数据展示简洁的复习建议。
+- 不引入复杂的每日打卡和游戏化模块。
+
+两个首页共用「樱与墨」设计系统，但不要求使用相同的布局。
+
+### SSG 页面规范
+
+所有 SEO 页面必须在构建阶段生成包含主要正文的 HTML。
+
+要求：
+
+- 页面主要标题和正文直接存在于初始 HTML 中。
+- 每页拥有独立的 `title`、`description`、canonical URL。
+- 使用规范的 H1/H2/H3 标题层级。
+- 页面之间使用真实、可抓取的链接。
+- 公开页面纳入 `sitemap.xml`。
+- 不在构建时注入用户身份信息或私有题目数据。
+- 原创内容更新后触发重新构建与部署。
+- 动态文章路由必须在构建时提供明确的 slug 清单。
+
+公开 SEO 内容不能仅通过浏览器调用 API 后才生成主要正文。
+
+### SPA 页面规范
+
+学习系统采用客户端渲染。
+
+要求：
+
+- 使用 React Router 管理导航。
+- 通过 FastAPI 获取用户相关数据。
+- 练习会话与草稿以服务端为事实来源。
+- 刷新页面能够恢复有效练习状态。
+- 复杂答题模块按路由或组件进行代码分割。
+- 仅在浏览器运行的音频 API、localStorage 等逻辑应放在客户端生命周期内。
+- 严格模考计时以服务端时间为准。
+- 不通过 HTML 隐藏来实现正确答案的权限控制。
+
+SPA 路由由构建产物中的 fallback 页面承载，不需要为每个练习会话生成静态 HTML。
+
+### SEO 与多语言
+
+SEO 仅对明确允许公开索引的页面开放。
+
+必须实现：
+
+- 每页独立 Title 和 Description。
+- Canonical URL。
+- `sitemap.xml` 和 `robots.txt`。
+- 对用户资料、练习会话、学习历史等页面设置 `noindex`。
+- 未登录时不能通过公开接口获取私人学习数据。
+- 不允许未经授权的完整试卷内容自动进入 SEO 页面。
+
+多语言正式上线时：
+
+- 中文、日语、英语使用独立的稳定 URL。
+- 设置对应语言的 `lang`。
+- 对已有等价翻译页面设置正确的 `hreflang`。
+- 未实际发布的语言版本不能加入 sitemap 或 hreflang。
+
+### 构建与部署
+
+第一阶段采用静态部署。
+
+前端构建产物由 Nginx 或等价静态文件服务提供。
+
+路由处理：
+
+1. 优先返回实际存在的静态资源。
+2. 对已预渲染的公开路由返回对应 HTML。
+3. 对学习 SPA 路由返回 React Router 生成的 SPA fallback。
+4. API 请求转发给 FastAPI。
+5. 无效公开路由应返回真实 404，避免大量软 404。
+
+特别注意：当 `/` 已被预渲染时，React Router 可能生成 `__spa-fallback.html` 供其他 SPA 路由使用；不得错误地把品牌首页 HTML 当作所有页面的 fallback。
+
+### 性能与验收
+
+至少验证：
+
+- 品牌首页在禁用 JavaScript 时仍有完整主要内容。
+- SEO 页面初始 HTML 包含正确的 Meta 信息。
+- SPA 页面可以直接访问、刷新和恢复。
+- 切换学习页面不发生不必要的整页刷新。
+- 前端资源支持长期缓存及哈希文件名。
+- 移动端首屏、字体与图片没有明显布局跳动。
+- 未授权访问不能获得私有答案或学习记录。
+- 构建产物部署后不存在错误的 SPA fallback 或重复 canonical。
+
+### 架构升级条件
+
+出现下列情况时重新评估 SSR：
+
+- 大量动态公开页面需要按请求实时生成。
+- 公开内容数量和更新频率使全量预渲染成本明显升高。
+- 个性化公开内容必须在服务端渲染。
+- 实际 SEO、性能或部署指标证明当前架构存在瓶颈。
+
+在以上情况出现前，不因单纯追求 SEO 而引入额外的 Node.js 服务。
 
 ## 全局布局
 

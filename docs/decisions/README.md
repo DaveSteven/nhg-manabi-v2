@@ -20,6 +20,7 @@
 | P-014 | AI 精读、支付、排行榜等非 2.0 首期默认需求 | 已确认边界 | 单独评审后才能加入 |
 | P-015 | 审核事件按 DB 插入顺序（sequence）定最终状态；阻断结论必须落可追踪 `content_issues`；Agent pass 不自动清除争议；结论严格绑定内容哈希；数据质量异常入库存档 | 已确认（ADR-0005） | 见 ADR-0005；blocking 未解决记录拒绝发布 |
 | P-016 | M2 作答域 `user_id` 由服务端认证上下文解析；默认 fail-closed；`dev_test` 测试身份机制在生产环境硬禁用；暂不建 users 表 | 已确认（ADR-0006） | 见 ADR-0006；正式认证接入时只替换 `get_current_user_id` |
+| P-017 | 用户端前端采用 React Router Framework Mode + SSG（品牌/内容页）+ SPA（学习系统）；第一阶段禁用运行时 SSR，不引入 Next.js 或 Node SSR 服务 | 已确认（ADR-0007） | 见 ADR-0007；影响 apps/web 与前端/部署配置；迁移全站 SSR 或 Next.js 须新 ADR |
 
 ## 尚未定稿的重点
 
@@ -36,3 +37,5 @@
 - `ADR-0003-submission-and-history.md`
 - `ADR-0004-content-releases.md`
 - `ADR-0005-review-event-ordering-and-issues.md`
+- `ADR-0006-minimal-user-identity-boundary.md`
+- `ADR-0007-hybrid-rendering-strategy.md`

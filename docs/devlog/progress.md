@@ -14,6 +14,7 @@
 - **M1.6 审核与数据校验稳定化**：Alembic 0003（`content_issues` 表 + `content_reviews.sequence` 确定性顺序 + blocking 必须关联 Issue 的 CHECK）；`review_state.py` 按 sequence 的状态解析与显式 `resolve_issue`；Agent pass 不再能清除未解决争议；发布答案回查按 Unit 输入哈希过滤（旧哈希结论不跨版本泄漏）；promote 新增「当前哈希存在 open blocking 记录拒绝发布」门槛；`data_quality.py` 把验证器异常（cue 越界/缺失/非法/大间隔、材料分组等）幂等同步为可查询数据质量记录，重校验自动 resolved；N4 真实包已同步（20 条，4 个确证字幕越界 open blocking 可查询，幅度与 ffprobe 审计吻合）；ADR-0005。
 - 测试：55 个测试全部通过（review_sync 12、data_quality 3、播放兼容 2、publisher/API 7、导入器 20、迁移一致性 2、Schema 编译 3、健康检查 1、真实 PG 约束 5 等在内）。
 - **M2.1 Task 01–04（2026-11-16）**：开发前检查；题库查询 API 扩展（`GET /api/exams/{id}` 轮廓、`/layers` 目录、`GET /api/releases/{rid}/units/{uid}` 按 release 取 Unit，公开载荷零答案泄漏，draft 仍 404）；最小用户身份边界（`app/auth.py`，服务端解析 + fail-closed + dev_test 生产硬禁用，ADR-0006）；练习会话管理（`app/api/practice.py`：创建固定 release 绑定的单/多 Unit 会话、单活跃练习 409 冲突、恢复、跨账号 404 隔离、finish→ended_early 幂等且不生成虚假成绩）。测试增至 74 个全部通过。
+- **ADR-0007 用户端混合渲染策略（2026-11-16，纯文档）**：React Router Framework Mode + SSG（品牌/内容页）+ SPA（学习系统），第一阶段禁用运行时 SSR，不引入 Next.js/Node SSR 服务。原建议编号 0005/0006 已被占用，顺延为 0007（M2 计划 Task 09 引用已修正）。`frontend-spec.md` 新增「页面渲染策略」章节为实现规范（页面分类、SSG/SPA 规范、SEO/多语言、静态部署路由规则、验收清单、SSR 升级条件）。两份并行起草的 ADR 已合并为单一 `ADR-0007-hybrid-rendering-strategy.md`。原「Task 09 前先写混合渲染 ADR」提前满足（实现仍在 M2.2）。无代码改动、未运行测试。
 
 ## 进行中（当前开发阶段）
 
@@ -22,11 +23,11 @@
 ## 未开始（按依赖顺序）
 
 1. M2.1 Task 05–08（草稿、提交、反馈权限、结果）。
-2. M2.2 React 学习页面（Task 09–11；Task 09 前先写混合渲染 ADR）。
+2. M2.2 React 学习页面（Task 09–11；混合渲染 ADR-0007 已就绪）。
 3. 运行真实 Agent 校验（按 contract 批量产出五套题库结果 → sync → 解锁 promote）；N4 4 个确证字幕越界待人工重对时间轴（当前为 open blocking，阻止 N4 发布）。
-2. N5/N3/N2/N1 逐包执行 `python -m app.data_quality sync`（M1.6 机制已就绪，按任务要求未自动全量跑）。
-3. 发布快照不可变的 DB 触发器 / restricted DB role。
-4. 认证/用户体系（当前内部 API 仅共享令牌；M2 Task 03 仅做最小身份边界）。
+4. N5/N3/N2/N1 逐包执行 `python -m app.data_quality sync`（M1.6 机制已就绪，按任务要求未自动全量跑）。
+5. 发布快照不可变的 DB 触发器 / restricted DB role。
+6. 认证/用户体系（当前内部 API 仅共享令牌；M2 Task 03 仅做最小身份边界）。
 
 ## 已知缺口 / 风险
 
