@@ -1,119 +1,37 @@
-# Shadcn Admin Dashboard
+# apps/admin · JLPT GO 管理端
 
-Admin Dashboard UI crafted with Shadcn and Vite. Built with responsiveness and accessibility in mind.
+独立 React SPA（Vite + shadcn-admin，来源与改动见 `THIRD_PARTY.md`，决策见 ADR-0008/0009/0010）。FastAPI 是身份与权限的唯一事实源，前端路由守卫只改善体验。
 
-![alt text](public/images/shadcn-admin.png)
-
-[![Sponsored by Clerk](https://img.shields.io/badge/Sponsored%20by-Clerk-5b6ee1?logo=clerk)](https://go.clerk.com/GttUAaK)
-
-I've been creating dashboard UIs at work and for my personal projects. I always wanted to make a reusable collection of dashboard UI for future projects; and here it is now. While I've created a few custom components, some of the code is directly adapted from ShadcnUI examples.
-
-> This is not a starter project (template) though. I'll probably make one in the future.
-
-## Features
-
-- Light/dark mode
-- Responsive
-- Accessible
-- With built-in Sidebar component
-- Global search command
-- 10+ pages
-- Extra custom components
-- RTL support
-
-<details>
-<summary>Customized Components (click to expand)</summary>
-
-This project uses Shadcn UI components, but some have been slightly modified for better RTL (Right-to-Left) support and other improvements. These customized components differ from the original Shadcn UI versions.
-
-If you want to update components using the Shadcn CLI (e.g., `npx shadcn@latest add <component>`), it's generally safe for non-customized components. For the listed customized ones, you may need to manually merge changes to preserve the project's modifications and avoid overwriting RTL support or other updates.
-
-> If you don't require RTL support, you can safely update the 'RTL Updated Components' via the Shadcn CLI, as these changes are primarily for RTL compatibility. The 'Modified Components' may have other customizations to consider.
-
-### Modified Components
-
-- scroll-area
-- sonner
-- separator
-
-### RTL Updated Components
-
-- alert-dialog
-- calendar
-- command
-- dialog
-- dropdown-menu
-- select
-- table
-- sheet
-- sidebar
-- switch
-
-**Notes:**
-
-- **Modified Components**: These have general updates, potentially including RTL adjustments.
-- **RTL Updated Components**: These have specific changes for RTL language support (e.g., layout, positioning).
-- For implementation details, check the source files in `src/components/ui/`.
-- All other Shadcn UI components in the project are standard and can be safely updated via the CLI.
-
-</details>
-
-## Tech Stack
-
-**UI:** [ShadcnUI](https://ui.shadcn.com) (TailwindCSS + RadixUI)
-
-**Build Tool:** [Vite](https://vitejs.dev/)
-
-**Routing:** [TanStack Router](https://tanstack.com/router/latest)
-
-**Type Checking:** [TypeScript](https://www.typescriptlang.org/)
-
-**Linting/Formatting:** [ESLint](https://eslint.org/) & [Prettier](https://prettier.io/)
-
-**Icons:** [Lucide Icons](https://lucide.dev/icons/), [Tabler Icons](https://tabler.io/icons) (Brand icons only)
-
-**Auth (partial):** [Clerk](https://go.clerk.com/GttUAaK)
-
-## Run Locally
-
-Clone the project
+## 运行
 
 ```bash
-  git clone https://github.com/satnaing/shadcn-admin.git
+# 1) 后端（默认端口 8001）
+cd backend && set -a && source ../.env && set +a && .venv/bin/uvicorn app.main:app --port 8001
+# 2) 管理端 → http://localhost:5175
+pnpm -F admin dev
 ```
 
-Go to the project directory
+开发代理：`/api` → `BACKEND_URL`（默认 `http://localhost:8001`）。
+
+## 账号
+
+只有 `super_admin`（ADR-0010）。创建/改密只通过命令行，口令交互输入：
 
 ```bash
-  cd shadcn-admin
+cd backend && .venv/bin/python -m app.admin_cli create-admin <用户名>
+cd backend && .venv/bin/python -m app.admin_cli reset-password <用户名>
 ```
 
-Install dependencies
+开发库已创建 `admin`，初始口令在被 gitignore 的 `.local/admin-initial-credentials.txt`。
+
+## 检查
 
 ```bash
-  pnpm install
+pnpm -F admin exec tsc -b && pnpm -F admin exec eslint src
+pnpm -F admin test:unit       # happy-dom 单元测试
+pnpm -F admin build
 ```
 
-Start the server
+## 现状
 
-```bash
-  pnpm run dev
-```
-
-## Sponsoring this project ❤️
-
-If you find this project helpful or use this in your own work, consider [sponsoring me](https://github.com/sponsors/satnaing) to support development and maintenance. You can [buy me a coffee](https://buymeacoffee.com/satnaing) as well. Don’t worry, every penny helps. Thank you! 🙏
-
-For questions or sponsorship inquiries, feel free to reach out at [satnaingdev@gmail.com](mailto:satnaingdev@gmail.com).
-
-### Current Sponsor
-
-- [Clerk](https://go.clerk.com/GttUAaK) - authentication and user management for the modern web
-
-## Author
-
-Crafted with 🤍 by [@satnaing](https://github.com/satnaing)
-
-## License
-
-Licensed under the [MIT License](https://choosealicense.com/licenses/mit/)
+目前只有登录、退出、受保护的壳层和首页。审核流程暂不做（ADR-0010）。

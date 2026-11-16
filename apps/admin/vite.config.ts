@@ -16,6 +16,14 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+  server: {
+    port: 5175,
+    strictPort: true,
+    // Same-origin API in dev (no CORS): FastAPI admin endpoints under /api.
+    proxy: {
+      '/api': { target: process.env.BACKEND_URL || 'http://localhost:8001' },
+    },
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

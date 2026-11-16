@@ -1,4 +1,5 @@
 import { useNavigate, useLocation } from '@tanstack/react-router'
+import { adminLogout } from '@/lib/api'
 import { useAuthStore } from '@/stores/auth-store'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 
@@ -12,7 +13,12 @@ export function SignOutDialog({ open, onOpenChange }: SignOutDialogProps) {
   const location = useLocation()
   const { auth } = useAuthStore()
 
-  const handleSignOut = () => {
+  const handleSignOut = async () => {
+    try {
+      await adminLogout() // revoke the server session; clear locally regardless
+    } catch {
+      /* already expired / unreachable: local sign-out still proceeds */
+    }
     auth.reset()
     // Preserve current location for redirect after sign-in
     const currentPath = location.href
@@ -27,9 +33,10 @@ export function SignOutDialog({ open, onOpenChange }: SignOutDialogProps) {
     <ConfirmDialog
       open={open}
       onOpenChange={onOpenChange}
-      title='Sign out'
-      desc='Are you sure you want to sign out? You will need to sign in again to access your account.'
-      confirmText='Sign out'
+      title='退出登录'
+      desc='确定要退出登录吗？之后需要重新登录才能使用管理端。'
+      confirmText='退出登录'
+      cancelBtnText='取消'
       destructive
       handleConfirm={handleSignOut}
       className='sm:max-w-sm'
