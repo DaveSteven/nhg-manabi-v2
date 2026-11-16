@@ -400,6 +400,15 @@ def promote_release(engine: Engine, release_id: str, reviewer_id: str,
                                     "reason": "open_issue",
                                     "issues": [str(i.id) for i in unit_issues]})
                     continue
+                # A later explicit human confirmation (resolve_issue) of the
+                # unit supersedes the Agent's flag; open issues were already
+                # handled above and still dominate.
+                latest_any = latest_review(conn, "unit", u["id"],
+                                           unit_input["content_hash"])
+                if (latest_any is not None
+                        and latest_any.reviewer_type == "human"
+                        and latest_any.review_status == "human_reviewed"):
+                    continue
                 unit_review = latest_review(conn, "unit", u["id"],
                                             unit_input["content_hash"],
                                             reviewer_type="agent")

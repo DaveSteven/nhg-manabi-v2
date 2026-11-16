@@ -36,6 +36,7 @@
 - **feedback 契约统一 + 目录页样式（2026-11-16）**：后端 submit 内嵌 feedback 与 GET 同形；补齐学习首页/试卷目录/大纲此前完全缺失的样式（`_catalog.scss`），顶栏 `首页` 不再在子路由高亮，加载错误区分「无法连接服务」。360px 无横向溢出、听力 dock 不遮挡提交按钮已实测；前端 121 passed、后端 103 passed + 2 skipped。Firefox/Safari、1024/768 逐档、200% 缩放、深色模式未测；品牌首页仍为占位。
 - **N2 2018-12 真实内容 QA Agent 首轮（2026-11-16）**：由 claude-sonnet-5-5 对 59 个非听力 Unit（73 题）独立作答后同步入开发库：69 题 `agent_verified`，4 题（我首轮答错、看过答案键后独立性受损）`needs_review` 待人工；听力 30 题未校验。尚缺：听力校验、4 题人工确认、`rights_confirmed`、媒体同步；未发布任何真实内容（`exam_current_releases` 为空）。
 - **N2 媒体同步（2026-11-16）**：`media_sync` 对真实 N2 同步 37 个资产（35 mp3 + 2 png）全部 stored，SHA-256/大小逐文件核对一致，重跑幂等；文件在 gitignored 的 `data/v2-media`。尚未发布，API 对真实内容仍无输出；真实文件的 Range 播放未复测。
+- **N2 人工确认落地（2026-11-16）**：用户确认 4 道被标记题；新增 `apply_human_reviews`（draft release 上记 `human_reviewed`，不冒充 Agent）并让 promote 的 Unit 检查尊重后续人工确认；后端 106 passed。N2 开发库：69 agent_verified + 4 human_reviewed，仅剩听力 30 题未验证；仍缺 `rights_confirmed`，未发布。
 ## 未开始（按依赖顺序）
 
 1. M2.2 Commit 2–4：学习首页/试卷目录 → Canonical 渲染器（含音频）→ 作答闭环与反馈（实施计划、ADR-0007、后端契约与媒体接口均已就绪）。

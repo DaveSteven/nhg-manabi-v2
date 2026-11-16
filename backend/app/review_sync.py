@@ -296,6 +296,56 @@ def sync_agent_reviews(engine: Engine, package_id: str,
     }
 
 
+def apply_human_reviews(engine: Engine, package_id: str) -> dict:
+    """Reflect explicit HUMAN confirmations onto the DRAFT release snapshot.
+
+    An answer key whose latest review (by sequence, at the unit's current
+    input hash) is a human ``human_reviewed`` row — written by
+    ``resolve_issue`` — with no open blocking issue becomes
+    ``human_reviewed`` in the draft release. The state records the truth
+    (a human confirmed it), never an Agent stamp. Idempotent; keys already
+    verified are untouched; published/withdrawn releases are never mutated.
+    """
+    from app.review_state import latest_review, open_issues
+
+    staged_hash, package = _load_staged_package(engine, package_id)
+    exam_id = package.records["exam.json"][0]["id"]
+    applied = []
+    with engine.begin() as conn:
+        release = conn.execute(text(
+            "SELECT id, state FROM exam_releases"
+            " WHERE exam_id = :e AND content_hash = :h"),
+            {"e": exam_id, "h": staged_hash}).first()
+        if release is None or release.state not in ("draft", "in_review"):
+            return {"ok": True, "package_id": package_id, "applied_count": 0,
+                    "release_state": release.state if release else None,
+                    "applied": []}
+        for u in package.records["units.jsonl"]:
+            unit_hash = _build_input_for(package, u["id"])["content_hash"]
+            for q in [q for q in package.records["questions.jsonl"]
+                      if q["unit_id"] == u["id"]]:
+                qid = q["id"]
+                if open_issues(conn, "answer_key", qid, unit_hash,
+                               severity="blocking"):
+                    continue
+                row = latest_review(conn, "answer_key", qid, unit_hash)
+                if (row is None or row.reviewer_type != "human"
+                        or row.review_status != "human_reviewed"):
+                    continue
+                n = conn.execute(text(
+                    "UPDATE release_answer_keys SET review_status ="
+                    " 'human_reviewed' WHERE release_id = :r AND"
+                    " question_id = :q AND review_status NOT IN"
+                    " ('agent_verified', 'human_reviewed')"),
+                    {"r": release.id, "q": qid}).rowcount
+                if n:
+                    applied.append({"question_id": qid,
+                                    "reviewer_id": row.reviewer_id})
+    return {"ok": True, "package_id": package_id,
+            "applied_count": len(applied), "release_state": release.state,
+            "applied": applied}
+
+
 def _checked_at(result: dict):
     raw = result.get("checked_at")
     if raw:
@@ -347,10 +397,16 @@ if __name__ == "__main__":
     p_sync = sub.add_parser("sync")
     p_sync.add_argument("package_id")
     p_sync.add_argument("results_jsonl")
+    p_human = sub.add_parser("apply-human")
+    p_human.add_argument("package_id")
     args = parser.parse_args()
 
     from app.db.engine import get_engine
     engine = get_engine()
+    if args.command == "apply-human":
+        print(json.dumps(apply_human_reviews(engine, args.package_id),
+                         ensure_ascii=False))
+        sys.exit(0)
     if args.command == "build":
         print(json.dumps(build_review_input(engine, args.package_id, args.unit_id),
                          ensure_ascii=False))

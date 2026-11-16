@@ -383,3 +383,79 @@ def test_old_content_hash_cannot_override_new_review_results(pg_engine,
     assert report["applied_count"] == 0
     assert report["intercepted"][0]["reason"] == "stale_content_hash"
     assert _key_status(pg_engine, r2["release_id"], Q1) == "unverified"
+
+
+def _flag_single_unit(pg_engine):
+    """Agent flags Q3 and its unit needs_review; the cloze unit passes."""
+    from app.review_sync import sync_agent_reviews
+    sync_agent_reviews(pg_engine, PACKAGE_ID, [
+        _unit_result(pg_engine, CLOZE_UNIT, [_pass(Q1), _pass(Q2)]),
+        _unit_result(pg_engine, SINGLE_UNIT,
+                     [{**_pass(Q3), "answer": "needs_review"}],
+                     status="needs_review", job_id="review-flag", run_id="run-f1"),
+    ])
+
+
+def _resolve_flagged(pg_engine, reviewer="reviewer-human"):
+    from app.review_state import open_issues, resolve_issue_engine
+    from app.review_sync import build_review_input
+    h = build_review_input(pg_engine, PACKAGE_ID, SINGLE_UNIT)["content_hash"]
+    with pg_engine.connect() as conn:
+        issues = (open_issues(conn, "answer_key", Q3, h, severity="blocking")
+                  + open_issues(conn, "unit", SINGLE_UNIT, h, severity="blocking"))
+    assert len(issues) == 2
+    for i in issues:
+        resolve_issue_engine(pg_engine, str(i.id), reviewer_id=reviewer,
+                             content_hash=h,
+                             evidence={"conclusion": "staged key confirmed"})
+
+
+@requires_db
+def test_apply_human_reviews_needs_a_resolution(pg_engine, staged_and_published):
+    from app.review_sync import apply_human_reviews
+    rid = staged_and_published["release_id"]
+    _flag_single_unit(pg_engine)
+    # Still flagged (open blocking issue): nothing may be promoted to human_reviewed.
+    out = apply_human_reviews(pg_engine, PACKAGE_ID)
+    assert out["applied_count"] == 0
+    assert _key_status(pg_engine, rid, Q3) == "unverified"
+
+
+@requires_db
+def test_human_resolution_then_apply_unblocks_promotion(pg_engine,
+                                                        staged_and_published):
+    from sqlalchemy import text
+    from app.publisher import PublishGateError, confirm_rights, promote_release
+    from app.review_sync import apply_human_reviews
+    rid = staged_and_published["release_id"]
+    _flag_single_unit(pg_engine)
+    with pg_engine.begin() as conn:
+        conn.execute(text("UPDATE media_assets SET availability = 'verified'"
+                          " WHERE id = 'JLPTGO-N5-TEST-EX-as001'"))
+    confirm_rights(pg_engine, EXAM_ID, reviewer_id="legal")
+
+    _resolve_flagged(pg_engine)
+    # Resolving the issues alone does not verify the key (honest state).
+    assert _key_status(pg_engine, rid, Q3) == "unverified"
+    with pytest.raises(PublishGateError):
+        promote_release(pg_engine, rid, reviewer_id="reviewer-1")
+
+    out = apply_human_reviews(pg_engine, PACKAGE_ID)
+    assert out["applied_count"] == 1
+    assert _key_status(pg_engine, rid, Q3) == "human_reviewed"
+    assert _key_status(pg_engine, rid, Q1) == "agent_verified"  # untouched
+    assert apply_human_reviews(pg_engine, PACKAGE_ID)["applied_count"] == 0
+
+    # The unit's earlier Agent needs_review no longer blocks once a later
+    # human review resolved it.
+    assert promote_release(pg_engine, rid,
+                           reviewer_id="reviewer-1")["state"] == "published"
+
+
+@requires_db
+def test_apply_human_reviews_never_touches_published(pg_engine,
+                                                     published_release):
+    from app.review_sync import apply_human_reviews
+    out = apply_human_reviews(pg_engine, PACKAGE_ID)
+    assert out["applied_count"] == 0
+    assert out["release_state"] == "published"

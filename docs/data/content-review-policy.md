@@ -8,6 +8,8 @@
 4. **哈希绑定**：审核结论只对绑定内容哈希有效；答案状态回查按 Unit 输入哈希过滤。旧哈希结论不能覆盖新内容审核结果，也不能满足新候选版本的门槛。
 5. **数据质量记录**：验证器发现的字幕时间轴异常（cue 越界/缺失/非法/大间隔）、材料分组异常等经 `app/data_quality.py` 同步入库，绑定包内容哈希与规则版本；`severity=blocking` 的未解决记录使发布门槛拒绝（warning 留痕不阻断），按 Unit/题型/严重度可查询。
 
+6. **人工确认落地（2026-11-16）**：人工通过 `resolve_issue` 解除 Agent 标记并给出证据后，答案键不会自动变为已验证；需运行 `python -m app.review_sync apply-human <package_id>`（`apply_human_reviews`），它只把「最近一条审核是人工 `human_reviewed`、且无 open 阻断 Issue」的答案键在 **draft/in_review** release 上置为 `human_reviewed`，如实记录是人工确认，不冒充 Agent 通过；published/withdrawn 不受影响。发布门槛对 Unit 的 Agent `needs_review/blocked` 标记，在其后有人工 `human_reviewed` 的 Unit 级确认时视为已解除（open Issue 仍优先阻断）。
+
 ## 轻量化审核流程（2026-11-15 起，本地 Agent 校验优先）
 
 1. **Agent 校验**：QA Agent 按 `agent-validation-contract.md` 逐 Unit 审核；系统通过 `app/review_sync.py` 的 `build` 生成绑定 content_hash 的审核任务，Agent 结果经 `sync` 批量同步。
