@@ -9,11 +9,17 @@ never depend on mail delivery succeeding.
 import json
 import os
 import sys
+import urllib.error
 import urllib.request
 from pathlib import Path
 
 _API = "https://api.resend.com/emails"
 _LOCAL_LOG = Path(".local/dev-email.log")
+
+# Machine-to-machine API call: bypass system proxies. Local proxies
+# (e.g. HTTPS_PROXY pointing at a local rule-based proxy) can reject the
+# API host with 403 and silently break auth mail.
+_OPENER = urllib.request.build_opener(urllib.request.ProxyHandler({}))
 
 
 def _send_resend(api_key: str, mail_from: str, to: str, subject: str,
@@ -23,10 +29,17 @@ def _send_resend(api_key: str, mail_from: str, to: str, subject: str,
     req = urllib.request.Request(
         _API, data=body, method="POST",
         headers={"Authorization": f"Bearer {api_key}",
-                 "Content-Type": "application/json"})
-    with urllib.request.urlopen(req, timeout=10) as resp:
-        if resp.status >= 300:
-            raise RuntimeError(f"resend status {resp.status}")
+                 "Content-Type": "application/json",
+                 # Resend sits behind Cloudflare, which rejects urllib's
+                 # default "Python-urllib" agent with 403.
+                 "User-Agent": "jlptgo-backend/0.1"})
+    try:
+        with _OPENER.open(req, timeout=10) as resp:
+            if resp.status >= 300:
+                raise RuntimeError(f"resend status {resp.status}")
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", "replace")[:300]
+        raise RuntimeError(f"HTTP {exc.code}: {detail}") from exc
 
 
 def _log_dev(to: str, subject: str, text: str) -> None:
