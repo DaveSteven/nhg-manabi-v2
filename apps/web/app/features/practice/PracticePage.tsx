@@ -17,7 +17,6 @@ import { clearSessionPendingRetries, loadPendingRetries } from "./pendingRetries
 
 const STATUS_TEXT: Record<string, string> = {
   idle: "",
-  dirty: "编辑中…",
   saving: "保存中…",
   saved: "已保存",
   save_error: "保存失败，可重试",
@@ -211,7 +210,8 @@ export function PracticePage({ sessionId }: { sessionId: string }) {
                 <fieldset className="question-fieldset" disabled={unitSubmitted}>
                   <legend>
                     {q.printedNumber ?? `第 ${q.position} 题`}
-                    {qState && qState.status !== "saved" ? (
+                    {qState && qState.status !== "saved"
+                           && qState.status !== "dirty" ? (
                       <span className={`save-state save-${qState.status}`}
                             aria-live="polite">
                         {STATUS_TEXT[qState.status]}
