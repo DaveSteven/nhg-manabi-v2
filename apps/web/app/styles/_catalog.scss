@@ -179,29 +179,11 @@
   gap: var(--space-1);
   min-height: 148px;
   padding: var(--space-4) var(--space-6);
-  overflow: hidden;
   text-align: left;
   font: inherit;
   color: var(--color-ink);
   cursor: default; /* plain, non-interactive card (practice by subject isn't open yet) */
-
-  /* soft corner accent */
-  &::after {
-    content: "";
-    position: absolute;
-    right: -24px;
-    bottom: -24px;
-    width: 104px;
-    height: 104px;
-    border-radius: 50%;
-    opacity: 0.55;
-    pointer-events: none;
-  }
-
-  &.subject-vocabulary::after { background: var(--accent-sakura-soft); }
-  &.subject-grammar::after { background: var(--accent-lavender-soft); }
-  &.subject-reading::after { background: var(--accent-matcha-soft); }
-  &.subject-listening::after { background: var(--accent-apricot-soft); }
+  /* no corner decoration (::after removed, 2026-11-16) */
 }
 
 .subject-icon {

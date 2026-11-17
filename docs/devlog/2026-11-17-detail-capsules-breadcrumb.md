@@ -29,3 +29,9 @@
 - 标准胶囊卡片（`.capsule-card` / `.exam-chip`，含试卷列表月份胶囊、详情页大题与练习组）去掉 1px 边框；原来靠「边框变品牌色」表达的悬停，改为文字变品牌色 + 上浮 1px + 阴影加强为 `--shadow-floating`（过渡属性相应由 `border-color` 改为 `box-shadow`）。
 - 文档：`design-system.md` §6.1（首页卡片无边框）、§6.2（专项练习卡片是 `div`、开放后应做成链接）、§6.5（胶囊无边框、悬停新规则）。
 - **未运行**：typecheck、vitest、build、浏览器检查均未做。可能受影响：依赖 `button` 角色查询专项卡片的测试（我只搜索了测试里对 `subject`/`aria-disabled` 的引用，未发现，但未实际运行确认）；无边框后白卡片在浅粉渐变背景上的对比度完全靠阴影（`--shadow-card` 很淡），观感需要你确认；已部署的容器也尚未重建。
+
+## 续：去掉专项卡片 ::after 装饰、加深阴影、写入设计规范（同日，用户指示；**未运行测试**）
+- `.subject-card::after`（右下角浅色圆形装饰）及四个科目的 `::after` 配色规则删除；同时去掉只为它服务的 `overflow: hidden`。左上角图标的小面积科目色底保留。
+- 阴影 Token 加深：`--shadow-card` `0 4px 18px 0.035` → `0 6px 24px 0.09`；`--shadow-floating` `0 8px 30px 0.075` → `0 12px 36px 0.15`。floating 必须同步加深，否则（card 0.09 > 原 floating 0.075）悬停反馈会比静止更弱。影响面：所有用 `--shadow-card` 的卡片/胶囊/静止态导航，以及用 `--shadow-floating` 的悬停、吸顶头部胶囊、Select/Popover，都会比之前深。
+- 设计规范：`design-system.md` §8.2 阴影规则（数值、层级约束、无边框卡片靠阴影区分）、§13.1 Token 数值、§6.2（不使用角落装饰）。
+- 未做：typecheck / vitest / build 均未运行（用户自行校验）；仅重建了 web 容器并确认 `/study` 返回 200，未查看渲染效果。吸顶头部胶囊、Popover 的阴影是否过深，需要在浏览器里确认。
