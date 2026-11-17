@@ -2,7 +2,18 @@
 
 最后更新：2026-11-17
 
-## 已完成
+## 当前核查结论（2026-11-17）
+
+- 本次仅静态核查代码与文档，未启动浏览器、访问数据库或重跑测试；下方历史测试数字不代表本次验证结果。
+- 专项练习尚未接通：TopNav 是不可导航占位按钮，StudyHome 四科为占位卡片，routes.ts 无专项配置页；普通 practice 会话 API 接收明确的 release_id/unit_id 列表，尚无按等级/题型的目录与智能抽样入口。
+- 可复用：普通练习 Session、草稿恢复、Unit 提交、反馈门控和结果页；Quick Practice 已独立，不应占用专项会话名额。
+- 建议下一优先级：专项题型目录与候选池 → 服务端跨卷智能抽样 → 配置页与四科入口 → 多 Unit 恢复/提交/结果全链路验收。随后补错题与学习历史，严格模拟仍待规则验证。
+- user_question_progress 目前只有表定义；智能抽样需补历史派生查询或缓存维护，不能仅接通按钮就声称完成。
+- 文档同步：已修订 AGENTS.md §七、docs/README.md 的过时骨架状态及本文件后续清单；专项实施拆分见 `docs/development/topic-practice-next.md`。未改变产品或架构规则。
+
+## 历史完成记录
+
+以下按开发时点保留，数字和“尚未”描述只代表当时状态；当前安排以上方核查结论和后续清单为准。
 
 - 项目文档体系（architecture / product / design / data / development / decisions ADR-0001~0004）。
 - 后端骨架：FastAPI `/health`、SQLAlchemy 32 表 metadata、Alembic 0001 初始迁移（静态 DDL）。
@@ -19,7 +30,7 @@
 - **ADR-0008 管理端技术基线（2026-11-16，纯文档）**：`apps/admin` 确认采用固定、经审查版本的 `satnaing/shadcn-admin` 作为独立 SPA 工程/UI 基础，保留上游默认主题，不套用「樱与墨」；实际引入时移除 Clerk/示例凭据/演示数据，保留 MIT 许可记录，并继续以 FastAPI 为管理身份、审核和发布权限事实源。实施计划见 `docs/development/admin-frontend-implementation.md`；当前尚未生成管理端工程。
 - **M2 媒体读取前置依赖（2026-11-16，M2.2 Task 09–11 的 Commit A）**：来源核实确认 Canonical 包不含媒体二进制、映射需按 SHA-256 内容寻址回溯 Raw `resources.json`；Alembic `0004` 新增 `media_storage` 映射表（状态/实测哈希/大小/MIME/时长 + 可查询 `last_error` 诊断）；新增独立同步步骤 `python -m app.media_sync`（校验后临时文件+原子落盘到 `MEDIA_STORAGE_DIR` 的 `<sha[:2]>/<sha[2:4]>/<sha256>.<ext>`，重复导入幂等、损坏自修复、失败标记 unavailable；只读 Raw 来源，不写 published 表）；新增 `GET /api/releases/{release_id}/assets/{asset_id}`（published + complete Unit 关联 + storage 哈希校验四重门槛，拒绝统一 404，RFC 9110 Range 206/416 支持浏览器拖动，历史 release 可读）。测试库/开发库迁移升级+回滚验证通过；全量回归 103 passed + 2 skipped（skip 因本地缺 Canonical Archive.zip，环境变化，与本次无关）。真实样本媒体同步与浏览器播放冒烟待执行（见 devlog），字幕 cues 仍未公开。
 
-## 进行中（当前开发阶段）
+## 阶段实施与验收记录（按日期保留）
 
 - **前端 SCSS 落地（2026-11-16）**：`apps/web` 已安装 Dart Sass，`tokens.css`/`global.css` 迁移为 SCSS；练习、对话框、反馈和结果样式拆至 `_practice.scss`，使用 `@use` 和嵌套组织作用域。新增或修改样式继续遵守 SCSS 规范。
 - **M2 核心学习流程**（计划见 `docs/development/M2-core-learning-flow.md`）：FastAPI 作答引擎 → React 学习页面 → 端到端验收。**M2.1 全部完成（Task 01–08）**；M2.2 Commit A、1、2、3、4 已完成，M2.3 首轮隔离库端到端已完成，下一步：多浏览器/多视口走查、听力出声确认、SSG 部署验收与视觉走查。
@@ -57,14 +68,15 @@
 - **Quick Practice 快速练习（2026-11-17，quick-practice.md v1.0）**：试卷详情 Unit 行改整行可点（标题/题数/✓已练/Chevron），移除反馈方式下拉与行内开始按钮；点击直查活跃会话——含该 Unit 则恢复、否则创建 immediate 单 Unit 会话，活跃冲突弹一次三操作对话框（取消/继续旧练习/开始新练习），开始新练习走后端 `replace_active=true` 原子替换（同事务 ended_early+建新，部分唯一索引兜底并发，5 项新测试覆盖幂等与数据保留）；新增 `GET /api/exams/{id}/practice-status` 本人 per-unit 提交历史；答题页全答直提不弹窗、未答一次确认（新文案）、提交后就地「下一组/返回试卷」导航。规范入库 `docs/design/quick-practice.md`。后端 174 passed + 2 skipped，web 224 passed，typecheck/build 通过；容器重建冒烟通过（发现 api 镜像由 migrate 服务构建，需 build migrate）。真实浏览器端到端待用户实测；practice-status 查询未做索引评估。cues 经 `GET .../transcript` 与 feedback 完全同门控下发（immediate 提交后/end 交卷后），公开 unit 端点仍恒不携带 cues，前端经 RichText 白名单渲染；规范入库 `docs/design/audio-player.md` 并挂接 README/practice-interactions。后端 167 passed + 2 skipped（新增 transcript 门控 5 测试），web 223 passed（AudioDock 19 测试）、typecheck/build 通过；Docker 全栈重建冒烟通过（/api/exams 105 套、未鉴权 401、迁移正常）。真实浏览器视觉走查未执行（交用户 :8080 实测）；Firefox/Safari、深色模式未测。
 - **Quick Practice 轻量化（2026-11-17，quick-practice.md v2.0 + ADR-0014）**：新增独立 `quick_practice` 会话模式（Alembic 0009：mode CHECK 扩展 + `ux_one_active_quick`，专项/模考单活跃索引不变）——点 Unit 直建 quick 会话进入，**无任何冲突弹窗**；quick 会话之间静默替换（同事务 ended_early+建新，绝不触碰专项会话）；无服务端草稿/恢复（`useDraftManager` persist 开关，选择纯本地、刷新/离开重置；`study_answer_drafts` 表保留给专项）；提交即完成（同事务 completed + `study_results`，`_complete_session` 与 finish 共用）；`practice-status` 双模式真实计数，目录「未练习/已练习 N 次」+ Layer「已练习 X / Y 组」（去 ✓ 对勾）；提交后「下一组」=同卷下一 Unit 开新会话。后端新增 quick-practice 测试 5 项（含专项会话不受 quick 影响的核心隔离），**179 passed + 2 skipped**；web 重写 ExamOutline 用例 + 新增 PracticePage quick 用例 5 项，**229 passed**，typecheck/build 通过；开发库迁移 upgrade/downgrade/upgrade 真实验证通过。真实浏览器端到端、听力 quick 练习走查、Firefox/Safari/深色模式未测；practice-status 索引评估沿袭未做。
 - **Quick Practice 文案动态化 + 按钮样式补齐（2026-11-17，quick-practice.md v2.1）**：文案按 Canonical Unit 类型映射（独立单题=提交答案/下一题、文法多题组=提交本组/下一组、阅读文章=提交本篇/下一篇）；标题用大纲真实位置（問題1-3）；多题 Unit 组内「上一题/下一题」分页（纯展示，整组提交事务不变）；单 Unit 不再显示「第1/1组」与「已提交锁定」（专项练习保留）；Layer 头部简化为「已练习X/Y」数字主色高亮；按钮样式补齐（practice/dialog/post-submit 次级描边胶囊、原文面板重试、分页器）；web **230 passed**、typecheck/build 通过。真实浏览器走查与 Firefox/Safari/深色模式未测。
-## 未开始（按依赖顺序）
+## 后续工作（2026-11-17 核查调整）
 
-1. M2.2 Commit 2–4：学习首页/试卷目录 → Canonical 渲染器（含音频）→ 作答闭环与反馈（实施计划、ADR-0007、后端契约与媒体接口均已就绪）。
-2. 管理端安全引入与首条纵向流程（ADR-0008；固定上游版本 → 移除 Clerk/演示内容 → Import Job 列表/详情；不阻塞当前 M2.2）。
-3. 运行真实 Agent 校验（按 contract 批量产出五套题库结果 → sync → 解锁 promote）；N4 4 个确证字幕越界待人工重对时间轴（当前为 open blocking，阻止 N4 发布）。
-4. N5/N3/N2/N1 逐包执行 `python -m app.data_quality sync`（M1.6 机制已就绪，按任务要求未自动全量跑）。
-5. 发布快照不可变的 DB 触发器 / restricted DB role。
-6. 认证/用户体系（当前内部 API 仅共享令牌；M2 Task 03 仅做最小身份边界）。
+1. 专项练习完整闭环（题型目录、可用数量、智能抽样、配置页、恢复与结果验收）。
+2. 错题、学习历史与统计；正式作答历史为事实源，skip 不覆盖最近有效正误。
+3. 现有快速练习/听力的真实浏览器回归与响应式验收。
+4. 内容质量遗留、管理端导入任务与发布快照 DB 级不可变约束。
+5. 正式部署前认证限流、真实注册/找回邮件全流程、部署验收；严格模拟另行验证规则。
+
+旧清单中的 React 作答闭环、管理端登录及学生认证已有实现，不再列为未开始；具体完成范围和验证边界见上方历史记录。
 
 ## 已知缺口 / 风险
 
