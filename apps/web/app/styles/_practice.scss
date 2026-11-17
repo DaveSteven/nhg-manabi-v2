@@ -82,6 +82,12 @@
 .option-row {
   cursor: pointer;
 
+  /* 提交后答对：所选答案变绿（盖过选中粉色） */
+  &.option-correct {
+    border-color: var(--color-success);
+    background: #e8f2ec;
+  }
+
   &:has(input[type="radio"]:checked) {
     border-color: var(--color-primary);
     background: var(--color-primary-soft);

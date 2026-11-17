@@ -143,7 +143,7 @@ describe("ExamOutline", () => {
     // whole row is clickable (one button = the row itself); no nested action
     // the row is the only button — no nested start action
     expect((rows[0] as HTMLElement).querySelectorAll("button")).toHaveLength(0);
-    expect(rows[0]).toHaveTextContent("5 题");
+    expect(rows[0]).not.toHaveTextContent("5 题"); // count removed from unit-meta
     expect(screen.queryByText("反馈方式")).not.toBeInTheDocument();
   });
 
@@ -230,6 +230,8 @@ describe("ExamOutline", () => {
     await user.click(layerToggle);
     const row = document.querySelector("button.unit-row")!;
     expect(row).toHaveTextContent("已练习 2 次");
+    expect(row.querySelector(".unit-count")).toHaveTextContent("2");
+    expect(row).not.toHaveTextContent("题"); // question count removed
 
     // a unit without history shows 未练习, and an unpracticed layer is 0/Y
     await user.click(await screen.findByRole("tab", { name: "文法" }));

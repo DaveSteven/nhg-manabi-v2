@@ -146,6 +146,9 @@ describe("PracticePage", () => {
     expect(screen.getByText(/因为选 o1 正确/)).toBeInTheDocument();
     // unit locked: radios disabled
     expect(screen.getByRole("radio", { name: /o1/ })).toBeDisabled();
+    // answered correctly: the chosen option row turns green
+    expect(screen.getByRole("radio", { name: /o1/ }).closest("label"))
+      .toHaveClass("option-correct");
   });
 
   it("server drafts are truth on refresh; local retry records only when newer", async () => {

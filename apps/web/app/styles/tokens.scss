@@ -48,8 +48,14 @@
   --radius-pill: 999px;
 
   /* typography */
-  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto,
-    "Noto Sans JP", "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+  /* 简体中文优先：中文字形先于日文字体，避免汉字落到日文字形 */
+  --font-sans: system-ui, -apple-system, "PingFang SC", "Hiragino Sans GB",
+    "Microsoft YaHei", "Noto Sans SC", "Source Han Sans SC", "Segoe UI",
+    Roboto, sans-serif;
+  /* 日文题干/选项（lang="ja"）：日文字形优先 */
+  --font-sans-ja: system-ui, -apple-system, "Hiragino Sans",
+    "Hiragino Kaku Gothic ProN", "Yu Gothic", "Noto Sans JP", Meiryo,
+    "PingFang SC", sans-serif;
   --font-serif-reading: "Hiragino Mincho ProN", "Yu Mincho", "Noto Serif JP",
     serif;
   --text-aux: 12px;

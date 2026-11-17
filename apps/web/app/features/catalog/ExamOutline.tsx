@@ -18,10 +18,10 @@ import { useQuickPracticeStart } from "../practice/useStartPractice";
  * `/practice-status` (never a frontend-accumulated state).
  */
 
-/** 未练习 / 已练习 1 次 / 已练习 N 次 — from the server's submitted_count. */
-function practiceCountText(count: number | undefined): string {
-  if (!count) return "未练习";
-  return count === 1 ? "已练习 1 次" : `已练习 ${count} 次`;
+/** 未练习 / 已练习 <N> 次 — the number is highlighted like layer-progress. */
+function PracticeCount({ count }: { count: number | undefined }) {
+  if (!count) return <>未练习</>;
+  return <>已练习 <span className="unit-count">{count}</span> 次</>;
 }
 
 export function ExamOutlineView({ outline }: { outline: ExamOutline }) {
@@ -122,8 +122,7 @@ function LayerBlock({ layer, counts, onOpen, opening }: {
                   {unit.label ?? `${label}-${unit.position}`}
                 </span>
                 <span className="unit-meta">
-                  {practiceCountText(counts.get(unit.unit_id))}
-                  {" · "}{unit.question_count} 题
+                  <PracticeCount count={counts.get(unit.unit_id)} />
                 </span>
                 <span className="unit-chevron" aria-hidden="true">
                   <svg viewBox="0 0 24 24" width="16" height="16" fill="none"

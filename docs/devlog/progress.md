@@ -75,3 +75,5 @@
 - `content_reviews.sequence` 在极端并发插入下按分配序入库（单进程 CLI 场景无影响）；多人并发审核工具上线前需评估。
 
 - **次级按钮内边距修正（2026-11-17）**：`_practice.scss` 引用了不存在的 `--space-5` 致 padding 失效，改为 `--space-4`；前端 230 passed、build 通过，浏览器视觉复核待用户。
+
+- **答对选项变绿 / 已练习次数高亮 / 中文字体栈（2026-11-17）**：见 `docs/devlog/2026-11-17-correct-option-green-unit-count-fonts.md`；日文内容 `lang="ja"`，页面中文优先字体栈。浏览器视觉待用户确认。

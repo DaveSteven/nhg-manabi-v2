@@ -499,6 +499,11 @@
   white-space: nowrap;
 }
 
+.unit-count {
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
 .unit-chevron {
   display: inline-flex;
   color: var(--color-text-muted);

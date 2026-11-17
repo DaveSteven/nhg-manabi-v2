@@ -408,6 +408,8 @@ button {
   margin-bottom: var(--space-2);
 }
 
+:lang(ja) { font-family: var(--font-sans-ja); }
+
 .text-aux {
   font-size: var(--text-aux);
   color: var(--color-text-muted);

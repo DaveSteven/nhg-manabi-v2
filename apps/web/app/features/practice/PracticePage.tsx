@@ -300,6 +300,8 @@ export function PracticePage({ sessionId }: { sessionId: string }) {
             const qState = manager.state.questions[q.id];
             const selected = qState
               ? (qState.pendingOptionId ?? qState.optionId) : null;
+            const answeredCorrect = feedback.data?.questions
+              .find((x) => x.question_id === q.id)?.is_correct === true;
             return (
               <li key={q.id} className="question-card card">
                 <fieldset className="question-fieldset" disabled={unitSubmitted}>
@@ -313,12 +315,14 @@ export function PracticePage({ sessionId }: { sessionId: string }) {
                     ) : null}
                   </legend>
                   {q.prompt !== null ? (
-                    <RichText value={q.prompt} slotIds={vm.slotIds} />
+                    <div lang="ja">
+                      <RichText value={q.prompt} slotIds={vm.slotIds} />
+                    </div>
                   ) : null}
                   <div role="radiogroup" aria-label={`第 ${q.printedNumber ?? q.position} 题选项`}>
                     {q.options.map((o) => (
-                      <label key={o.id}
-                             className={`option-row${selected === o.id ? " option-selected" : ""}`}>
+                      <label key={o.id} lang="ja"
+                             className={`option-row${selected === o.id ? " option-selected" : ""}${selected === o.id && answeredCorrect ? " option-correct" : ""}`}>
                         <input type="radio" name={`q-${q.id}`} value={o.id}
                                checked={selected === o.id}
                                onChange={() => manager.select(q.id, o.id)} />
