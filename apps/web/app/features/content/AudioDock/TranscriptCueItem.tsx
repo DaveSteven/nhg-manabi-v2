@@ -1,7 +1,6 @@
 import { RichText } from "../richtext/RichText";
 import { FORMAT } from "../richtext/schema";
 import type { TranscriptCue } from "../../../api/dto/practice";
-import { formatTime } from "./AudioProgress";
 
 /** Cue children are the INLINE children of one paragraph; wrapping them
  * in a single-paragraph doc reuses the exact RichText whitelist pipeline
@@ -26,10 +25,10 @@ export function cueIsActive(cue: TranscriptCue, currentTimeMs: number): boolean 
   return s <= currentTimeMs && currentTimeMs < e;
 }
 
-/** One transcript paragraph (audio-player.md §4.2): time range + text.
- * A reading/locating tool, not a chat UI. Active state is a font-color
- * change (user decision 2026-11-17); aria-current keeps it from being
- * color-only. */
+/** One transcript paragraph (audio-player.md §4.2). Time-range labels are
+ * intentionally NOT shown (user decision 2026-11-17) — timestamps drive
+ * highlight/seek only. Active state is a font-color change; aria-current
+ * keeps it from being color-only. */
 export function TranscriptCueItem({ cue, active, currentTimeMs, onSeek }: {
   cue: TranscriptCue;
   active: boolean;
@@ -37,15 +36,7 @@ export function TranscriptCueItem({ cue, active, currentTimeMs, onSeek }: {
   onSeek(seconds: number): void;
 }) {
   const seekable = cueIsSeekable(cue);
-  const range = seekable
-    ? `${formatTime((cue.start_ms as number) / 1000)} – ${formatTime((cue.end_ms as number) / 1000)}`
-    : "时间未校准";
-  const body = (
-    <>
-      <span className="cue-time">{range}</span>
-      <RichText value={cueDoc(cue.children)} />
-    </>
-  );
+  const body = <RichText value={cueDoc(cue.children)} />;
   if (!seekable) {
     return (
       <div className={`transcript-cue${active ? " is-active" : ""}`}
@@ -59,7 +50,7 @@ export function TranscriptCueItem({ cue, active, currentTimeMs, onSeek }: {
             className={`transcript-cue is-seekable${active ? " is-active" : ""}`}
             data-cue-index={cue.index}
             aria-current={active || undefined}
-            aria-label={`播放 ${range} 段落`}
+            aria-label="播放此段落"
             onClick={() => onSeek((cue.start_ms as number) / 1000)}>
       {body}
     </button>

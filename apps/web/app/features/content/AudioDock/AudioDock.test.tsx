@@ -244,7 +244,8 @@ describe("AudioDock transcript panel", () => {
       configurable: true, get: () => t, set: (v: number) => { t = v; },
     });
     const playSpy = vi.spyOn(audio, "play").mockResolvedValue();
-    fireEvent.click(screen.getByRole("button", { name: /播放 0:12 – 0:18/ }));
+    // aria-labels are shared ("播放此段落"); target the cue by index.
+    fireEvent.click(document.querySelector('[data-cue-index="2"]')!);
     expect(t).toBe(12);
     expect(playSpy).toHaveBeenCalled();
   });
@@ -254,7 +255,6 @@ describe("AudioDock transcript panel", () => {
     renderWithQuery(<AudioDock {...DOCK_PROPS} transcript={TRANSCRIPT} />);
     fireEvent.click(screen.getByRole("button", { name: "原文" }));
     expect(await screen.findByText("（時間未校準の文）")).toBeInTheDocument();
-    expect(screen.getByText("时间未校准")).toBeInTheDocument();
     expect(document.querySelector('.transcript-cue[data-cue-index="3"].is-seekable')).toBeNull();
   });
 

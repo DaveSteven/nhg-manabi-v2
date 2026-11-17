@@ -58,11 +58,18 @@
   冒烟：`GET /api/exams` 返回 105 套目录、未认证 `GET /api/practice/sessions/current` 正确 401
   （"authentication required"）、首页预渲染 HTML 正常。
 
-## 后续调整（同日）
+## 后续调整（同日，用户实测反馈）
 
-- 用户确认当前播放段落高亮**不用浅樱背景/指示线样式，直接改字体颜色**为深樱色
-  `--color-primary`；`_audio-dock.scss` `.is-active` 简化，`aria-current` 保留（仍非仅颜色）；
-  `audio-player.md` §5/§11 同步修订。AudioDock 19 测试通过、build 产物检查通过、web 容器已重建。
+- **Active 高亮改纯字体色**：不用浅樱背景/指示线，段落文字与时间标签直接变深樱色。首版改动后用户
+  仍观察到「只有时间标签变色」——静态夹具 + 容器真实 CSS 复现定位出根因：`.transcript-scroll p`
+  （本给加载/空态文案写的规则）直接命中 cue 内 `.richtext-p`，直接规则压过祖先继承；已收窄为
+  `> p` 只作用状态文案。
+- **Dock 收窄 100px**：宽屏下 max-width = 内容容器 − 64px − 100px，窄视口仍跟随侧边距；面板同宽；
+  `audio-player.md` §2.1 已记录。
+- **去掉段落时间数值 + 压缩上下间距**：cue 不再渲染时间范围/「时间未校准」标签（时间戳仅用于高亮
+  与点击定位，seekable 判定与降级逻辑不变）；`transcript-scroll` gap 与 cue padding 调小；
+  `audio-player.md` §4.2 与布局示意同步。
+- AudioDock 19 测试、typecheck、build 产物检查通过；web 容器每步重建，:8080 冒烟 200。
 
 ## 未执行 / 剩余风险
 

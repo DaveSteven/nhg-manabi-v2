@@ -9,8 +9,9 @@
   left: var(--space-4);
   right: var(--space-4);
   margin: 0 auto;
-  /* edges align with .container's content box at every breakpoint */
-  max-width: calc(var(--page-max-width) - var(--space-8) * 2);
+  /* 100px narrower than the content box on wide screens
+     (user decision 2026-11-17); narrow viewports follow the side insets */
+  max-width: calc(var(--page-max-width) - var(--space-8) * 2 - 100px);
   min-height: var(--audio-dock-height);
   display: flex;
   align-items: center;
@@ -360,8 +361,7 @@
   left: var(--space-4);
   right: var(--space-4);
   margin: 0 auto;
-  max-width: calc(var(--page-max-width) - var(--space-8) * 2);
-  /* default 320px, shrinking when the viewport cannot afford it */
+  max-width: calc(var(--page-max-width) - var(--space-8) * 2 - 100px);
   height: min(var(--transcript-panel-height),
               calc(100vh - var(--audio-dock-height) - var(--audio-dock-bottom) - 40px));
   display: flex;
@@ -449,22 +449,24 @@
 .transcript-scroll {
   flex: 1;
   overflow-y: auto;
-  padding: var(--space-4) var(--space-6);
+  padding: var(--space-3) var(--space-6);
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-1);
 
   &:focus-visible {
     outline: 2px solid var(--color-primary);
     outline-offset: -2px;
   }
 
-  p { color: var(--color-text-muted); font-size: var(--text-body); }
+  /* status text (loading/empty/error) only — must NOT hit cue paragraphs,
+     a direct rule on p would beat the active cue's color inheritance */
+  > p { color: var(--color-text-muted); font-size: var(--text-body); }
 }
 
 .transcript-cue {
   display: block;
-  padding: var(--space-2) var(--space-3);
+  padding: var(--space-1) var(--space-3);
   border-radius: var(--radius-sm);
   border-left: 3px solid transparent;
   font-size: var(--text-body);
@@ -492,18 +494,8 @@
 
 .transcript-cue.is-active {
   /* active cue = color change only (user decision 2026-11-17): no
-     background, no indicator line */
+     background, no indicator line, no time labels */
   color: var(--color-primary);
-
-  .cue-time { color: var(--color-primary); }
-}
-
-.cue-time {
-  display: block;
-  font-size: var(--text-aux);
-  color: var(--color-text-muted);
-  font-variant-numeric: tabular-nums;
-  margin-bottom: 2px;
 }
 
 /* ---------------------------------------------------------- states ---- */
