@@ -1,7 +1,7 @@
 """Quick Practice tests (audio/quick-practice spec §5.4, §10).
 
-Quick sessions are their own mode and never touch practice sessions
-(ADR-0015: practice sessions may be many). practice-status returns the
+Quick sessions are their own mode and never touch the single 专项 practice
+slot (ADR-0016) — in either direction. practice-status returns the
 caller's own per-unit submission history for an exam.
 """
 import os
@@ -132,15 +132,17 @@ def test_quick_never_touches_active_practice_session(
             " WHERE user_id = :u"), {"u": USER_A}).all()}
     assert states[practice["id"]] == ("in_progress", "practice")
     assert states[quick["id"]] == ("in_progress", "quick_practice")
-    # starting another 专项 practice neither conflicts nor ends either one
+    # starting another 专项 practice replaces the 专项 slot only: the quick
+    # session is untouched
     r2 = create(client, USER_A, published_release, [SINGLE_UNIT])
     assert r2.status_code == 201
     with pg_engine.connect() as conn:
-        n = conn.execute(sa.text(
-            "SELECT count(*) FROM study_sessions"
-            " WHERE user_id = :u AND state = 'in_progress'"),
-            {"u": USER_A}).scalar()
-    assert n == 3
+        st = dict(conn.execute(sa.text(
+            "SELECT id::text, state FROM study_sessions WHERE user_id = :u"),
+            {"u": USER_A}).all())
+    assert st[practice["id"]] == "abandoned"
+    assert st[quick["id"]] == "in_progress"
+    assert st[r2.json()["id"]] == "in_progress"
 
 
 @requires_db

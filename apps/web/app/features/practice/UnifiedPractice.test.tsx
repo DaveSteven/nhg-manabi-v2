@@ -213,6 +213,16 @@ describe("统一反馈 practice", () => {
     expect(spy.submits).toHaveLength(1);
   });
 
+  it("an abandoned (replaced) session is a locked read-only view with a clear note", async () => {
+    setup({ state: "abandoned" });
+    mount();
+    expect(await screen.findByText(/第 1 \/ 3 题/)).toBeInTheDocument();
+    expect(screen.getByText(/已被新的专项练习取代/)).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "q1 选项 a" })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "完成并提交练习" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "查看结果" })).not.toBeInTheDocument();
+  });
+
   it("after the session is completed: locked review with answers and explanations, no submit", async () => {
     const spy = setup({ state: "completed" });
     mount();

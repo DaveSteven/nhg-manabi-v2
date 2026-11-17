@@ -154,10 +154,10 @@ flowchart TD
 建议约束：
 
 ```sql
--- ADR-0015（Alembic 0010）：普通/专项练习不再限制单活跃，已删除 ux_one_active_practice；
--- 仅保留非唯一索引服务「最近进行中会话」查询
-CREATE INDEX ix_sessions_user_active_practice
-  ON study_sessions(user_id, created_at DESC)
+-- ADR-0016（Alembic 0011）：普通/专项练习每用户仅一份可恢复进度；
+-- 创建新练习时同事务先把旧进行中会话置 'abandoned'（不占唯一槽位）
+CREATE UNIQUE INDEX ux_one_active_practice
+  ON study_sessions(user_id)
   WHERE mode = 'practice' AND state = 'in_progress';
 
 -- 示意：模拟考试独立限制

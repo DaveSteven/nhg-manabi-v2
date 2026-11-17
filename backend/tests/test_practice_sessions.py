@@ -1,7 +1,8 @@
 """M2 Task 04 tests: practice session lifecycle.
 
-Covers: creation with pinned release binding, many concurrent in-progress
-practice sessions (ADR-0015: never a conflict), resume, ownership isolation, finish
+Covers: creation with pinned release binding, the single recoverable
+practice slot (ADR-0016: a new start abandons the old one, never a conflict),
+resume, ownership isolation, finish
 (ended_early, idempotent, no fabricated score), and rejection of draft /
 non-current content.
 """
@@ -84,33 +85,32 @@ def test_single_unit_session(pg_engine, published_release, monkeypatch):
 
 
 @requires_db
-def test_many_in_progress_practice_sessions_never_conflict(
+def test_new_practice_abandons_the_previous_one_without_conflict(
         pg_engine, published_release, monkeypatch):
+    import sqlalchemy as sa
     client = make_client(monkeypatch, pg_engine)
     first = create_session(client, USER_A, published_release, [CLOZE_UNIT])
     second = create_session(client, USER_A, published_release, [SINGLE_UNIT])
-    third = create_session(client, USER_A, published_release, [SINGLE_UNIT])
-    assert [r.status_code for r in (first, second, third)] == [201, 201, 201]
-    ids = {r.json()["id"] for r in (first, second, third)}
-    assert len(ids) == 3
-    # none was ended or altered by a later creation
-    for r in (first, second, third):
-        got = client.get(f"/api/practice/sessions/{r.json()['id']}",
-                         headers=auth(USER_A)).json()
-        assert got["state"] == "in_progress"
-    # /current is only a convenience: the newest in-progress session
+    assert (first.status_code, second.status_code) == (201, 201)  # never 409
+    with pg_engine.connect() as conn:
+        states = dict(conn.execute(sa.text(
+            "SELECT id::text, state FROM study_sessions WHERE user_id = :u"),
+            {"u": USER_A}).all())
+    assert states[first.json()["id"]] == "abandoned"
+    assert states[second.json()["id"]] == "in_progress"
     cur = client.get("/api/practice/sessions/current", headers=auth(USER_A))
-    assert cur.json()["id"] == third.json()["id"]
-    # a legacy client still sending replace_active changes nothing
+    assert cur.json()["id"] == second.json()["id"]
+    # a legacy client still sending replace_active behaves identically
     legacy = client.post("/api/practice/sessions", json={
         "feedback_mode": "end", "replace_active": True,
         "units": [{"release_id": str(published_release),
                    "unit_id": SINGLE_UNIT}]}, headers=auth(USER_A))
     assert legacy.status_code == 201
-    assert client.get(f"/api/practice/sessions/{first.json()['id']}",
-                      headers=auth(USER_A)).json()["state"] == "in_progress"
+    # another user has their own slot
     assert create_session(
         client, USER_B, published_release, [SINGLE_UNIT]).status_code == 201
+    assert client.get("/api/practice/sessions/current",
+                      headers=auth(USER_B)).status_code == 200
 
 
 @requires_db

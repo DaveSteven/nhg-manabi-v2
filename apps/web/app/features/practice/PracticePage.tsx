@@ -396,7 +396,11 @@ function StepPracticePage({ sessionId }: { sessionId: string }) {
             </div>
           ) : null}
           {!isQuick && sessionEnded && !allSubmitted ? (
-            <p className="text-aux">练习已提前结束（部分题目未提交）。</p>
+            <p className="text-aux">
+              {session.state === "abandoned"
+                ? "这次练习已被新的专项练习取代；已提交的答案保留在历史中。"
+                : "练习已提前结束（部分题目未提交）。"}
+            </p>
           ) : null}
           {unitSubmitted && (!sessionEnded || isQuick) ? (
             <div className="practice-post-submit-nav">

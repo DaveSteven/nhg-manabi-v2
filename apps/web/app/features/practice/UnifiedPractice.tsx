@@ -261,7 +261,11 @@ export function UnifiedPracticeView({ sessionId, bundle }: {
                 查看结果
               </Link>
             ) : (
-              <p className="text-aux">练习已提前结束，未生成完整成绩。</p>
+              <p className="text-aux">
+                {session.state === "abandoned"
+                  ? "这次练习已被新的专项练习取代；已提交的答案保留在历史中。"
+                  : "练习已提前结束，未生成完整成绩。"}
+              </p>
             )
           ) : null}
           <button type="button" onClick={() => navigate("/study/practice")}>

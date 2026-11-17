@@ -96,6 +96,8 @@
 
 - **专项练习首版闭环（2026-11-17）**：见 `docs/devlog/2026-11-17-topic-practice.md`。后端新增题型目录与服务端智能抽样接口（复用 practice 会话事务），前端新增 `/study/practice` 配置页、顶栏/首页入口、结果页「再练一组」；后端 195 passed + 2 skipped，web 237 passed，typecheck/build 通过，容器已重建，真实开发库只读冒烟通过。真实浏览器验收、`user_question_progress` 缓存、「只复习最近仍错」、Firefox/Safari/深色模式未做。
 
-- **取消专项/普通练习单活跃限制（2026-11-17，ADR-0015）**：见 `docs/devlog/2026-11-17-multi-active-sessions.md`。Alembic 0010 删除 `ux_one_active_practice`（Quick/模考单名额不变），创建练习不再检查/结束/覆盖其他会话，无 409 与 `replace_active`，前端删除冲突弹窗与 `ActiveSessionConflictDialog`；`/current` 改为最近进行中练习。后端 197 passed + 2 skipped，web 通过，开发库迁移 up/down/up 通过。真实浏览器验收、进行中练习列表入口未做。
+- **（已被 ADR-0016 取代）取消专项/普通练习单活跃限制（2026-11-17，ADR-0015）**：见 `docs/devlog/2026-11-17-multi-active-sessions.md`。Alembic 0010 删除 `ux_one_active_practice`（Quick/模考单名额不变），创建练习不再检查/结束/覆盖其他会话，无 409 与 `replace_active`，前端删除冲突弹窗与 `ActiveSessionConflictDialog`；`/current` 改为最近进行中练习。后端 197 passed + 2 skipped，web 通过，开发库迁移 up/down/up 通过。真实浏览器验收、进行中练习列表入口未做。
 
 - **专项练习统一反馈整次提交（2026-11-17）**：见 `docs/devlog/2026-11-17-unified-feedback-final-submit.md`。统一反馈会话导航只存草稿，整次通过 `POST /api/practice/sessions/{id}/submit` 一次性事务判题并生成结果（幂等、非法答案整体回滚），逐 Unit 提交接口对该模式拒绝（409）；前端新增连续题目流（上一题/下一题/题号导航，最后一题确认一次）。后端 203 passed + 2 skipped，web 244 passed，typecheck 通过。真实浏览器验收未做。
+
+- **专项练习单一最近进度（2026-11-17，ADR-0016，取代 ADR-0015）**：见 `docs/devlog/2026-11-17-single-recent-session.md`。Alembic 0011 恢复 `ux_one_active_practice`，创建专项/普通练习时同事务把旧进行中会话置 `abandoned` 再创建（失败整体回滚、并发后来者胜、已提交答案与历史保留、未提交草稿不计）；`/current` 即唯一可恢复练习，完成后保存结果；不做多练习列表/清理；Quick/模考不变。后端 205 passed + 2 skipped，web 246 passed，typecheck 通过，迁移 up/down/up（含多会话数据升级）已验证。真实浏览器验收未做。

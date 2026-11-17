@@ -2,10 +2,12 @@
 
 Session lifecycle (Task 04):
 
-- A user may hold any number of in-progress practice sessions (ADR-0015):
-  a session stores study data, it never limits what the student may start.
-  Creating a session never ends, alters or conflicts with another one;
-  resuming is the student's explicit choice, by session id.
+- One recoverable practice session per user (ADR-0016, DB partial unique
+  index `ux_one_active_practice`). Starting a new one ABANDONS the previous
+  in-progress session inside the same transaction — no conflict, no prompt;
+  a failed creation rolls the abandonment back, so the old practice is
+  never lost. Submitted answers and results of an abandoned session are
+  kept; its unsubmitted drafts never count.
 - Session units are pinned to a concrete release_id at creation time, so a
   later publish never changes what an in-progress session refers to.
 - Every route resolves the caller via get_current_user_id and scopes reads
@@ -125,6 +127,25 @@ def create_practice_session(
 def _create_session_tx(engine, body: PracticeSessionCreate,
                        user_id: uuid.UUID,
                        config_extra: dict | None = None) -> dict:
+    """Abandon the user's in-progress practice (if any) and create the new
+    one atomically. Two simultaneous starts race on ux_one_active_practice:
+    the loser re-runs once (it then abandons the winner — latest wins);
+    only a second consecutive collision surfaces as 409."""
+    for attempt in (1, 2):
+        try:
+            return _replace_and_create(engine, body, user_id, config_extra)
+        except IntegrityError:
+            if attempt == 2:
+                raise HTTPException(
+                    status_code=409,
+                    detail={"code": "session_replace_conflict",
+                            "message": "concurrent practice start; retry"})
+    raise AssertionError("unreachable")
+
+
+def _replace_and_create(engine, body: PracticeSessionCreate,
+                        user_id: uuid.UUID,
+                        config_extra: dict | None) -> dict:
     with engine.begin() as conn:
         # Pin every requested unit to its CURRENT published release content.
         # Draft / non-current releases must not enter a practice session.
@@ -151,6 +172,15 @@ def _create_session_tx(engine, body: PracticeSessionCreate,
                             "release_id": str(req.release_id),
                             "unit_id": req.unit_id})
             metas.append(meta)
+
+        # Validation above passed: only now retire the previous practice.
+        # Same transaction as the INSERT below, so any failure (here or
+        # later) rolls the abandonment back and the old session survives.
+        conn.execute(text(
+            "UPDATE study_sessions SET state = 'abandoned', ended_at = now(),"
+            " version = version + 1"
+            " WHERE user_id = :u AND mode = 'practice'"
+            "   AND state = 'in_progress'"), {"u": user_id})
 
         session_id = conn.execute(text(
             "INSERT INTO study_sessions (id, user_id, mode, feedback_mode,"
@@ -193,9 +223,9 @@ def create_quick_practice_session(
 ) -> dict:
     """Quick Practice (quick-practice.md v2.0): click a unit, practice now.
 
-    - Own mode `quick_practice`, so it never interacts with 专项 sessions
-      (which may be many, ADR-0015); only a concurrent quick double-click
-      can 409 at ux_one_active_quick.
+    - Own mode `quick_practice`, so it never interacts with the 专项
+      session slot (ADR-0016); only a concurrent quick double-click can
+      409 at ux_one_active_quick.
     - A stale in-progress QUICK session (user left without submitting) is
       ended silently (ended_early, same transaction) — unsubmitted quick
       selections reset by design, so there is nothing to resume and no
@@ -275,9 +305,8 @@ def create_quick_practice_session(
 def get_current_practice_session(
     user_id: uuid.UUID = Depends(get_current_user_id),
 ) -> dict:
-    """The caller's most recently created in-progress practice session —
-    a convenience for entry points like 首页「继续练习」. It never gates
-    starting anything; any session is resumable by id."""
+    """The caller's single recoverable practice session (at most one
+    in-progress `practice` session exists, ADR-0016) — 首页「继续上次练习」."""
     with get_engine().connect() as conn:
         session_id = conn.execute(text(
             "SELECT id FROM study_sessions"
@@ -1088,6 +1117,12 @@ def get_session_results(
                 detail={"code": "no_results_early_end",
                         "message": "session ended early; no full result"
                                    " was produced"})
+        if owned["state"] == "abandoned":
+            raise HTTPException(
+                status_code=409,
+                detail={"code": "session_abandoned",
+                        "message": "session was replaced by a newer practice;"
+                                   " no result was produced"})
         if owned["state"] != "completed":
             raise HTTPException(
                 status_code=409,

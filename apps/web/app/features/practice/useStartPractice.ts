@@ -24,7 +24,7 @@ export function useQuickPracticeStart(
 
 /** Explicit user action: end a practice session (ended_early keeps the
  * submitted answers; no fabricated result). Never a prerequisite for
- * starting another practice (ADR-0015). */
+ * starting another practice (ADR-0016). */
 export function useFinishSession() {
   return useMutation({
     mutationFn: (sessionId: string) => finishSession(sessionId),

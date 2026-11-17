@@ -123,16 +123,14 @@ def test_create_validation_errors(pg_engine, published_release, monkeypatch):
 
 
 @requires_db
-def test_starting_another_topic_session_never_conflicts_or_ends_the_old_one(
+def test_starting_another_topic_session_abandons_the_old_one_keeping_answers(
         pg_engine, published_release, monkeypatch):
     client = make_client(monkeypatch, pg_engine)
     first = create(client, USER_A).json()
     suid = first["units"][0]["id"]
-    submit(client, USER_A, first["id"], suid,
-           [(Q1, Q1 + "-o2"), (Q2, Q2 + "-o1")])
-    other = create(client, USER_A, qtype="vocabulary_kanji_reading")  # 词汇 while 文法 open
-    again = create(client, USER_A)  # same type again
-    assert other.status_code == 201 and again.status_code == 201
+    submit(client, USER_A, first["id"], suid, [(Q1, Q1 + "-o2"), (Q2, Q2 + "-o1")])
+    other = create(client, USER_A, qtype="vocabulary_kanji_reading")  # no 409
+    assert other.status_code == 201
     with pg_engine.connect() as conn:
         st = dict(conn.execute(sa.text(
             "SELECT id::text, state FROM study_sessions WHERE user_id=:u"),
@@ -140,10 +138,11 @@ def test_starting_another_topic_session_never_conflicts_or_ends_the_old_one(
         kept = conn.execute(sa.text(
             "SELECT count(*) FROM study_submitted_answers WHERE session_unit_id=:s"),
             {"s": suid}).scalar()
-    assert st[first["id"]] == "in_progress"
+    assert st[first["id"]] == "abandoned"
     assert st[other.json()["id"]] == "in_progress"
-    assert st[again.json()["id"]] == "in_progress"
-    assert kept == 2
+    assert kept == 2  # formal answers of the old session survive
+    # ...and still count as history for sampling
+    assert types(client, USER_A)["grammar_cloze"]["new_units"] == 0
 
 
 @requires_db

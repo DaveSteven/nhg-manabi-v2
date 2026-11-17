@@ -194,23 +194,27 @@ def test_invalid_answer_rolls_the_whole_submission_back(
 
 
 @requires_db
-def test_final_submit_is_owner_only_and_isolated_between_sessions(
+def test_final_submit_is_owner_only_and_never_crosses_sessions(
         pg_engine, published_release, monkeypatch):
     client = make_client(monkeypatch, pg_engine)
     a, sua = new_session(client, published_release, [CLOZE_UNIT])
-    b, sub_ = new_session(client, published_release, [CLOZE_UNIT])
+    b, sub_ = new_session(client, published_release, [CLOZE_UNIT], user=USER_B)
     assert submit_all(client, a["id"], [], user=USER_B).status_code == 404
-    # another session's unit id is not accepted
+    # another account's session-unit id is not accepted
     r = submit_all(client, a["id"], [(sub_[CLOZE_UNIT], Q1, Q1 + "-o2")])
     assert r.status_code == 422
     assert submit_all(client, a["id"], [(sua[CLOZE_UNIT], Q1, Q1 + "-o2")]
                       ).status_code == 200
-    # b untouched
-    gb = client.get(f"/api/practice/sessions/{b['id']}", headers=auth(USER_A)).json()
+    gb = client.get(f"/api/practice/sessions/{b['id']}", headers=auth(USER_B)).json()
     assert gb["state"] == "in_progress" and gb["units"][0]["state"] == "pending"
-    # an ended session cannot be submitted
+    # an ended or abandoned session cannot be submitted
     c, suc = new_session(client, published_release, [CLOZE_UNIT])
     client.post(f"/api/practice/sessions/{c['id']}/finish", headers=auth(USER_A))
     r = submit_all(client, c["id"], [(suc[CLOZE_UNIT], Q1, Q1 + "-o2")])
+    assert r.status_code == 409
+    assert r.json()["detail"]["code"] == "session_not_active"
+    d, sud = new_session(client, published_release, [CLOZE_UNIT])
+    new_session(client, published_release, [CLOZE_UNIT])  # abandons d
+    r = submit_all(client, d["id"], [(sud[CLOZE_UNIT], Q1, Q1 + "-o2")])
     assert r.status_code == 409
     assert r.json()["detail"]["code"] == "session_not_active"

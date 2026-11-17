@@ -13,7 +13,7 @@
 | P-007 | 选择 ≠ 提交；按 Unit 即时反馈；统一反馈至整次提交后揭晓 | 已确认 | 不提前泄露同篇材料后续答案 |
 | P-008 | 可以带未答提交；未答 ≠ 错误；正式提交后锁定 | 已确认 | 提交确认展示未答数量 |
 | P-009 | 记录所有历史答错；最近仍错/最近已对按最后有效回答判断 | 已确认 | skip 不覆盖最近正误 |
-| P-010 | ~~普通练习最多一个活跃会话~~ **已被 ADR-0015 取代**：允许多个进行中普通/专项会话，开始新练习无冲突提示；草稿自动保存与按 Session ID 恢复保留，恢复为用户主动选择 | 已确认（ADR-0015） | Quick Practice 与严格模考的单名额不变 |
+| P-010 | 每个用户只保留**一份**可恢复的专项/普通练习 Session（单一最近进度）：开始新练习时同事务把旧进行中 Session 置 `abandoned` 再创建，无冲突弹窗；已提交答案/历史保留，未提交草稿不计成绩；完成后保存正式结果并不再可恢复；不做多练习列表/清理 | 已确认（ADR-0016，取代 ADR-0015 与原冲突弹窗方案） | Quick Practice 与严格模考单名额不变；临时进度只留一份，正式成绩全部保留 |
 | P-011 | 严格模考与普通练习规则分离；服务器控制时间，交卷前禁止答案 | 已确认边界 | 具体时长、音频规则、无时长不能启动“严格模拟” |
 | P-012 | React + TypeScript / FastAPI / PostgreSQL；模块化单体，Alembic 迁移 | 当前采用架构 | 不照搬 1.0 状态库或旧表 |
 | P-013 | 发布采用不可变 Release；每个跨卷抽样 Unit 保存自己的 release | 当前采用架构 | 旧答卷引用旧版本，不能静默重算 |
@@ -50,4 +50,5 @@
 - `ADR-0012-local-docker-deployment.md`
 - `ADR-0013-user-center-and-avatar.md`
 - `ADR-0014-quick-practice-lightweight-mode.md`
-- `ADR-0015-multiple-active-practice-sessions.md`
+- `ADR-0015-multiple-active-practice-sessions.md`（已被 ADR-0016 取代）
+- `ADR-0016-single-recent-practice-session.md`

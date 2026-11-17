@@ -42,6 +42,16 @@ export default function ResultsRoute() {
         </section>
       );
     }
+    if (e.status === 409 && e.code === "session_abandoned") {
+      return (
+        <section className="container" aria-label="练习结果">
+          <PracticeBreadcrumb current="结果" examId={examId} topic={isTopic} />
+          <h1>这次练习已被取代</h1>
+          <p>你开始了新的专项练习，这次未完成的练习没有生成成绩；已提交的答案保留在历史中。</p>
+          <p><Link to="/study/practice">返回专项练习</Link></p>
+        </section>
+      );
+    }
     if (e.status === 409 && e.code === "session_not_finished") {
       return (
         <section className="container" aria-label="练习结果">

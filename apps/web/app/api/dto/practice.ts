@@ -12,7 +12,7 @@ import { z } from "zod";
 export const FeedbackModeSchema = z.enum(["immediate", "end"]);
 export type FeedbackMode = z.infer<typeof FeedbackModeSchema>;
 
-export const SessionStateSchema = z.enum(["in_progress", "completed", "ended_early"]);
+export const SessionStateSchema = z.enum(["in_progress", "completed", "ended_early", "abandoned"]);
 export type SessionState = z.infer<typeof SessionStateSchema>;
 
 export const SessionUnitSchema = z.strictObject({
@@ -130,7 +130,7 @@ export const SubmitResultSchema = z.strictObject({
   skipped_count: z.number().int(),
   idempotent: z.boolean(),
   /** Post-submit session state — quick sessions complete on submit. */
-  session_state: z.enum(["in_progress", "completed", "ended_early"]).optional(),
+  session_state: z.enum(["in_progress", "completed", "ended_early", "abandoned"]).optional(),
   feedback: FeedbackPayloadSchema.optional(),
 });
 export type SubmitResult = z.infer<typeof SubmitResultSchema>;

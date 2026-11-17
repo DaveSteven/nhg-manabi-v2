@@ -55,7 +55,8 @@ export function TopicPracticeView() {
   const check = selected ? checkCount(selected, count) : null;
 
   // Starting is always allowed: sessions hold study data, they never gate
-  // a new practice (ADR-0015) — no conflict check, no dialog.
+  // a new practice: the server abandons the old in-progress one atomically
+  // (ADR-0016) — no conflict check, no dialog.
   function begin() {
     if (!selected || !level || !check?.ok) return;
     start.mutate({ level, question_type_id: selected.question_type_id, count,

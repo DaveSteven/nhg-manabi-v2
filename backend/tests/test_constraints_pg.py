@@ -135,7 +135,8 @@ def test_check_constraint_result_total(engine):
         _cleanup(engine, release_id)
 
 
-def test_many_active_practice_sessions_per_user_allowed(engine):
+def test_one_active_practice_session_per_user(engine):
+    """ADR-0016: at most one in-progress practice per user (DB-enforced)."""
     release_id, _ = _seed_release(engine)
     user_id = str(uuid.uuid4())
     try:
@@ -144,16 +145,21 @@ def test_many_active_practice_sessions_per_user_allowed(engine):
                 "INSERT INTO study_sessions (id, user_id, mode, feedback_mode,"
                 " config) VALUES (:id, :uid, 'practice', 'end', '{}'::jsonb)",
             ), {"id": str(uuid.uuid4()), "uid": user_id})
-        with engine.begin() as conn:  # ADR-0015: no single-active limit
+        with pytest.raises(Exception):
+            with engine.begin() as conn:
+                conn.execute(text(
+                    "INSERT INTO study_sessions (id, user_id, mode,"
+                    " feedback_mode, config)"
+                    " VALUES (:id, :uid, 'practice', 'end', '{}'::jsonb)",
+                ), {"id": str(uuid.uuid4()), "uid": user_id})
+        with engine.begin() as conn:  # an abandoned one does not occupy the slot
             conn.execute(text(
-                "INSERT INTO study_sessions (id, user_id, mode,"
-                " feedback_mode, config)"
-                " VALUES (:id, :uid, 'practice', 'end', '{}'::jsonb)",
+                "UPDATE study_sessions SET state = 'abandoned' WHERE user_id = :uid"),
+                {"uid": user_id})
+            conn.execute(text(
+                "INSERT INTO study_sessions (id, user_id, mode, feedback_mode,"
+                " config) VALUES (:id, :uid, 'practice', 'end', '{}'::jsonb)",
             ), {"id": str(uuid.uuid4()), "uid": user_id})
-            n = conn.execute(text(
-                "SELECT count(*) FROM study_sessions WHERE user_id = :uid"
-                " AND state = 'in_progress'"), {"uid": user_id}).scalar()
-        assert n == 2
     finally:
         with engine.begin() as conn:
             conn.execute(text("DELETE FROM study_sessions WHERE user_id = :uid"), {"uid": user_id})

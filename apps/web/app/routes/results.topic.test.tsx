@@ -58,6 +58,20 @@ describe("results page for 专项练习 sessions", () => {
       count: 7, feedback_mode: "end" });
   });
 
+  it("an abandoned session shows a plain notice, not a score", async () => {
+    server.use(
+      http.get("*/api/practice/sessions/s-1/results", () =>
+        HttpResponse.json({ detail: { code: "session_abandoned",
+          message: "replaced" } }, { status: 409 })),
+      http.get("*/api/practice/sessions/s-1", () =>
+        HttpResponse.json(topicSession)),
+    );
+    renderResults();
+    expect(await screen.findByRole("heading", { name: "这次练习已被取代" }))
+      .toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "返回专项练习" })).toBeInTheDocument();
+  });
+
   it("exam sessions keep 返回试卷列表 and have no 再练一组", async () => {
     server.use(
       http.get("*/api/practice/sessions/s-1/results", () =>

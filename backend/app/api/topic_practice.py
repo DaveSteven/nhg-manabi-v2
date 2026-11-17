@@ -9,8 +9,8 @@ Stage 2 (sampling): the server — never the client — picks whole Units of
 ONE question type across exams/releases, weighted by the caller's formal
 practice history (submitted answers only; drafts never count), then creates
 an ordinary `practice` session through the same transaction used by
-POST /api/practice/sessions. A user may hold many in-progress sessions
-(ADR-0015): starting one never ends or conflicts with another. Reuses
+POST /api/practice/sessions. Starting one abandons the user's previous
+in-progress practice atomically (ADR-0016); no conflict, no prompt. Reuses
 release pinning per Unit, draft/submit/feedback gates and results. The
 response carries ids only; answers are never part of it.
 """
