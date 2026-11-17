@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  answersForUnit,
   collectAnswers,
   draftReducer,
   initialQuestionState,
@@ -127,5 +128,17 @@ describe("draftMachine transition matrix", () => {
     const answers = collectAnswers(s.questions);
     expect(answers).toContainEqual({ question_id: "qa", chosen_option_id: "oa" });
     expect(answers).toContainEqual({ question_id: "qb", chosen_option_id: null });
+  });
+});
+
+describe("answersForUnit", () => {
+  it("drops answers of questions from a previously practiced unit", () => {
+    const all = [
+      { question_id: "u04-q01", chosen_option_id: "u04-q01-o3" },
+      { question_id: "u05-q01", chosen_option_id: "u05-q01-o3" },
+    ];
+    expect(answersForUnit(all, ["u05-q01"])).toEqual([
+      { question_id: "u05-q01", chosen_option_id: "u05-q01-o3" },
+    ]);
   });
 });

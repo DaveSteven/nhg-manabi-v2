@@ -255,3 +255,14 @@ export function collectAnswers(
     chosen_option_id: displayOptionId(q),
   }));
 }
+
+/** Only the answers belonging to the given unit's questions. The draft state
+ *  outlives navigation to the next unit's session, and a stale question id
+ *  makes the server reject the whole submit (question_not_in_unit). */
+export function answersForUnit(
+  all: { question_id: string; chosen_option_id: string | null }[],
+  questionIds: string[],
+): { question_id: string; chosen_option_id: string | null }[] {
+  const ids = new Set(questionIds);
+  return all.filter((a) => ids.has(a.question_id));
+}

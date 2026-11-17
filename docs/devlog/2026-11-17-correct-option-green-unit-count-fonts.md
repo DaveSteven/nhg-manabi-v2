@@ -20,3 +20,9 @@
 
 ## 追加：去掉提交成功横幅
 提交成功后不再渲染 `<p role="status">已提交：答 N 题，未答 M 题</p>`（含幂等「已提交（重复请求…）」与 alreadySubmitted 的确认文案），结果由反馈卡片展示。提交**失败**文案保留。typecheck 通过，vitest 230 passed；web 镜像已重建。
+
+## 追加修复：下一题提交报 question_not_in_unit
+**现象**：专项/快速练习提交 u04 后点「下一题」进入 u05（新会话，同一 PracticePage 实例），再提交时请求体带上了 u04-q01 与 u05-q01，服务端 422 `question_not_in_unit`。
+**根因**：`useDraftManager` 的 reducer 状态随组件实例存活，跨会话导航不重置；`manager.answers()` 收集了全部历史题目。
+**修复**：新增 `answersForUnit(all, questionIds)`（`draftMachine.ts`），提交时只发送当前 Unit 的题目；后端校验保持不变（正确地拒绝了脏数据）。
+**测试**：新增 draftMachine 单测；前端 231 passed，typecheck 通过；`pnpm test` 的 ECONNREFUSED 日志在改动前即存在，不影响通过。web 镜像已重建。浏览器端到端（连续两题）待用户确认。

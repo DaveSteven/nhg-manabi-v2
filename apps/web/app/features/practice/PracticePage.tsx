@@ -10,6 +10,7 @@ import { RichText } from "../content/richtext/RichText";
 import { AudioDock } from "../content/AudioDock/AudioDock";
 import { useSessionRestore, type RestoredUnit } from "./useSessionRestore";
 import { useDraftManager } from "./useDraftManager";
+import { answersForUnit } from "./draftMachine";
 import { useSubmitUnit } from "./useSubmitUnit";
 import { useFeedback } from "./useFeedback";
 import { useFinishSession, useQuickPracticeStart } from "./useStartPractice";
@@ -186,8 +187,12 @@ export function PracticePage({ sessionId }: { sessionId: string }) {
     if (!current) return;
     setSubmitMsg(null);
     submit.mutate({ sessionUnitId: current.sessionUnitId,
-                    answers: manager.answers() });
-  }, [current, manager, submit]);
+                    // The draft state survives navigation to the next unit's
+                    // session (same component instance), so only send answers
+                    // of THIS unit's questions — stale ids make the server
+                    // reject the whole submit (question_not_in_unit).
+                    answers: answersForUnit(manager.answers(), questionIds) });
+  }, [current, manager, submit, questionIds]);
 
   const onFinish = useCallback(() => {
     setFinishError(null);
