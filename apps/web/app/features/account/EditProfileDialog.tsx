@@ -5,6 +5,7 @@ import type { UserProfile } from "../../api/endpoints/auth";
 import { authStore } from "../auth/authStore";
 import { AVATARS } from "./avatars";
 import { UserAvatar } from "./UserAvatar";
+import { Button, ButtonLink } from "../../components/Button";
 
 /**
  * Edit avatar + nickname in one dialog, saved with a single PATCH. Picking
@@ -95,13 +96,13 @@ export function EditProfileDialog({ user, onClose }: {
         {error ? <p role="alert" className="form-error">{error}</p> : null}
 
         <div className="dialog-actions">
-          <button type="button" className="secondary-button" onClick={onClose}>
+          <Button variant="secondary" onClick={onClose}>
             取消
-          </button>
-          <button type="button" className="primary" onClick={save}
-                  disabled={saving || !trimmed}>
+          </Button>
+          <Button variant="primary" onClick={save}
+                  disabled={!trimmed} loading={saving}>
             {saving ? "保存中…" : "保存"}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

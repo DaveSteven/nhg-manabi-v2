@@ -5,6 +5,7 @@ import { describeLoadError } from "../../api/errors";
 import type { FeedbackMode } from "../../api/dto/practice";
 import { useLevel } from "../auth/useLevel";
 import { useStartTopicPractice, useTopicTypes } from "./useTopicPractice";
+import { Button, ButtonLink } from "../../components/Button";
 import { COUNT_PRESETS, TOPIC_SUBJECTS, checkCount, defaultCount, isTopicSubject,
          maxCount, unitNoun, type TopicSubject } from "./topicModel";
 
@@ -166,11 +167,11 @@ export function TopicPracticeView() {
                 <p className="text-aux">该题型分类仍在核对中，名称可能调整。</p>
               ) : null}
 
-              <button type="button" className="primary"
+              <Button variant="primary"
                       disabled={!check?.ok || start.isPending}
                       onClick={begin}>
                 {start.isPending ? "正在抽题…" : "开始练习"}
-              </button>
+              </Button>
               {startError ? <p role="alert">{startError}</p> : null}
             </div>
           ) : (

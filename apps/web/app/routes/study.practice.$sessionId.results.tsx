@@ -1,4 +1,4 @@
-import { Link, useNavigate, useParams } from "react-router";
+import { useNavigate, useParams } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import { getSessionResults } from "../api/endpoints/sessions";
 import type { ResultsResponse } from "../api/dto/practice";
@@ -6,6 +6,7 @@ import type { ApiError } from "../api/errors";
 import { resultVerdict, summarizeResults } from "../features/practice/resultsModel";
 import { PracticeBreadcrumb, useSessionInfo } from "../features/practice/PracticeBreadcrumb";
 import { useStartTopicPractice } from "../features/topic/useTopicPractice";
+import { Button, ButtonLink } from "../components/Button";
 
 /** Session results: completed numbers + per-question review; ended_early
  * renders an explicit early-end view with NO fabricated score. */
@@ -36,8 +37,8 @@ export default function ResultsRoute() {
           <p>本次练习有未提交的题目，因此没有生成完整成绩。已提交的答案保留在历史中。</p>
           <p>
             {isTopic
-              ? <Link to="/study/practice">返回专项练习</Link>
-              : <Link to="/study/exams">返回试卷列表</Link>}
+              ? <ButtonLink variant="secondary" to="/study/practice">返回专项练习</ButtonLink>
+              : <ButtonLink variant="secondary" to="/study/exams">返回试卷列表</ButtonLink>}
           </p>
         </section>
       );
@@ -48,7 +49,7 @@ export default function ResultsRoute() {
           <PracticeBreadcrumb current="结果" examId={examId} topic={isTopic} />
           <h1>这次练习已被取代</h1>
           <p>你开始了新的专项练习，这次未完成的练习没有生成成绩；已提交的答案保留在历史中。</p>
-          <p><Link to="/study/practice">返回专项练习</Link></p>
+          <p><ButtonLink variant="secondary" to="/study/practice">返回专项练习</ButtonLink></p>
         </section>
       );
     }
@@ -59,9 +60,7 @@ export default function ResultsRoute() {
           <h1>练习尚未完成</h1>
           <p>完成并交卷后才能查看结果。</p>
           <p>
-            <Link to={`/study/practice/${encodeURIComponent(sessionId ?? "")}`}>
-              返回练习
-            </Link>
+            <ButtonLink variant="secondary" to={`/study/practice/${encodeURIComponent(sessionId ?? "")}`}>返回练习</ButtonLink>
           </p>
         </section>
       );
@@ -115,7 +114,7 @@ export default function ResultsRoute() {
       </ol>
       {info.topic ? (
         <div className="practice-actions">
-          <button type="button" className="primary" disabled={again.isPending}
+          <Button variant="primary" loading={again.isPending}
                   onClick={() => again.mutate({
                     level: info.topic!.level,
                     question_type_id: info.topic!.question_type_id,
@@ -123,14 +122,15 @@ export default function ResultsRoute() {
                     feedback_mode: info.feedbackMode ?? "immediate",
                   })}>
             {again.isPending ? "正在抽题…" : "再练一组"}
-          </button>
-          <Link to={`/study/practice/${encodeURIComponent(sessionId ?? "")}`}>
+          </Button>
+          <ButtonLink variant="secondary"
+                      to={`/study/practice/${encodeURIComponent(sessionId ?? "")}`}>
             查看答案与解析
-          </Link>
-          <Link to="/study/practice">返回专项练习</Link>
+          </ButtonLink>
+          <ButtonLink variant="secondary" to="/study/practice">返回专项练习</ButtonLink>
         </div>
       ) : (
-        <p><Link to="/study/exams">返回试卷列表</Link></p>
+        <p><ButtonLink variant="secondary" to="/study/exams">返回试卷列表</ButtonLink></p>
       )}
       {again.error ? (
         <p role="alert">无法再练一组：{again.error.message}</p>

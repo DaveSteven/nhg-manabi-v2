@@ -6,6 +6,7 @@ import { EditProfileDialog } from "./EditProfileDialog";
 import { signOut } from "./signOut";
 import { UserAvatar } from "./UserAvatar";
 import { Select } from "../../components/select";
+import { Button, ButtonLink } from "../../components/Button";
 
 const LEVEL_ITEMS = JLPT_LEVELS.map((l) => ({ value: l, label: l }));
 
@@ -37,10 +38,10 @@ export function AccountPage() {
           <p className="account-display-name">{user.display_name}</p>
           <p className="text-aux">{user.email}</p>
         </div>
-        <button type="button" className="secondary-button"
+        <Button variant="secondary"
                 onClick={() => setEditing(true)}>
           编辑资料
-        </button>
+        </Button>
       </aside>
 
       <div className="account-groups">
@@ -70,14 +71,14 @@ export function AccountPage() {
               <strong>结束本次会话</strong>
               <small>退出后需要重新登录</small>
             </div>
-            <button type="button" className="secondary-button" disabled={busy}
+            <Button variant="secondary" loading={busy}
                     onClick={async () => {
                       setBusy(true);
                       await signOut();
                       navigate("/study");
                     }}>
               退出登录
-            </button>
+            </Button>
           </div>
         </section>
       </div>

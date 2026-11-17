@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router";
+import { useNavigate } from "react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { FinishResponse } from "../../api/dto/practice";
 import { ApiError } from "../../api/errors";
@@ -15,6 +15,7 @@ import { FeedbackView } from "./FeedbackView";
 import { PracticeBreadcrumb } from "./PracticeBreadcrumb";
 import { DraftConflictDialog, UnansweredConfirmDialog } from "./SubmitDialogs";
 import { clearSessionPendingRetries, loadPendingRetries } from "./pendingRetries";
+import { Button, ButtonLink } from "../../components/Button";
 
 /**
  * 统一反馈 practice (frontend-spec 专项练习流程, practice-interactions):
@@ -240,26 +241,27 @@ export function UnifiedPracticeView({ sessionId, bundle }: {
         {submitError ? <p role="alert">{submitError}</p> : null}
 
         <div className="practice-actions">
-          <button type="button" disabled={idx === 0}
+          <Button variant="secondary" className="pager-btn" disabled={idx === 0}
                   onClick={() => setIdx((i) => Math.max(0, i - 1))}>
             上一题
-          </button>
+          </Button>
           {!isLast ? (
-            <button type="button" className="primary"
+            <Button variant={ended && completed ? "secondary" : "primary"}
+                    className="pager-btn"
                     onClick={() => setIdx((i) => Math.min(total - 1, i + 1))}>
               下一题
-            </button>
+            </Button>
           ) : !ended ? (
-            <button type="button" className="primary"
-                    disabled={finalSubmit.isPending} onClick={onFinalClick}>
+            <Button variant="primary"
+                    loading={finalSubmit.isPending} onClick={onFinalClick}>
               {finalSubmit.isPending ? "提交中…" : "完成并提交练习"}
-            </button>
+            </Button>
           ) : null}
           {ended ? (
             completed ? (
-              <Link className="primary-link" to={`/study/practice/${encodeURIComponent(sessionId)}/results`}>
+              <ButtonLink variant="primary" to={`/study/practice/${encodeURIComponent(sessionId)}/results`}>
                 查看结果
-              </Link>
+              </ButtonLink>
             ) : (
               <p className="text-aux">
                 {session.state === "abandoned"
@@ -268,9 +270,9 @@ export function UnifiedPracticeView({ sessionId, bundle }: {
               </p>
             )
           ) : null}
-          <button type="button" onClick={() => navigate("/study/practice")}>
+          <Button variant="secondary" onClick={() => navigate("/study/practice")}>
             返回专项练习
-          </button>
+          </Button>
         </div>
         {!ended ? (
           <p className="text-aux">

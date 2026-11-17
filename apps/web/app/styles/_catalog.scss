@@ -79,7 +79,6 @@
   font-size: 14px;
 }
 
-.primary-link,
 .unit-start {
   display: inline-flex;
   align-items: center;
@@ -117,7 +116,7 @@
     flex-wrap: wrap;
 
     .continue-info { flex-basis: calc(100% - 68px); }
-    .primary-link { flex: 1; }
+    .btn { flex: 1; }
   }
 }
 

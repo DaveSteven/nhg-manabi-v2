@@ -19,6 +19,7 @@ import { FeedbackView } from "./FeedbackView";
 import { UnifiedPracticeView } from "./UnifiedPractice";
 import { DraftConflictDialog, UnansweredConfirmDialog } from "./SubmitDialogs";
 import { clearSessionPendingRetries, loadPendingRetries } from "./pendingRetries";
+import { Button, ButtonLink } from "../../components/Button";
 
 const STATUS_TEXT: Record<string, string> = {
   save_error: "保存失败，可重试",
@@ -298,18 +299,18 @@ function StepPracticePage({ sessionId }: { sessionId: string }) {
 
         {paged ? (
           <nav aria-label="题目导航" className="question-pager">
-            <button type="button" disabled={questionIdx === 0}
+            <Button variant="secondary" className="pager-btn" disabled={questionIdx === 0}
                     onClick={() => setQuestionIdx((i) => i - 1)}>
               上一题
-            </button>
+            </Button>
             <span className="question-pager-pos">
               {questions[questionIdx]!.printedNumber ?? `第 ${questions[questionIdx]!.position} 题`}
               {" · "}{questionIdx + 1} / {questions.length}
             </span>
-            <button type="button" disabled={questionIdx === questions.length - 1}
+            <Button variant="secondary" className="pager-btn" disabled={questionIdx === questions.length - 1}
                     onClick={() => setQuestionIdx((i) => i + 1)}>
               下一题
-            </button>
+            </Button>
           </nav>
         ) : null}
 
@@ -365,7 +366,7 @@ function StepPracticePage({ sessionId }: { sessionId: string }) {
 
         <div className="practice-actions">
           {!unitSubmitted ? (
-            <button type="button" className="primary" disabled={submit.isPending}
+            <Button variant="primary" loading={submit.isPending}
                     onClick={() => {
                       // Quick Practice §4.2: fully answered → direct submit;
                       // the one confirmation dialog is only for unanswered.
@@ -373,26 +374,26 @@ function StepPracticePage({ sessionId }: { sessionId: string }) {
                       else onConfirmSubmit();
                     }}>
               {copy.submitLabel}
-            </button>
+            </Button>
           ) : null}
           {!isQuick && allSubmitted && !sessionEnded ? (
-            <button type="button" className="primary" disabled={finish.isPending}
+            <Button variant="primary" loading={finish.isPending}
                     onClick={onFinish}>
               {session.feedback_mode === "end" ? "交卷并查看结果" : "完成练习"}
-            </button>
+            </Button>
           ) : null}
           {isQuick && sessionEnded && !allSubmitted ? (
             // this stale quick session was silently replaced by a newer one
             <div className="practice-post-submit-nav">
               <p className="text-aux">本次练习已被新的练习取代。</p>
-              <button type="button" disabled={startQuick.isPending}
+              <Button variant="secondary" loading={startQuick.isPending}
                       onClick={() => startQuick.mutate({
                         release_id: sessionUnit?.release_id
                           ?? session.units[0]!.release_id,
                         unit_id: current!.unit.id,
                       })}>
                 重新练习本组
-              </button>
+              </Button>
             </div>
           ) : null}
           {!isQuick && sessionEnded && !allSubmitted ? (
@@ -406,32 +407,32 @@ function StepPracticePage({ sessionId }: { sessionId: string }) {
             <div className="practice-post-submit-nav">
               {isQuick ? (
                 nextQuickUnit ? (
-                  <button type="button" className="primary"
-                          disabled={startQuick.isPending}
+                  <Button variant="primary"
+                          loading={startQuick.isPending}
                           onClick={() => startQuick.mutate({
                             release_id: outline.data!.release_id,
                             unit_id: nextQuickUnit.unit_id,
                           })}>
                     {copy.nextLabel}
-                  </button>
+                  </Button>
                 ) : null
               ) : currentIdx + 1 < units.length ? (
-                <button type="button" className="primary"
+                <Button variant="primary"
                         onClick={() => setCurrentIdx(currentIdx + 1)}>
                   下一组
-                </button>
+                </Button>
               ) : null}
               {isTopic ? (
-                <button type="button"
+                <Button variant="secondary"
                         onClick={() => navigate("/study/practice")}>
                   返回专项练习
-                </button>
+                </Button>
               ) : session.units[0]?.exam_id ? (
-                <button type="button"
+                <Button variant="secondary"
                         onClick={() => navigate(
                           `/study/exams/${encodeURIComponent(session.units[0]!.exam_id)}`)}>
                   返回试卷
-                </button>
+                </Button>
               ) : null}
             </div>
           ) : null}

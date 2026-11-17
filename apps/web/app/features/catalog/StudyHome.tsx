@@ -3,6 +3,7 @@ import { Link } from "react-router";
 import type { ExamSummary } from "../../api/dto/exam";
 import type { PracticeSession } from "../../api/dto/practice";
 import { useCurrentSession, useExamList } from "./useExamCatalog";
+import { ButtonLink } from "../../components/Button";
 
 /** Page header copy per design-system.md v1.1 §5.2 + the confirmed home
  * UI reference (docs/design/JLPT GO 2.0 首页.png). */
@@ -111,10 +112,10 @@ function ContinueSessionCard({ state, exams }: {
         <p className="continue-eyebrow">继续上次练习</p>
         <h2>{title}</h2>
       </div>
-      <Link className="primary-link"
+      <ButtonLink variant="primary"
             to={`/study/practice/${encodeURIComponent(session.id)}`}>
         继续练习<span aria-hidden="true">→</span>
-      </Link>
+      </ButtonLink>
     </section>
   );
 }

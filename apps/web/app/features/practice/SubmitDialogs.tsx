@@ -3,6 +3,8 @@
  * spec §4.2/§8): fully-answered groups submit directly with no dialog.
  * Skip ≠ wrong is preserved downstream.
  */
+
+import { Button, ButtonLink } from "../../components/Button";
 export function UnansweredConfirmDialog({ count, submitting, onConfirm, onCancel,
                                          scope = "本组" }: {
   count: number;
@@ -20,11 +22,11 @@ export function UnansweredConfirmDialog({ count, submitting, onConfirm, onCancel
         {scope}还有 <strong>{count}</strong> 题未作答。提交后将无法修改，确定继续吗？
       </p>
       <div className="dialog-actions">
-        <button type="button" onClick={onCancel}>继续答题</button>
-        <button type="button" className="primary" disabled={submitting}
+        <Button variant="secondary" onClick={onCancel}>继续答题</Button>
+        <Button variant="primary" loading={submitting}
                 onClick={onConfirm}>
           {submitting ? "提交中…" : "确认提交"}
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -50,10 +52,10 @@ export function DraftConflictDialog({ questionId, onAdoptServer, onOverwrite }: 
         采用服务器上的最新值，或以你当前的选择覆盖（使用最新版本号）。
       </p>
       <div className="dialog-actions">
-        <button type="button" onClick={onAdoptServer}>采用服务器值</button>
-        <button type="button" className="primary" onClick={onOverwrite}>
+        <Button variant="secondary" onClick={onAdoptServer}>采用服务器值</Button>
+        <Button variant="primary" onClick={onOverwrite}>
           以我的选择覆盖
-        </button>
+        </Button>
       </div>
     </div>
   );

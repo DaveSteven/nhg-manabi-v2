@@ -1,5 +1,7 @@
 # 页面信息架构与关键界面
 
+> 按钮与操作区统一遵守 [button-spec.md](button-spec.md)（2026-11-17）；视觉标准不改变会话、提交及反馈权限。
+
 > 路由均为 **建议 URL**，非已经实现的 API/前端路由。依赖 `product/prd.md` 和 `design/design-system.md`。
 
 ## 全局导航

@@ -1,0 +1,151 @@
+/* Standard action buttons — docs/design/button-spec.md v1.0.
+   Only this file defines button radius/height/padding; page selectors
+   lay buttons out, they never restyle them. */
+:root {
+  --button-radius: var(--radius-pill);
+  --button-height-sm: 36px;
+  --button-height-md: 44px;
+  --button-height-lg: 48px;
+  --button-padding-x-sm: 16px;
+  --button-padding-x-md: 24px;
+  --button-gap: 8px;
+  --action-gap: 12px;
+}
+
+.btn {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--button-gap);
+  min-height: var(--button-height-md);
+  padding: 0 var(--button-padding-x-md);
+  border: 1px solid transparent;
+  border-radius: var(--button-radius);
+  font: inherit;
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 600;
+  text-decoration: none;
+  text-align: center;
+  cursor: pointer;
+  box-shadow: none;
+  transition: background-color var(--motion-fast), border-color var(--motion-fast),
+              color var(--motion-fast), box-shadow var(--motion-fast);
+
+  svg { width: 20px; height: 20px; flex: none; }
+
+  &.btn-sm {
+    min-height: var(--button-height-sm);
+    padding: 0 var(--button-padding-x-sm);
+    font-size: 14px;
+    line-height: 20px;
+    svg { width: 16px; height: 16px; }
+
+    /* coarse pointers get the 44px touch target */
+    @media (pointer: coarse) { min-height: var(--button-height-md); }
+  }
+  &.btn-lg { min-height: var(--button-height-lg); }
+}
+
+.btn-primary {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #fff;
+
+  &:hover:not(:disabled):not([aria-disabled="true"]) {
+    background: var(--color-primary-hover);
+    border-color: var(--color-primary-hover);
+  }
+}
+
+.btn-secondary {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+  color: var(--color-ink);
+
+  &:hover:not(:disabled):not([aria-disabled="true"]) {
+    background: var(--color-primary-soft);
+  }
+}
+
+.btn-ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--color-ink);
+
+  &:hover:not(:disabled):not([aria-disabled="true"]) {
+    background: var(--color-primary-soft);
+  }
+}
+
+.btn-danger {
+  background: var(--color-danger);
+  border-color: var(--color-danger);
+  color: #fff;
+
+  &:hover:not(:disabled):not([aria-disabled="true"]) { filter: brightness(0.92); }
+}
+
+.btn:active:not(:disabled):not([aria-disabled="true"]) {
+  box-shadow: inset 0 2px 4px rgba(43, 43, 51, 0.18);
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Disabled keeps the outline and size; neutral, no hover/pressed. */
+.btn:disabled {
+  background: var(--color-surface-subtle);
+  border-color: var(--color-border);
+  color: var(--color-text-muted);
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* Loading keeps width and hierarchy; repeat triggers are blocked. */
+.btn.is-loading {
+  cursor: progress;
+  &::before {
+    content: "";
+    width: 16px;
+    height: 16px;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: btn-spin 800ms linear infinite;
+  }
+}
+
+@keyframes btn-spin { to { transform: rotate(360deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .btn { transition: none; }
+  .btn.is-loading::before { animation: none; }
+}
+
+/* Inline link: brand text with underline, no button chrome. */
+.link-button {
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--color-primary);
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+/* Action row: wraps as a group, 12px apart, 24px below content. */
+.practice-actions,
+.dialog-actions,
+.practice-post-submit-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--action-gap);
+}
+
+.pager-btn { min-width: 112px; } /* 上一题/下一题 paired, same width */

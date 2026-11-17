@@ -3,6 +3,7 @@ import { useAuth } from "./authStore";
 import { JLPT_LEVELS, useLevel } from "./useLevel";
 import { UserAvatar } from "../account/UserAvatar";
 import { Select } from "../../components/select";
+import { ButtonLink } from "../../components/Button";
 
 /**
  * Right slot of the study header (design v1.1 §3.1): everyone gets the
@@ -22,8 +23,8 @@ export function HeaderControls() {
         </Link>
       ) : (
         <div className="account-links">
-          <Link className="account-signin" to="/login">登录</Link>
-          <Link className="account-signup" to="/register">注册</Link>
+          <ButtonLink variant="secondary" size="sm" to="/login">登录</ButtonLink>
+          <ButtonLink variant="primary" size="sm" to="/register">注册</ButtonLink>
         </div>
       )}
     </div>

@@ -11,6 +11,7 @@ import {
   verifyEmail,
 } from "../../api/endpoints/auth";
 import { authStore } from "./authStore";
+import { Button, ButtonLink } from "../../components/Button";
 
 /**
  * Student auth pages (ADR-0011). Root-level SPA routes, noindex. Forms
@@ -98,9 +99,9 @@ export function LoginPage() {
                  autoComplete="current-password" />
         </label>
         <FormMessage message={error} kind="error" />
-        <button type="submit" className="primary-link" disabled={busy}>
+        <Button variant="primary" type="submit" loading={busy}>
           登录
-        </button>
+        </Button>
       </form>
       <p className="auth-links">
         还没有账户？<Link to="/register">注册</Link>
@@ -177,9 +178,9 @@ export function RegisterPage() {
           <FieldError message={field?.field === "password" ? field.message : null} />
         </label>
         <FormMessage message={error} kind="error" />
-        <button type="submit" className="primary-link" disabled={busy}>
+        <Button variant="primary" type="submit" loading={busy}>
           注册
-        </button>
+        </Button>
       </form>
       <p className="auth-links">
         已有账户？<Link to="/login">登录</Link>
@@ -265,9 +266,9 @@ function ResendLink({ email }: { email: string | null }) {
         <input type="email" required value={value}
                onChange={(e) => setValue(e.target.value)} />
       </label>
-      <button type="submit" className="secondary-button" disabled={busy}>
+      <Button variant="secondary" type="submit" loading={busy}>
         重新发送验证邮件
-      </button>
+      </Button>
     </form>
   );
 }
@@ -303,9 +304,9 @@ export function ForgotPasswordPage() {
                    onChange={(e) => setEmail(e.target.value)}
                    autoComplete="email" />
           </label>
-          <button type="submit" className="primary-link" disabled={busy}>
+          <Button variant="primary" type="submit" loading={busy}>
             发送重置链接
-          </button>
+          </Button>
         </form>
       )}
       <p className="auth-links"><Link to="/login">返回登录</Link></p>
@@ -359,9 +360,9 @@ export function ResetPasswordPage() {
             <FieldError message={field} />
           </label>
           <FormMessage message={error} kind="error" />
-          <button type="submit" className="primary-link" disabled={busy}>
+          <Button variant="primary" type="submit" loading={busy}>
             重置密码
-          </button>
+          </Button>
         </form>
       ) : (
         <FormMessage message="链接缺少重置令牌，请从邮件中的链接进入。" kind="error" />
