@@ -146,6 +146,89 @@ def test_transcript_end_mode_sealed_until_session_ends(
 
 
 @requires_db
+def test_transcript_pairs_zh_translation_by_paragraph_order(
+        pg_engine, unit_with_transcript, monkeypatch):
+    """The converter stores the raw `translation` as a unit-level zh-CN
+    explanation whose paragraph blocks align with the transcript cues by
+    order; paired 1:1 only when the counts match."""
+    client = make_client(monkeypatch, pg_engine)
+    with pg_engine.begin() as conn:
+        zh_blocks = [
+            {"type": "paragraph",
+             "children": [{"type": "text", "text": t}]}
+            for t in ["女：不好意思……", "男：有的哦。"]
+        ]
+        conn.execute(sa.text(
+            "DELETE FROM release_explanations WHERE unit_id = :u"
+            "   AND kind = 'translation' AND language = 'zh-CN'"), {"u": CLOZE_UNIT})
+        conn.execute(sa.text(
+            "INSERT INTO release_explanations (release_id, explanation_id,"
+            " unit_id, kind, language, content, revision, review_status)"
+            " VALUES (:r, :x, :u, 'translation', 'zh-CN',"
+            " CAST(:c AS jsonb), 1, 'unverified')"
+            " ON CONFLICT (release_id, explanation_id) DO UPDATE"
+            "   SET content = EXCLUDED.content"),
+            {"r": str(unit_with_transcript),
+             "x": f"{CLOZE_UNIT}-exp-translation-zh-CN-r1", "u": CLOZE_UNIT,
+             "c": __import__("json").dumps({"blocks": zh_blocks})})
+
+    session = create_session(client, USER_A, unit_with_transcript,
+                             [CLOZE_UNIT], feedback="immediate")
+    suid = unit_id_map(session)[CLOZE_UNIT]
+    submit(client, USER_A, session["id"], suid,
+           [(f"{CLOZE_UNIT}-q01", f"{CLOZE_UNIT}-q01-o2"),
+            (f"{CLOZE_UNIT}-q02", f"{CLOZE_UNIT}-q02-o1")])
+
+    r = client.get(transcript_path(session, suid), headers=auth(USER_A))
+    assert r.status_code == 200
+    tr = r.json()["translation"]
+    assert tr["language"] == "zh-CN"
+    assert [c["index"] for c in tr["cues"]] == [c["index"] for c in CUES]
+    assert tr["cues"][0]["children"][0]["text"] == "女：不好意思……"
+
+    # Before the gate opens, the translation is equally sealed (same 409).
+    client.post(f"/api/practice/sessions/{session['id']}/finish",
+                headers=auth(USER_A))  # free the active-session slot
+    session2 = create_session(client, USER_A, unit_with_transcript,
+                              [CLOZE_UNIT], feedback="end")
+    suid2 = unit_id_map(session2)[CLOZE_UNIT]
+    submit(client, USER_A, session2["id"], suid2,
+           [(f"{CLOZE_UNIT}-q01", f"{CLOZE_UNIT}-q01-o2"),
+            (f"{CLOZE_UNIT}-q02", f"{CLOZE_UNIT}-q02-o1")])
+    assert client.get(transcript_path(session2, suid2),
+                      headers=auth(USER_A)).status_code == 409
+
+
+@requires_db
+def test_transcript_translation_null_when_counts_mismatch(
+        pg_engine, unit_with_transcript, monkeypatch):
+    client = make_client(monkeypatch, pg_engine)
+    with pg_engine.begin() as conn:
+        zh_blocks = [{"type": "paragraph",
+                      "children": [{"type": "text", "text": "只此一段"}]}]
+        conn.execute(sa.text(
+            "INSERT INTO release_explanations (release_id, explanation_id,"
+            " unit_id, kind, language, content, revision, review_status)"
+            " VALUES (:r, :x, :u, 'translation', 'zh-CN',"
+            " CAST(:c AS jsonb), 1, 'unverified')"
+            " ON CONFLICT (release_id, explanation_id) DO UPDATE"
+            "   SET content = EXCLUDED.content"),
+            {"r": str(unit_with_transcript),
+             "x": f"{CLOZE_UNIT}-exp-translation-zh-CN-r1", "u": CLOZE_UNIT,
+             "c": __import__("json").dumps({"blocks": zh_blocks})})
+
+    session = create_session(client, USER_A, unit_with_transcript,
+                             [CLOZE_UNIT], feedback="immediate")
+    suid = unit_id_map(session)[CLOZE_UNIT]
+    submit(client, USER_A, session["id"], suid,
+           [(f"{CLOZE_UNIT}-q01", f"{CLOZE_UNIT}-q01-o2"),
+            (f"{CLOZE_UNIT}-q02", f"{CLOZE_UNIT}-q02-o1")])
+    r = client.get(transcript_path(session, suid), headers=auth(USER_A))
+    assert r.status_code == 200
+    assert r.json()["translation"] is None
+
+
+@requires_db
 def test_transcript_cross_account_is_404(pg_engine, unit_with_transcript,
                                          monkeypatch):
     client = make_client(monkeypatch, pg_engine)

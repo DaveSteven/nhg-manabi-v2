@@ -231,11 +231,6 @@ export function PracticePage({ sessionId }: { sessionId: string }) {
                         <RichText value={o.content} slotIds={vm.slotIds} />
                       </label>
                     ))}
-                    <button type="button" className="option-clear"
-                            disabled={unitSubmitted || selected === null}
-                            onClick={() => manager.clear(q.id)}>
-                      清除本题选择
-                    </button>
                   </div>
                 </fieldset>
                 {feedback.data

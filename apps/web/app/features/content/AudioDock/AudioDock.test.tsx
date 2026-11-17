@@ -29,14 +29,25 @@ const CUES = [
     children: [{ type: "text", text: "（時間未校準の文）" }] },
 ];
 
-function transcriptPayload(cues = CUES): TranscriptPayload {
+function transcriptPayload(cues = CUES, translation: TranscriptPayload["translation"] = null): TranscriptPayload {
   return {
     session_unit_id: "su-1", unit_id: "u-1", release_id: "r-1",
     feedback_mode: "immediate",
     materials: [{ material_id: "m-1", kind: "transcript",
-                  language: "ja-JP", cues }],
+                  language: "ja-JP", cues,
+                  translated_from_material_id: null }],
+    translation,
   };
 }
+
+const ZH_TRANSLATION: TranscriptPayload["translation"] = {
+  language: "zh-CN",
+  cues: [
+    { index: 1, children: [{ type: "text", text: "女：不好意思，这附近有……" }] },
+    { index: 2, children: [{ type: "text", text: "男：有的哦。" }] },
+    { index: 3, children: [{ type: "text", text: "（未对齐段落）" }] },
+  ],
+};
 
 function getAudio(): HTMLAudioElement {
   const el = document.querySelector("audio");
@@ -268,6 +279,33 @@ describe("AudioDock transcript panel", () => {
     expect(sw).toHaveAttribute("aria-checked", "false");
     fireEvent.click(sw);
     expect(sw).toHaveAttribute("aria-checked", "true");
+  });
+
+  it("中文对照 switch only appears with a paired translation track", async () => {
+    // no translation: no switch
+    mockTranscript.mockResolvedValue(transcriptPayload());
+    const { unmount } = renderWithQuery(
+      <AudioDock {...DOCK_PROPS} transcript={TRANSCRIPT} />);
+    fireEvent.click(screen.getByRole("button", { name: "原文" }));
+    await screen.findByText("男：はい、ありますよ。");
+    expect(screen.queryByRole("switch", { name: "中文对照" })).not.toBeInTheDocument();
+    unmount();
+
+    // with translation: switch appears, off by default; enabling shows the
+    // zh line under each aligned cue
+    mockTranscript.mockResolvedValue(transcriptPayload(CUES, ZH_TRANSLATION));
+    renderWithQuery(<AudioDock {...DOCK_PROPS} transcript={TRANSCRIPT} />);
+    fireEvent.click(screen.getByRole("button", { name: "原文" }));
+    const sw = await screen.findByRole("switch", { name: "中文对照" });
+    expect(sw).toHaveAttribute("aria-checked", "false");
+    expect(screen.queryByText("女：不好意思，这附近有……")).not.toBeInTheDocument();
+    fireEvent.click(sw);
+    expect(sw).toHaveAttribute("aria-checked", "true");
+    expect(await screen.findByText("女：不好意思，这附近有……")).toBeInTheDocument();
+    expect(screen.getByText("男：有的哦。")).toBeInTheDocument();
+    // pairing is strictly by cue index: index 3 exists in both tracks,
+    // so its zh line renders too
+    expect(screen.getByText("（未对齐段落）")).toBeInTheDocument();
   });
 
   it("no cue materials shows the empty state", async () => {

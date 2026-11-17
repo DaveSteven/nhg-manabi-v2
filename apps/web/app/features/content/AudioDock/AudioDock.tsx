@@ -45,6 +45,7 @@ export function AudioDock({ src, title = "音声", subtitle = null, disabledReas
   const panelId = "transcript-panel";
   const [expanded, setExpanded] = useState(false);
   const [follow, setFollow] = useState(true);
+  const [showZh, setShowZh] = useState(false);
   const [view, setView] = useState<TranscriptViewState | null>(null);
   const loadSeq = useRef(0);
 
@@ -61,7 +62,12 @@ export function AudioDock({ src, title = "音声", subtitle = null, disabledReas
       .then((payload) => {
         if (loadSeq.current !== seq) return;
         const cues: TranscriptCue[] = payload.materials.flatMap((m) => m.cues);
-        setView({ kind: "ready", cues, language: payload.materials[0]?.language ?? null });
+        const translationByIndex = payload.translation
+          ? new Map(payload.translation.cues.map((c) => [c.index, c]))
+          : null;
+        setView({ kind: "ready", cues,
+                  language: payload.materials[0]?.language ?? null,
+                  translationByIndex });
       })
       .catch((e: unknown) => {
         if (loadSeq.current !== seq) return;
@@ -93,7 +99,8 @@ export function AudioDock({ src, title = "音声", subtitle = null, disabledReas
       {expanded ? (
         <TranscriptPanel id={panelId} view={view ?? { kind: "loading" }}
                          currentTimeMs={currentTimeMs} follow={follow}
-                         onFollowChange={setFollow} onSeek={api.playFrom}
+                         onFollowChange={setFollow} showZh={showZh}
+                         onShowZhChange={setShowZh} onSeek={api.playFrom}
                          onClose={() => setExpanded(false)}
                          onRetry={() => {
                            if (transcript) {

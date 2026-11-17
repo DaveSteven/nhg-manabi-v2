@@ -181,8 +181,24 @@ export const TranscriptMaterialSchema = z.strictObject({
   kind: z.string(),
   language: z.string().nullable(),
   cues: z.array(TranscriptCueSchema),
+  /** Present on translated transcripts; points at the source material. */
+  translated_from_material_id: z.string().nullable(),
 });
 export type TranscriptMaterial = z.infer<typeof TranscriptMaterialSchema>;
+
+export const TranslationCueSchema = z.strictObject({
+  index: z.number().int(),
+  children: z.unknown(),
+});
+export type TranslationCue = z.infer<typeof TranslationCueSchema>;
+
+/** Paired zh-CN companion track — paragraph-aligned with the transcript
+ * cues; server pairs 1:1 ONLY when counts match, else null. */
+export const TranslationTrackSchema = z.strictObject({
+  language: z.string(),
+  cues: z.array(TranslationCueSchema),
+});
+export type TranslationTrack = z.infer<typeof TranslationTrackSchema>;
 
 export const TranscriptPayloadSchema = z.strictObject({
   session_unit_id: z.string(),
@@ -190,5 +206,6 @@ export const TranscriptPayloadSchema = z.strictObject({
   release_id: z.string(),
   feedback_mode: FeedbackModeSchema,
   materials: z.array(TranscriptMaterialSchema),
+  translation: TranslationTrackSchema.nullable(),
 });
 export type TranscriptPayload = z.infer<typeof TranscriptPayloadSchema>;

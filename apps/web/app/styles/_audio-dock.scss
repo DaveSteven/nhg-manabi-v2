@@ -530,6 +530,17 @@
   background: var(--color-primary-soft);
 }
 
+/* zh companion line under the ja cue (中文对照 switch) */
+.cue-translation {
+  display: block;
+  margin-top: 2px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+
+  p { margin: 0; }
+}
+
 /* ---------------------------------------------------------- states ---- */
 
 .audio-error {

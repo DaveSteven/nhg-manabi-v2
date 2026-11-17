@@ -658,11 +658,33 @@ def get_unit_transcript(
             raise HTTPException(status_code=404, detail="session unit not found")
         _feedback_gate(unit)
         materials = conn.execute(text(
-            "SELECT material_id, kind, language, cues"
+            "SELECT material_id, kind, language, cues,"
+            " translated_from_material_id"
             " FROM release_unit_materials"
             " WHERE release_id = :r AND unit_id = :u"
             "   AND cues IS NOT NULL ORDER BY position"),
             {"r": unit["release_id"], "u": unit["unit_id"]}).mappings().all()
+        # Chinese companion text (converter stores the raw group
+        # `translation` as a unit-level zh-CN explanation). Its paragraph
+        # blocks align with the transcript cues by order; paired 1:1 ONLY
+        # when the counts match — never guessed or padded.
+        translation = None
+        zh = conn.execute(text(
+            "SELECT content FROM release_explanations"
+            " WHERE release_id = :r AND unit_id = :u"
+            "   AND kind = 'translation' AND language = 'zh-CN'"
+            " ORDER BY revision DESC, explanation_id DESC LIMIT 1"),
+            {"r": unit["release_id"], "u": unit["unit_id"]}).scalar()
+        if materials and zh and isinstance(zh, dict):
+            blocks = zh.get("blocks") or []
+            first_cues = materials[0]["cues"] or []
+            if len(blocks) == len(first_cues):
+                translation = {
+                    "language": "zh-CN",
+                    "cues": [{"index": cue["index"],
+                              "children": block.get("children")}
+                             for cue, block in zip(first_cues, blocks)],
+                }
     return {
         "session_unit_id": str(session_unit_id),
         "unit_id": unit["unit_id"],
@@ -671,7 +693,11 @@ def get_unit_transcript(
         "materials": [{
             "material_id": m["material_id"], "kind": m["kind"],
             "language": m["language"], "cues": m["cues"],
+            # pairing field for translated transcripts (canonical-schema:
+            # transcript and its translation are separate materials)
+            "translated_from_material_id": m["translated_from_material_id"],
         } for m in materials],
+        "translation": translation,
     }
 
 

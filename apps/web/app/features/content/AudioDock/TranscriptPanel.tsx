@@ -6,17 +6,21 @@ export type TranscriptViewState =
   | { kind: "loading" }
   | { kind: "error"; message: string }
   | { kind: "empty" }
-  | { kind: "ready"; cues: TranscriptCue[]; language: string | null };
+  | { kind: "ready"; cues: TranscriptCue[]; language: string | null;
+      /** Paired translated cues by index (audio-player: transcript and its
+       * translation are separate Canonical materials). */
+      translationByIndex: Map<number, TranscriptCue> | null };
 
-/** Follow-playback switch (audio-player.md Task 5): token-styled switch,
- * NOT a checkbox. */
-function FollowSwitch({ checked, onChange }: {
+/** Token-styled switch (audio-player.md Task 5) — shared by the follow
+ * and Chinese-translation controls; NOT a checkbox. */
+function PanelSwitch({ checked, label, onChange }: {
   checked: boolean;
+  label: string;
   onChange(next: boolean): void;
 }) {
   return (
     <button type="button" role="switch" aria-checked={checked}
-            className="follow-switch" aria-label="跟随播放"
+            className="follow-switch" aria-label={label}
             onClick={() => onChange(!checked)}>
       <span className="follow-thumb" aria-hidden="true" />
     </button>
@@ -26,17 +30,20 @@ function FollowSwitch({ checked, onChange }: {
 /**
  * Transcript Panel (audio-player.md §3/§5/§6): the in-flow upper half of
  * the floating dock component (shared shadow/radius/background, light
- * divider between panel and control bar). Independent inner scroll,
- * reading width capped and centred; never changes page layout. Follow
- * playback scrolls the active cue into view and pauses itself when the
- * user scrolls (wheel/touch/keyboard), resuming only via the switch.
+ * divider between panel and control bar). Independent inner scroll;
+ * never changes page layout. Follow playback scrolls the active cue into
+ * view and pauses itself when the user scrolls, resuming only via the
+ * switch. 中文对照 shows the paired translated cue under each line when
+ * the release actually contains a translation material — never fabricated.
  */
-export function TranscriptPanel({ id, view, currentTimeMs, follow, onFollowChange, onSeek, onClose, onRetry }: {
+export function TranscriptPanel({ id, view, currentTimeMs, follow, onFollowChange, showZh, onShowZhChange, onSeek, onClose, onRetry }: {
   id: string;
   view: TranscriptViewState;
   currentTimeMs: number;
   follow: boolean;
   onFollowChange(next: boolean): void;
+  showZh: boolean;
+  onShowZhChange(next: boolean): void;
   onSeek(seconds: number): void;
   onClose(): void;
   onRetry(): void;
@@ -49,6 +56,8 @@ export function TranscriptPanel({ id, view, currentTimeMs, follow, onFollowChang
   }, []);
 
   const cues = view.kind === "ready" ? view.cues : [];
+  const hasTranslation = view.kind === "ready"
+    && view.translationByIndex !== null && view.translationByIndex.size > 0;
   const activeIndex = cues.findIndex((c) => cueIsActive(c, currentTimeMs));
 
   // Follow playback: bring the active cue into view.
@@ -81,10 +90,20 @@ export function TranscriptPanel({ id, view, currentTimeMs, follow, onFollowChang
       <header className="transcript-header">
         <h2>听力原文</h2>
         {view.kind === "ready" && cues.length > 0 ? (
-          <span className="transcript-follow">
-            <span className="transcript-follow-label">跟随播放</span>
-            <FollowSwitch checked={follow} onChange={onFollowChange} />
-          </span>
+          <>
+            {hasTranslation ? (
+              <span className="transcript-follow">
+                <span className="transcript-follow-label">中文对照</span>
+                <PanelSwitch checked={showZh} label="中文对照"
+                             onChange={onShowZhChange} />
+              </span>
+            ) : null}
+            <span className="transcript-follow">
+              <span className="transcript-follow-label">跟随播放</span>
+              <PanelSwitch checked={follow} label="跟随播放"
+                           onChange={onFollowChange} />
+            </span>
+          </>
         ) : null}
         <button type="button" className="transcript-close"
                 aria-label="收起原文" onClick={onClose}>
@@ -115,6 +134,10 @@ export function TranscriptPanel({ id, view, currentTimeMs, follow, onFollowChang
             <TranscriptCueItem key={cue.index} cue={cue}
                                active={cueIsActive(cue, currentTimeMs)}
                                currentTimeMs={currentTimeMs}
+                               showZh={showZh}
+                               translation={view.kind === "ready"
+                                 ? view.translationByIndex?.get(cue.index) ?? null
+                                 : null}
                                onSeek={onSeek} />
           ))
         )}

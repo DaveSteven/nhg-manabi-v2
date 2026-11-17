@@ -64,6 +64,18 @@ Panel 做最小改动优化；不触碰 Canonical Schema、音频引擎、提交
   行为本身不变。测试原以 `已保存` 文本等待自动保存完成，改为以 draft 请求发出为信号。
   web 全量 224 passed，容器重建冒烟 200。
 
+## 中文对照 + 交互精简（用户追加要求）
+
+- **中文对照开关**：核实原始数据确认每个听力组的 `translation` 字段是 `<p class="moj-trans">`
+  中文段落列表、与日文字幕段落同序——转换器已把它收为 Unit 级 `release_explanations`
+  （kind='translation', zh-CN），无需改数据管线。transcript 端点在同一权限门控下将其段落块与
+  cues **按序号 1:1 配对**（数量不等则返回 null，绝不猜测/补齐），响应新增 `translation`
+  字段；后端 7 项 transcript 测试含配对、end 模式密封、数量不齐降级。前端「中文对照」Switch
+  仅在存在配对翻译时出现，默认关；开启后每条日文 cue 下方渲染中文行（13px/次要色，白名单
+  RichText 渲染）。
+- **移除「清除本题选择」按钮**（用户要求；换选其它选项仍可改草稿，行为不变），相关样式一并删除。
+- web 225 passed、typecheck/build 通过；后端 169 passed + 2 skipped；api/web 容器重建冒烟 200。
+
 ## 未执行 / 剩余风险
 
 - Firefox/Safari、深色模式、200% 缩放未测（既有缺口）。
