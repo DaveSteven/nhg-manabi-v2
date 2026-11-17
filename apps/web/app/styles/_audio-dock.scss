@@ -37,11 +37,11 @@
   }
 }
 
-/* expanded: small radius on top (panel), capsule on the bottom (bar) */
+/* expanded: small radius on top (panel), circular capsule corners on the
+   bottom bar (height/2). Horizontal=vertical: 999px horizontal radii on a
+   wide bar get flattened by the CSS radius-scaling rule into an ellipse */
 .audio-dock.is-expanded {
   border-radius: var(--transcript-panel-radius) var(--transcript-panel-radius)
-    var(--radius-pill) var(--radius-pill) /
-    var(--transcript-panel-radius) var(--transcript-panel-radius)
     calc(var(--audio-dock-height) / 2) calc(var(--audio-dock-height) / 2);
 }
 
@@ -480,8 +480,6 @@
   flex: 1;
   overflow-y: auto;
   width: 100%;
-  max-width: 800px; /* reading line width, centred (audio-player.md Task 1) */
-  margin: 0 auto;
   padding: var(--space-4) var(--space-6);
   display: flex;
   flex-direction: column;
