@@ -472,3 +472,42 @@ button {
     display: none;
   }
 }
+
+/* Breadcrumb (design-system §3.6): text only, no background */
+.breadcrumb {
+  margin-bottom: var(--space-3);
+  font-size: 14px;
+
+  ol {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  li { display: inline-flex; align-items: center; gap: var(--space-2); }
+
+  a {
+    color: var(--color-text-secondary);
+    text-decoration: none;
+    transition: color var(--motion-fast);
+
+    &:hover { color: var(--color-primary); }
+    &:focus-visible {
+      outline: 2px solid var(--color-primary);
+      outline-offset: 2px;
+      border-radius: 4px;
+    }
+  }
+
+  [aria-current="page"] { color: var(--color-ink); font-weight: 600; }
+}
+
+.breadcrumb-sep { color: var(--color-text-muted); }
+
+@media (prefers-reduced-motion: reduce) {
+  .breadcrumb a { transition: none; }
+}

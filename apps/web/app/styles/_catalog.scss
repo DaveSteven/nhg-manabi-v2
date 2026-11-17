@@ -333,11 +333,15 @@
   gap: var(--space-3);
 }
 
-/* Capsule card (block, full width of its column) */
+/* Capsule card — the standard capsule (design-system §6.5): month chips on the
+   exam list, layer rows and unit rows on the exam detail page. Block-level,
+   fills its column. */
+.capsule-card,
 .exam-chip {
   display: flex;
-  justify-content: flex-start; /* text left-aligned, count pushed to the right */
+  justify-content: flex-start; /* text left-aligned, count/actions pushed right */
   align-items: center;
+  box-sizing: border-box;
   gap: var(--space-2);
   min-height: var(--capsule-height);
   padding: 0 var(--space-6);
@@ -346,10 +350,17 @@
   background: var(--color-surface);
   box-shadow: var(--shadow-card);
   color: var(--color-ink);
+  font: inherit;
   font-weight: 600;
   text-decoration: none;
   transition: border-color var(--motion-fast), color var(--motion-fast),
     transform var(--motion-fast);
+}
+
+/* interactive capsules: link chips and the layer toggle */
+.exam-chip,
+.layer-toggle {
+  cursor: pointer;
 
   &:hover {
     border-color: var(--color-primary);
@@ -357,6 +368,11 @@
     transform: translateY(-1px);
   }
   &:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .capsule-card, .exam-chip { transition: none; }
+  .exam-chip:hover, .layer-toggle:hover { transform: none; }
 }
 
 .exam-chip-count {
@@ -378,9 +394,6 @@
   font-size: 12px;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .exam-chip { transition: none; &:hover { transform: none; } }
-}
 
 .exam-level {
   min-width: 3em;
@@ -408,52 +421,66 @@
 .tabs { overflow-x: auto; margin-bottom: var(--space-4); }
 .tabs [role="tab"] { white-space: nowrap; }
 
-.layer-block {
-  margin-bottom: var(--space-2);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-card);
-  background: var(--color-surface);
-}
+.layer-block { margin-bottom: var(--space-3); }
 
 .layer-toggle {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
   width: 100%;
-  min-height: var(--touch-min);
-  padding: var(--space-2) var(--space-4);
-  border: none;
-  background: none;
-  font: inherit;
-  font-weight: 600;
   text-align: left;
-  cursor: pointer;
 }
+
+.layer-chevron { width: 1em; color: var(--color-text-muted); }
+.layer-toggle:hover .layer-chevron { color: inherit; }
 
 .layer-meta {
   margin-left: auto;
-  font-size: var(--text-aux);
-  font-weight: normal;
-  color: var(--color-text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
+
+.layer-toggle:hover .layer-meta { color: inherit; }
 
 .unit-list {
   list-style: none;
-  margin: 0;
-  padding: 0 var(--space-4) var(--space-3);
+  margin: var(--space-2) 0 0 var(--space-6); /* indented under its layer */
+  padding: 0;
+  display: grid;
+  gap: var(--space-2);
 }
 
+/* unit capsule: label left, count + action right (the button nests in the pill) */
 .unit-row {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--space-3);
-  padding: var(--space-2) 0;
-  border-top: 1px solid var(--color-border);
+  padding: 0 var(--space-3) 0 var(--space-6);
 }
 
-.unit-label { flex: 1; min-width: 8em; }
-.unit-meta { color: var(--color-text-secondary); font-size: var(--text-aux); }
+.unit-label { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.unit-meta {
+  color: var(--color-text-muted);
+  font-size: 13px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.unit-start {
+  min-height: 36px;
+  padding: 0 var(--space-4);
+  border: none;
+  border-radius: var(--radius-pill);
+  background: var(--color-primary);
+  color: #fff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--motion-fast);
+
+  &:hover:not(:disabled) { background: var(--color-primary-hover); }
+  &:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+  &:disabled { opacity: 0.5; cursor: wait; }
+}
 
 .not-available { padding: var(--space-4) var(--space-6); }
 

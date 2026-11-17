@@ -3,6 +3,7 @@ import { useNavigate } from "react-router";
 import type { FeedbackMode } from "../../api/dto/practice";
 import type { ExamOutline, OutlineLayer, OutlineUnit } from "../../api/dto/exam";
 import { Select } from "../../components/select";
+import { Breadcrumb } from "../../components/Breadcrumb";
 import { decorateSections, examTitle, subjectLabel } from "./viewModels";
 import { ActiveSessionConflictDialog } from "../practice/ActiveSessionConflictDialog";
 import {
@@ -64,9 +65,8 @@ export function ExamOutlineView({ outline }: { outline: ExamOutline }) {
 
   return (
     <section aria-label="试卷详情">
-      <p>
-        <a href="/study/exams">返回试卷列表</a>
-      </p>
+      <Breadcrumb items={[{ label: "试卷", to: "/study/exams" },
+                          { label: "详情" }]} />
       <h1>{examTitle(outline)}</h1>
 
       <div className="feedback-mode select-field">
@@ -129,9 +129,13 @@ function LayerBlock({ layer, onStart, starting }: {
   const label = layer.display_label ?? `大题 ${layer.position}`;
   return (
     <div className="layer-block">
-      <button type="button" className="layer-toggle" aria-expanded={expanded}
+      <button type="button" className="layer-toggle capsule-card"
+              aria-expanded={expanded}
               onClick={() => setExpanded((v) => !v)}>
-        {expanded ? "▾" : "▸"} {label}
+        <span className="layer-chevron" aria-hidden="true">
+          {expanded ? "▾" : "▸"}
+        </span>
+        <span className="layer-label">{label}</span>
         <span className="layer-meta">
           {layer.units.length} 组 · {layer.units.reduce((n, u) => n + u.question_count, 0)} 题
         </span>
@@ -139,7 +143,7 @@ function LayerBlock({ layer, onStart, starting }: {
       {expanded ? (
         <ul className="unit-list">
           {layer.units.map((unit) => (
-            <li key={unit.unit_id} className="unit-row">
+            <li key={unit.unit_id} className="unit-row capsule-card">
               <span className="unit-label">{unit.label ?? `${label}-${unit.position}`}</span>
               <span className="unit-meta">{unit.question_count} 题</span>
               <button type="button" className="unit-start"

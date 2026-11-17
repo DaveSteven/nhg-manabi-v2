@@ -1,5 +1,5 @@
 import { beforeAll, afterAll, afterEach, describe, expect, it } from "vitest";
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { ORIGIN, server } from "../../test/mocks/server";
@@ -110,6 +110,34 @@ describe("ExamOutline", () => {
       "/study/exams/E-N2-2018-12",
     );
   }
+
+  it("shows a text breadcrumb 试卷 > 详情 instead of a back link", async () => {
+    useOutlineHandler();
+    renderDetail();
+    const nav = await screen.findByRole("navigation", { name: "面包屑" });
+    // ancestor is a link back to the list; the current page is plain text
+    expect(within(nav).getByRole("link", { name: "试卷" }))
+      .toHaveAttribute("href", "/study/exams");
+    const current = within(nav).getByText("详情");
+    expect(current).toHaveAttribute("aria-current", "page");
+    expect(within(nav).queryByRole("link", { name: "详情" })).not.toBeInTheDocument();
+    expect(screen.queryByText("返回试卷列表")).not.toBeInTheDocument();
+  });
+
+  it("layers and units are standard capsule cards", async () => {
+    const user = userEvent.setup();
+    useOutlineHandler();
+    renderDetail();
+    const toggle = await screen.findByRole("button", { name: /問題1/ });
+    expect(toggle).toHaveClass("capsule-card");
+    await user.click(toggle);
+    const rows = document.querySelectorAll(".unit-row");
+    expect(rows.length).toBeGreaterThan(0);
+    rows.forEach((r) => expect(r).toHaveClass("capsule-card"));
+    // the start action lives inside the unit capsule
+    expect(within(rows[0] as HTMLElement).getByRole("button", { name: "开始练习" }))
+      .toBeInTheDocument();
+  });
 
   it("renders section tabs in server order and switches panels", async () => {
     const user = userEvent.setup();
