@@ -13,15 +13,15 @@ const TYPES = {
     { question_type_id: "vocabulary_kanji_reading", subject: "vocabulary",
       label_zh: "汉字读音", label_ja: "漢字読み", unit_kind: "single",
       is_provisional: false, available_units: 30, available_questions: 30,
-      new_units: 25 },
+      new_units: 25, wrong_units: 0 },
     { question_type_id: "vocabulary_usage", subject: "vocabulary",
       label_zh: "用法", label_ja: "用法", unit_kind: "single",
       is_provisional: false, available_units: 4, available_questions: 4,
-      new_units: 4 },
+      new_units: 4, wrong_units: 2 },
     { question_type_id: "reading_short", subject: "reading",
       label_zh: "内容理解（短篇）", label_ja: "内容理解（短文）",
       unit_kind: "passage", is_provisional: false, available_units: 8,
-      available_questions: 16, new_units: 8 },
+      available_questions: 16, new_units: 8, wrong_units: 0 },
   ],
 };
 const USER = { id: "u1", email: "a@example.com", display_name: "小明",
@@ -86,7 +86,38 @@ describe("TopicPracticeView", () => {
     await user.click(start);
     expect(await screen.findByText("practice page")).toBeInTheDocument();
     expect(body).toEqual({ level: "N2", question_type_id: "vocabulary_kanji_reading",
-      count: 5, feedback_mode: "end" });
+      count: 5, feedback_mode: "end", selection: "smart" });
+  });
+
+  it("offers 只复习最近仍错 only for types that still have wrong units", async () => {
+    authStore.setSession("tok", USER);
+    let body: unknown = null;
+    server.use(
+      http.get("*/api/topic-practice/types", () => HttpResponse.json(TYPES)),
+      http.post("*/api/topic-practice/sessions", async ({ request }) => {
+        body = await request.json();
+        return HttpResponse.json(SESSION, { status: 201 });
+      }));
+    const user = userEvent.setup();
+    renderPage("/study/practice?subject=vocabulary");
+    expect(await screen.findByText(/仍错 2 题/)).toBeInTheDocument();
+    await user.click(await screen.findByLabelText(/汉字读音/));   // 0 wrong
+    expect(screen.getByRole("radio", { name: /只复习最近仍错\s*（暂无）/ })).toBeDisabled();
+    await user.click(screen.getByLabelText(/用法/));               // 2 wrong
+    const wrong = screen.getByRole("radio", { name: /只复习最近仍错\s*（2 题）/ });
+    expect(wrong).toBeEnabled();
+    await user.click(wrong);
+    // the pool shrinks to the still-wrong Units
+    expect(screen.getByRole("spinbutton")).toHaveValue(2);
+    await user.clear(screen.getByRole("spinbutton"));
+    await user.type(screen.getByRole("spinbutton"), "3");
+    expect(screen.getByRole("alert")).toHaveTextContent("当前最多可选 2 题");
+    await user.clear(screen.getByRole("spinbutton"));
+    await user.type(screen.getByRole("spinbutton"), "2");
+    await user.click(screen.getByRole("button", { name: "开始练习" }));
+    expect(await screen.findByText("practice page")).toBeInTheDocument();
+    expect(body).toEqual({ level: "N2", question_type_id: "vocabulary_usage",
+      count: 2, feedback_mode: "immediate", selection: "wrong_only" });
   });
 
   it("blocks starting when the count exceeds what is available", async () => {

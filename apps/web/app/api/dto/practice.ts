@@ -46,6 +46,8 @@ export const PracticeSessionSchema = z.strictObject({
       level: z.enum(["N1", "N2", "N3", "N4", "N5"]),
       question_type_id: z.string(),
       requested_count: z.number().int(),
+      /** Sessions created before 只复习最近仍错 carry no selection. */
+      selection: z.enum(["smart", "wrong_only"]).default("smart"),
     }).optional(),
   }),
   version: z.number().int(),

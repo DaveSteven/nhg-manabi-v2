@@ -14,7 +14,12 @@ export const TopicTypeSchema = z.strictObject({
   available_questions: z.number().int(),
   /** Units the caller has never formally submitted. */
   new_units: z.number().int(),
+  /** Units that still hold a question whose latest valid answer is wrong. */
+  wrong_units: z.number().int(),
 });
+/** smart: new-first + ~25% review; wrong_only: only still-wrong Units. */
+export type TopicSelection = "smart" | "wrong_only";
+
 export type TopicType = z.infer<typeof TopicTypeSchema>;
 
 export const TopicTypesSchema = z.strictObject({

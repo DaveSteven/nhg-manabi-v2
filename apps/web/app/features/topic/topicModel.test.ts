@@ -6,7 +6,7 @@ const t = (over: Partial<TopicType> = {}): TopicType => ({
   question_type_id: "vocabulary_kanji_reading", subject: "vocabulary",
   label_zh: "汉字读音", label_ja: "漢字読み", unit_kind: "single",
   is_provisional: false, available_units: 30, available_questions: 30,
-  new_units: 30, ...over,
+  new_units: 30, wrong_units: 0, ...over,
 });
 
 describe("topicModel", () => {
@@ -22,6 +22,16 @@ describe("topicModel", () => {
     expect(defaultCount(t())).toBe(10);
     expect(defaultCount(t({ available_units: 4 }))).toBe(4);
     expect(maxCount(t({ available_units: 500 }))).toBe(100);
+  });
+
+  it("wrong_only is bounded by the still-wrong pool", () => {
+    const w = t({ wrong_units: 3 });
+    expect(maxCount(w, "wrong_only")).toBe(3);
+    expect(defaultCount(w, "wrong_only")).toBe(3);
+    expect(checkCount(w, 4, "wrong_only"))
+      .toEqual({ ok: false, message: "当前最多可选 3 题" });
+    expect(checkCount(t(), 1, "wrong_only"))
+      .toEqual({ ok: false, message: "当前没有仍错的题" });
   });
 
   it("flags zero, fractional and over-limit counts with the right noun", () => {

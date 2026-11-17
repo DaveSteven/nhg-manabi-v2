@@ -1,4 +1,4 @@
-import type { TopicType } from "../../api/dto/topic";
+import type { TopicSelection, TopicType } from "../../api/dto/topic";
 
 export const TOPIC_SUBJECTS = [
   { key: "vocabulary", label: "文字词汇" },
@@ -24,20 +24,29 @@ export function unitNoun(unitKind: string): string {
 export const MAX_TOPIC_COUNT = 100;
 export const COUNT_PRESETS = [5, 10, 20] as const;
 
-export function maxCount(t: TopicType): number {
-  return Math.min(t.available_units, MAX_TOPIC_COUNT);
+/** wrong_only draws only from Units that are still wrong. */
+export function poolSize(t: TopicType, selection: TopicSelection = "smart"): number {
+  return selection === "wrong_only" ? t.wrong_units : t.available_units;
+}
+
+export function maxCount(t: TopicType, selection: TopicSelection = "smart"): number {
+  return Math.min(poolSize(t, selection), MAX_TOPIC_COUNT);
 }
 
 /** Default draw size: 10 when available, otherwise everything there is. */
-export function defaultCount(t: TopicType): number {
-  return Math.min(10, maxCount(t));
+export function defaultCount(t: TopicType, selection: TopicSelection = "smart"): number {
+  return Math.min(10, maxCount(t, selection));
 }
 
 export type CountCheck = { ok: true } | { ok: false; message: string };
 
-export function checkCount(t: TopicType, raw: number): CountCheck {
+export function checkCount(t: TopicType, raw: number,
+                           selection: TopicSelection = "smart"): CountCheck {
   const noun = unitNoun(t.unit_kind);
-  const max = maxCount(t);
+  const max = maxCount(t, selection);
+  if (max < 1) {
+    return { ok: false, message: `当前没有仍错的${noun}` };
+  }
   if (!Number.isInteger(raw) || raw < 1) {
     return { ok: false, message: `请输入至少 1 ${noun}` };
   }

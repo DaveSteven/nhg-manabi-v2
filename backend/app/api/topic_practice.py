@@ -27,7 +27,8 @@ from app.api.practice import (MAX_SESSION_UNITS, PracticeSessionCreate,
                               SessionUnitRequest, _create_session_tx)
 from app.auth import get_current_user_id
 from app.db.engine import get_engine
-from app.topic_sampling import Candidate, UnitHistory, select_units
+from app.topic_sampling import (Candidate, UnitHistory, select_units,
+                                select_wrong_units)
 
 router = APIRouter()
 
@@ -45,7 +46,9 @@ _CANDIDATES_SQL = (
     " WHERE e.level = :level AND r.state = 'published'"
     "   AND u.conversion_status = 'complete'")
 
-# Formal history only: submitted session units of practice/quick sessions.
+# Formal history only: submitted session units of practice/quick sessions;
+# answered / still-wrong come from the user_question_progress cache (itself
+# derived from submitted answers, drafts never count).
 _HISTORY_SQL = (
     "WITH sub AS ("
     " SELECT er.exam_id, su.unit_id, count(*) AS submitted_count,"
@@ -57,26 +60,46 @@ _HISTORY_SQL = (
     " WHERE s.user_id = :u AND s.mode IN ('practice', 'quick_practice')"
     "   AND su.state = 'submitted' AND e.level = :level"
     " GROUP BY er.exam_id, su.unit_id),"
-    " latest AS ("
-    " SELECT DISTINCT ON (er.exam_id, sa.question_id)"
-    "  er.exam_id, sa.unit_id, sa.is_correct"
-    " FROM study_submitted_answers sa"
-    " JOIN study_session_units su ON su.id = sa.session_unit_id"
-    " JOIN study_sessions s ON s.id = su.session_id"
-    " JOIN exam_releases er ON er.id = sa.release_id"
-    " JOIN exam_catalogs e ON e.id = er.exam_id"
-    " WHERE s.user_id = :u AND s.mode IN ('practice', 'quick_practice')"
-    "   AND sa.chosen_option_id IS NOT NULL AND e.level = :level"
-    " ORDER BY er.exam_id, sa.question_id, sa.submitted_at DESC),"
     " agg AS ("
-    " SELECT exam_id, unit_id, count(*) AS answered,"
-    "  count(*) FILTER (WHERE NOT is_correct) AS latest_wrong"
-    " FROM latest GROUP BY exam_id, unit_id)"
+    " SELECT r.exam_id, q.unit_id,"
+    "  count(*) FILTER (WHERE p.last_valid_result IS NOT NULL) AS answered,"
+    "  count(*) FILTER (WHERE p.last_valid_result IS FALSE) AS latest_wrong"
+    " FROM release_questions q"
+    " JOIN exam_current_releases c ON c.release_id = q.release_id"
+    " JOIN exam_releases r ON r.id = q.release_id"
+    " JOIN exam_catalogs e ON e.id = r.exam_id"
+    " JOIN user_question_progress p"
+    "  ON p.question_id = q.question_id AND p.user_id = :u"
+    " WHERE e.level = :level AND r.state = 'published'"
+    " GROUP BY r.exam_id, q.unit_id)"
     " SELECT sub.exam_id, sub.unit_id, sub.submitted_count, sub.last_at,"
     "  coalesce(agg.answered, 0) AS answered,"
     "  coalesce(agg.latest_wrong, 0) AS latest_wrong"
     " FROM sub LEFT JOIN agg"
     "  ON agg.exam_id = sub.exam_id AND agg.unit_id = sub.unit_id")
+
+
+_WRONG_SQL = (
+    "SELECT u.release_id, u.unit_id, count(*) AS wrong_questions"
+    " FROM release_units u"
+    " JOIN exam_releases r ON r.id = u.release_id"
+    " JOIN exam_current_releases c ON c.release_id = r.id"
+    " JOIN exam_catalogs e ON e.id = r.exam_id"
+    " JOIN release_questions q"
+    "  ON q.release_id = u.release_id AND q.unit_id = u.unit_id"
+    " JOIN user_question_progress p"
+    "  ON p.question_id = q.question_id AND p.user_id = :u"
+    "  AND p.last_valid_result IS FALSE"
+    " WHERE e.level = :level AND r.state = 'published'"
+    "   AND u.conversion_status = 'complete'"
+    " GROUP BY u.release_id, u.unit_id")
+
+
+def _wrong_map(conn, user_id: uuid.UUID, level: str) -> dict:
+    rows = conn.execute(text(_WRONG_SQL),
+                        {"u": user_id, "level": level}).mappings().all()
+    return {(str(r["release_id"]), r["unit_id"]): r["wrong_questions"]
+            for r in rows}
 
 
 def _history_map(conn, user_id: uuid.UUID, level: str) -> dict:
@@ -97,6 +120,7 @@ def list_topic_types(
         cands = conn.execute(text(_CANDIDATES_SQL),
                              {"level": level}).mappings().all()
         history = _history_map(conn, user_id, level)
+        wrong = _wrong_map(conn, user_id, level)
         types = conn.execute(text(
             "SELECT id, subject, label_zh, label_ja, default_unit_kind,"
             " is_provisional FROM question_types ORDER BY subject, id"
@@ -104,12 +128,14 @@ def list_topic_types(
     stats: dict[str, dict] = {}
     for c in cands:
         s = stats.setdefault(c["question_type_id"], {
-            "units": 0, "questions": 0, "new": 0})
+            "units": 0, "questions": 0, "new": 0, "wrong": 0})
         s["units"] += 1
         s["questions"] += c["question_count"]
         h = history.get((c["exam_id"], c["unit_id"]))
         if h is None or h.submitted_count == 0:
             s["new"] += 1
+        if wrong.get((str(c["release_id"]), c["unit_id"]), 0) > 0:
+            s["wrong"] += 1
     return {"level": level, "types": [{
         "question_type_id": t["id"], "subject": t["subject"],
         "label_zh": t["label_zh"], "label_ja": t["label_ja"],
@@ -118,6 +144,7 @@ def list_topic_types(
         "available_units": stats[t["id"]]["units"],
         "available_questions": stats[t["id"]]["questions"],
         "new_units": stats[t["id"]]["new"],
+        "wrong_units": stats[t["id"]]["wrong"],
     } for t in types if t["id"] in stats]}
 
 
@@ -126,6 +153,8 @@ class TopicSessionCreate(BaseModel):
     question_type_id: str
     count: int = Field(ge=1, le=MAX_SESSION_UNITS)
     feedback_mode: Literal["immediate", "end"]
+    # smart = 新题为主兼顾复习；wrong_only = 只复习最近仍错的 Unit
+    selection: Literal["smart", "wrong_only"] = "smart"
 
 
 @router.post("/api/topic-practice/sessions", status_code=201)
@@ -139,6 +168,15 @@ def create_topic_session(
                                          {"level": body.level}).mappings()
                  if c["question_type_id"] == body.question_type_id]
         history = _history_map(conn, user_id, body.level)
+        wrong = (_wrong_map(conn, user_id, body.level)
+                 if body.selection == "wrong_only" else {})
+    if body.selection == "wrong_only":
+        cands = [c for c in cands
+                 if wrong.get((str(c["release_id"]), c["unit_id"]), 0) > 0]
+        if not cands:
+            raise HTTPException(status_code=422, detail={
+                "code": "no_wrong_units",
+                "message": "no still-wrong units for this level and type"})
     if not cands:
         raise HTTPException(status_code=422, detail={
             "code": "no_candidates",
@@ -151,14 +189,17 @@ def create_topic_session(
     pool = [Candidate(str(c["release_id"]), c["unit_id"], c["exam_id"],
                       history.get((c["exam_id"], c["unit_id"])))
             for c in cands]
-    picked = select_units(pool, body.count, datetime.now(timezone.utc),
-                          random.Random())
+    if body.selection == "wrong_only":
+        picked = select_wrong_units(pool, wrong, body.count, random.Random())
+    else:
+        picked = select_units(pool, body.count, datetime.now(timezone.utc),
+                              random.Random())
     create = PracticeSessionCreate(
         feedback_mode=body.feedback_mode,
         units=[SessionUnitRequest(release_id=uuid.UUID(c.release_id),
                                   unit_id=c.unit_id) for c in picked])
     topic = {"kind": "topic", "level": body.level,
              "question_type_id": body.question_type_id,
-             "requested_count": body.count}
+             "requested_count": body.count, "selection": body.selection}
     return _create_session_tx(engine, create, user_id,
                               config_extra={"topic": topic})

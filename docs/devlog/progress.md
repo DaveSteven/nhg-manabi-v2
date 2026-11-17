@@ -114,3 +114,5 @@
 - **专项练习统一反馈整次提交（2026-11-17）**：见 `docs/devlog/2026-11-17-unified-feedback-final-submit.md`。统一反馈会话导航只存草稿，整次通过 `POST /api/practice/sessions/{id}/submit` 一次性事务判题并生成结果（幂等、非法答案整体回滚），逐 Unit 提交接口对该模式拒绝（409）；前端新增连续题目流（上一题/下一题/题号导航，最后一题确认一次）。后端 203 passed + 2 skipped，web 244 passed，typecheck 通过。真实浏览器验收未做。
 
 - **专项练习单一最近进度（2026-11-17，ADR-0016，取代 ADR-0015）**：见 `docs/devlog/2026-11-17-single-recent-session.md`。Alembic 0011 恢复 `ux_one_active_practice`，创建专项/普通练习时同事务把旧进行中会话置 `abandoned` 再创建（失败整体回滚、并发后来者胜、已提交答案与历史保留、未提交草稿不计）；`/current` 即唯一可恢复练习，完成后保存结果；不做多练习列表/清理；Quick/模考不变。后端 205 passed + 2 skipped，web 246 passed，typecheck 通过，迁移 up/down/up（含多会话数据升级）已验证。真实浏览器验收未做。
+
+- **user_question_progress 缓存 + 专项「只复习最近仍错」（2026-11-17）**：见 `docs/devlog/2026-11-17-question-progress-wrong-only.md`。每题缓存在每次正式提交的同一事务内重算（skip 不覆盖最近正误，可由 `rebuild_user_progress` 整体重建），迁移 0012 回填历史（开发库 up/down/up 通过）；专项目录新增 `wrong_units`、创建接口新增 `selection=wrong_only`，配置页与「再练一组」接通。后端 212 passed + 2 skipped，web 257 passed，typecheck/build 通过。真实浏览器验收、容器重建、缓存性能评估未做；错题本/学习历史/统计与严格模拟规则文档尚未开始。

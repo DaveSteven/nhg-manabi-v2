@@ -100,7 +100,8 @@ def test_create_samples_whole_unit_pinned_to_release(pg_engine, published_releas
     assert s["units"][0]["release_id"] == str(published_release)
     assert s["config"]["topic"] == {
         "kind": "topic", "level": "N5",
-        "question_type_id": "grammar_cloze", "requested_count": 1}
+        "question_type_id": "grammar_cloze", "requested_count": 1,
+        "selection": "smart"}
     assert "correct" not in r.text
     # the new session is the ordinary current practice session
     cur = client.get("/api/practice/sessions/current", headers=auth(USER_A))

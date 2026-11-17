@@ -120,6 +120,7 @@ export default function ResultsRoute() {
                     question_type_id: info.topic!.question_type_id,
                     count: info.topic!.requested_count,
                     feedback_mode: info.feedbackMode ?? "immediate",
+                    selection: info.topic!.selection,
                   })}>
             {again.isPending ? "正在抽题…" : "再练一组"}
           </Button>
@@ -133,7 +134,13 @@ export default function ResultsRoute() {
         <p><ButtonLink variant="secondary" to="/study/exams">返回试卷列表</ButtonLink></p>
       )}
       {again.error ? (
-        <p role="alert">无法再练一组：{again.error.message}</p>
+        <p role="alert">
+          {again.error.code === "no_wrong_units"
+            ? "目前没有最近仍错的题了，可返回专项练习重新选择。"
+            : again.error.code === "count_exceeds_available"
+            ? "仍错的题已不足原来的数量，请返回专项练习调整。"
+            : `无法再练一组：${again.error.message}`}
+        </p>
       ) : null}
     </section>
   );

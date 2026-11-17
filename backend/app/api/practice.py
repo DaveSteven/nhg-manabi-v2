@@ -46,6 +46,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app.auth import get_current_user_id
 from app.db.engine import get_engine
+from app.question_progress import refresh_question_progress
 
 router = APIRouter()
 
@@ -596,7 +597,7 @@ def _build_unit_feedback(conn, release_id, unit_id: str,
 
 
 def _judge_and_store_unit(conn, release_id, unit_id: str, session_unit_id,
-                          answer_map: dict) -> None:
+                          answer_map: dict, user_id: uuid.UUID) -> None:
     """Judge every question of one unit and write the formal answers, then
     flip the session unit to 'submitted' — all in the CALLER's transaction.
     Raises HTTPException (422) before writing anything for this unit when
@@ -660,6 +661,9 @@ def _judge_and_store_unit(conn, release_id, unit_id: str, session_unit_id,
         "UPDATE study_session_units SET state = 'submitted',"
         " submitted_at = now() WHERE id = :u AND state = 'pending'"),
         {"u": session_unit_id})
+    # Same transaction: the derived per-question cache never lags the
+    # formal answers (and rolls back with them).
+    refresh_question_progress(conn, user_id, list(questions))
 
 
 @router.post("/api/practice/sessions/{session_id}/units/{session_unit_id}/submit")
@@ -724,7 +728,8 @@ def submit_session_unit(
         if not already:
             _judge_and_store_unit(
                 conn, unit["release_id"], unit["unit_id"], session_unit_id,
-                {a.question_id: a.chosen_option_id for a in body.answers})
+                {a.question_id: a.chosen_option_id for a in body.answers},
+                user_id)
 
         # Quick Practice never lingers as an open session: submitting its
         # single unit IS finishing the session — the aggregate result row
@@ -1088,7 +1093,7 @@ def submit_practice_session(
         for u in units:
             if u["state"] == "pending":
                 _judge_and_store_unit(conn, u["release_id"], u["unit_id"],
-                                      u["id"], by_unit[u["id"]])
+                                      u["id"], by_unit[u["id"]], user_id)
         _complete_session(conn, session_id)
         payload = _session_payload(conn, session_id)
         payload["results"] = _build_results(conn, session_id)

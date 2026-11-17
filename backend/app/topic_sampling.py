@@ -82,3 +82,19 @@ def select_units(candidates: list[Candidate], count: int, now: datetime,
     picked += rng.sample(unseen, n_new)
     rng.shuffle(picked)
     return picked
+
+
+def select_wrong_units(candidates: list[Candidate],
+                       wrong_counts: dict[tuple[str, str], int], count: int,
+                       rng: random.Random | None = None) -> list[Candidate]:
+    """「只复习最近仍错」: whole Units that still hold at least one question
+    whose latest valid answer is wrong. Units with more still-wrong
+    questions are likelier but never certain (weighted, not top-N), and the
+    pool is never padded with units the user has not got wrong."""
+    rng = rng or random.Random()
+    pool = [c for c in candidates if wrong_counts.get((c.release_id, c.unit_id), 0) > 0]
+    count = min(count, len(pool))
+    if count <= 0:
+        return []
+    weights = [float(wrong_counts[(c.release_id, c.unit_id)]) for c in pool]
+    return _weighted_sample(pool, weights, count, rng)

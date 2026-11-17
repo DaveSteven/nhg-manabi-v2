@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
-import type { TopicType } from "../../api/dto/topic";
+import type { TopicSelection, TopicType } from "../../api/dto/topic";
 import { describeLoadError } from "../../api/errors";
 import type { FeedbackMode } from "../../api/dto/practice";
 import { useLevel } from "../auth/useLevel";
@@ -32,6 +32,7 @@ export function TopicPracticeView() {
 
   const [typeId, setTypeId] = useState<string | null>(null);
   const [countText, setCountText] = useState("10");
+  const [selection, setSelection] = useState<TopicSelection>("smart");
   const [feedback, setFeedback] = useState<FeedbackMode>("immediate");
 
   // keep the selection valid when the subject/level/catalog changes
@@ -45,15 +46,24 @@ export function TopicPracticeView() {
     subjectTypes.find((t) => t.question_type_id === typeId);
 
   function pick(t: TopicType) {
+    // a type with nothing still wrong falls back to the smart draw
+    const next = selection === "wrong_only" && t.wrong_units === 0 ? "smart" : selection;
     setTypeId(t.question_type_id);
-    setCountText(String(defaultCount(t)));
+    setSelection(next);
+    setCountText(String(defaultCount(t, next)));
+  }
+
+  function chooseSelection(next: TopicSelection) {
+    if (!selected) return;
+    setSelection(next);
+    setCountText(String(defaultCount(selected, next)));
   }
 
   const start = useStartTopicPractice((s) =>
     navigate(`/study/practice/${encodeURIComponent(s.id)}`));
 
   const count = Number(countText);
-  const check = selected ? checkCount(selected, count) : null;
+  const check = selected ? checkCount(selected, count, selection) : null;
 
   // Starting is always allowed: sessions hold study data, they never gate
   // a new practice: the server abandons the old in-progress one atomically
@@ -61,12 +71,14 @@ export function TopicPracticeView() {
   function begin() {
     if (!selected || !level || !check?.ok) return;
     start.mutate({ level, question_type_id: selected.question_type_id, count,
-                   feedback_mode: feedback });
+                   feedback_mode: feedback, selection });
   }
 
   const startError = start.error
     ? (start.error.code === "count_exceeds_available"
         ? "可选数量已变化，请调整后重试。"
+        : start.error.code === "no_wrong_units"
+        ? "目前没有最近仍错的题了。"
         : `无法开始练习：${start.error.message}`)
     : null;
 
@@ -115,6 +127,7 @@ export function TopicPracticeView() {
                     <span className="topic-type-ja" lang="ja">{t.label_ja}</span>
                     <span className="topic-type-meta">
                       共 {t.available_units} {noun} · 未练习 {t.new_units} {noun}
+                      {t.wrong_units > 0 ? ` · 仍错 ${t.wrong_units} ${noun}` : ""}
                     </span>
                   </label>
                 );
@@ -125,12 +138,31 @@ export function TopicPracticeView() {
           {selected ? (
             <div className="card topic-config" aria-label="练习设置">
               <h2 className="module-title">{selected.label_zh}</h2>
+              <div className="topic-field" role="radiogroup" aria-label="出题范围">
+                <span className="topic-field-label">出题范围</span>
+                <label className="topic-feedback-option">
+                  <input type="radio" name="topic-selection"
+                         checked={selection === "smart"}
+                         onChange={() => chooseSelection("smart")} />
+                  智能抽题（新题为主，兼顾复习）
+                </label>
+                <label className="topic-feedback-option">
+                  <input type="radio" name="topic-selection"
+                         checked={selection === "wrong_only"}
+                         disabled={selected.wrong_units === 0}
+                         onChange={() => chooseSelection("wrong_only")} />
+                  只复习最近仍错
+                  （{selected.wrong_units > 0
+                    ? `${selected.wrong_units} ${unitNoun(selected.unit_kind)}`
+                    : "暂无"}）
+                </label>
+              </div>
               <div className="topic-field">
                 <label htmlFor="topic-count">
                   数量（{unitNoun(selected.unit_kind)}）
                 </label>
                 <div className="topic-count">
-                  {COUNT_PRESETS.filter((n) => n <= maxCount(selected)).map((n) => (
+                  {COUNT_PRESETS.filter((n) => n <= maxCount(selected, selection)).map((n) => (
                     <button key={n} type="button"
                             aria-pressed={count === n}
                             onClick={() => setCountText(String(n))}>
@@ -138,14 +170,14 @@ export function TopicPracticeView() {
                     </button>
                   ))}
                   <input id="topic-count" type="number" inputMode="numeric"
-                         min={1} max={maxCount(selected)} value={countText}
+                         min={1} max={maxCount(selected, selection)} value={countText}
                          onChange={(e) => setCountText(e.target.value)} />
                 </div>
                 <p className={check?.ok ? "text-aux" : "text-aux topic-warn"}
                    role={check?.ok ? undefined : "alert"}>
                   {check && !check.ok
                     ? check.message
-                    : `可选 1–${maxCount(selected)} ${unitNoun(selected.unit_kind)}`}
+                    : `可选 1–${maxCount(selected, selection)} ${unitNoun(selected.unit_kind)}`}
                 </p>
               </div>
 

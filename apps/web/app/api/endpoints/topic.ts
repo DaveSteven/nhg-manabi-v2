@@ -2,7 +2,7 @@ import { apiFetch } from "../client";
 import { parseDto } from "../dto/exam";
 import { CreateSessionResponseSchema, type FeedbackMode,
          type PracticeSession } from "../dto/practice";
-import { TopicTypesSchema, type TopicTypes } from "../dto/topic";
+import { TopicTypesSchema, type TopicSelection, type TopicTypes } from "../dto/topic";
 import type { JlptLevel } from "./auth";
 
 export function getTopicTypes(level: JlptLevel,
@@ -17,6 +17,8 @@ export interface CreateTopicSessionInput {
   question_type_id: string;
   count: number;
   feedback_mode: FeedbackMode;
+  /** smart (default): new-first + review; wrong_only: still-wrong Units. */
+  selection?: TopicSelection;
 }
 
 /** The server samples the Units; the client only sends the configuration. */
