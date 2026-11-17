@@ -62,6 +62,16 @@
     accent-color: var(--color-primary);
     width: 18px;
     height: 18px;
+    flex: none;
+  }
+
+  /* option text renders through .richtext > p; the global p margin-bottom
+     made the text block taller than the radio and broke vertical centring */
+  .richtext {
+    flex: 1;
+    min-width: 0;
+
+    p { margin: 0; }
   }
 }
 

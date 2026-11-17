@@ -52,6 +52,12 @@ Panel 做最小改动优化；不触碰 Canonical Schema、音频引擎、提交
   `audio-player.md` §3.3 同步。截图复验：底部正圆弧、正文满宽。20 测试、build 通过，
   web 容器重建冒烟 200。
 
+## 选项对齐修复（用户截图反馈）
+
+- 选项行 radio 与文字不水平居中：选项文字经 `.richtext > p` 渲染，全局 `p { margin-bottom: 12px }`
+  把文字块撑高、相对 radio 偏上。`.option-row .richtext p { margin: 0 }` 修复，radio 加
+  `flex: none`。web 全量 224 passed、build 通过，容器重建冒烟 200。
+
 ## 未执行 / 剩余风险
 
 - Firefox/Safari、深色模式、200% 缩放未测（既有缺口）。
