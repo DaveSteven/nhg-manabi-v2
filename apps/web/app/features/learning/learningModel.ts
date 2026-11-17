@@ -32,4 +32,14 @@ export function formatDate(iso: string): string {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 
-export const PAGE_SIZE = 20;
+export const PAGE_SIZE = 10;
+
+/** Semantic tone for an answered-accuracy value (statuses keep their own
+ * colors, design-system §2.3). null (“—”) stays neutral, never red. */
+export type AccuracyTone = "good" | "mid" | "bad" | "none";
+export function accuracyTone(ratio: number | null): AccuracyTone {
+  if (ratio === null) return "none";
+  if (ratio >= 0.8) return "good";
+  if (ratio >= 0.6) return "mid";
+  return "bad";
+}

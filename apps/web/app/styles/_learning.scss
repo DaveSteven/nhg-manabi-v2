@@ -71,3 +71,113 @@
 }
 
 .learning-pager { display: flex; align-items: center; justify-content: center; gap: var(--space-3); }
+
+/* ---- colour (design-system §2.3: subject accents are small-area, low
+   saturation; result/status colours stay independent of the sakura brand) -- */
+[data-subject="vocabulary"] { --subj: var(--accent-sakura);   --subj-soft: var(--accent-sakura-soft); }
+[data-subject="grammar"]    { --subj: var(--accent-lavender); --subj-soft: var(--accent-lavender-soft); }
+[data-subject="reading"]    { --subj: var(--accent-matcha);   --subj-soft: var(--accent-matcha-soft); }
+[data-subject="listening"]  { --subj: var(--accent-apricot);  --subj-soft: var(--accent-apricot-soft); }
+
+.subject-chip {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.6;
+  background: var(--subj-soft, var(--color-surface-subtle));
+  color: var(--subj, var(--color-text-secondary));
+}
+
+.pill {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.6;
+  font-variant-numeric: tabular-nums;
+  &.pill-success { background: color-mix(in srgb, var(--color-success) 12%, white); color: var(--color-success); }
+  &.pill-danger  { background: color-mix(in srgb, var(--color-danger) 11%, white);  color: var(--color-danger); }
+  &.pill-muted   { background: var(--color-surface-subtle); color: var(--color-text-secondary); }
+}
+
+.acc { font-weight: 600; font-variant-numeric: tabular-nums; }
+.acc-good { color: var(--color-success); }
+.acc-mid  { color: var(--color-warning); }
+.acc-bad  { color: var(--color-danger); }
+.acc-none { color: var(--color-text-muted); }
+
+.source-chip {
+  display: inline-block;
+  margin-right: var(--space-2);
+  padding: 1px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 13px;
+  font-weight: 600;
+  &.source-topic { background: var(--accent-sakura-soft);   color: var(--accent-sakura); }
+  &.source-quick { background: var(--accent-lavender-soft); color: var(--accent-lavender); }
+  &.source-exam  { background: var(--accent-apricot-soft);  color: var(--accent-apricot); }
+}
+
+.learning-meta, .learning-counts { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+
+/* stat cards: tinted surface + accent top edge + accent value */
+.learning-stat {
+  border-top: 3px solid var(--tone);
+  background: linear-gradient(180deg, var(--tone-soft), var(--color-surface) 70%);
+  .learning-stat-value { color: var(--tone); }
+  &.tone-matcha   { --tone: var(--accent-matcha);   --tone-soft: var(--accent-matcha-soft); }
+  &.tone-lavender { --tone: var(--accent-lavender); --tone-soft: var(--accent-lavender-soft); }
+  &.tone-sakura   { --tone: var(--accent-sakura);   --tone-soft: var(--accent-sakura-soft); }
+  &.tone-apricot  { --tone: var(--accent-apricot);  --tone-soft: var(--accent-apricot-soft); }
+}
+
+.coverage-cell { display: flex; align-items: center; gap: var(--space-3); min-width: 160px; }
+.coverage-bar {
+  flex: 1;
+  height: 8px;
+  border-radius: var(--radius-pill);
+  background: var(--subj-soft, var(--color-surface-subtle));
+  overflow: hidden;
+  > span { display: block; height: 100%; border-radius: inherit; background: var(--subj, var(--color-primary)); }
+}
+
+/* weak types / records: a subject-coloured edge on each row */
+.learning-row[data-subject] { box-shadow: inset 3px 0 0 var(--subj); padding-left: var(--space-3); }
+.learning-title { display: flex; align-items: center; flex-wrap: wrap; }
+
+.learning-chip.is-selected { color: var(--color-primary); font-weight: 600; }
+
+/* numbered pagination */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+.pagination-total { color: var(--color-text-secondary); font-size: 14px; }
+.pagination-controls { display: flex; align-items: center; gap: var(--space-2); }
+.pagination-pages { display: flex; align-items: center; gap: var(--space-1); list-style: none; margin: 0; padding: 0; }
+.pagination-gap { padding: 0 var(--space-1); color: var(--color-text-muted); }
+.pagination-page {
+  appearance: none;
+  min-width: 36px;
+  height: 36px;
+  padding: 0 var(--space-2);
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  background: none;
+  color: var(--color-ink);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: background var(--motion-fast), border-color var(--motion-fast);
+
+  &:hover { border-color: var(--color-primary); }
+  &:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+  &[aria-current="page"] { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+}
+@media (max-width: 560px) { .pagination { justify-content: center; } }

@@ -6,9 +6,10 @@ import { useAuth } from "../auth/authStore";
 import { useLevel } from "../auth/useLevel";
 import { useQuickPracticeStart } from "../practice/useStartPractice";
 import { Button, ButtonLink } from "../../components/Button";
+import { Pagination } from "../../components/Pagination";
 import { useHistory, useOverview, useQuestionRecords } from "./useLearning";
-import { LEARNING_TABS, PAGE_SIZE, RECORD_FILTERS, SUBJECT_LABEL, formatDate,
-         formatPercent, isLearningTab, type LearningTab } from "./learningModel";
+import { LEARNING_TABS, PAGE_SIZE, RECORD_FILTERS, SUBJECT_LABEL, accuracyTone,
+         formatDate, formatPercent, isLearningTab, type LearningTab } from "./learningModel";
 
 /**
  * 我的学习 `/study/learning` (page-structure.md「我的学习」): three flat tabs.
@@ -42,9 +43,13 @@ export function LearningView() {
   );
 }
 
-function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
+type StatTone = "matcha" | "lavender" | "sakura" | "apricot";
+
+function Stat({ label, value, hint, tone }: {
+  label: string; value: string; hint?: string; tone: StatTone;
+}) {
   return (
-    <div className="card learning-stat">
+    <div className={`card learning-stat tone-${tone}`}>
       <span className="text-aux">{label}</span>
       <strong className="learning-stat-value">{value}</strong>
       {hint ? <span className="text-aux">{hint}</span> : null}
@@ -72,13 +77,13 @@ function OverviewTab({ level }: { level: ReturnType<typeof useLevel>["level"] })
   return (
     <div className="learning-overview">
       <div className="learning-stats">
-        <Stat label="已作答正确率" value={formatPercent(t.answered_accuracy)}
+        <Stat tone="matcha" label="已作答正确率" value={formatPercent(t.answered_accuracy)}
               hint={`答对 ${t.correct} / 答错 ${t.wrong}（未答不计入）`} />
-        <Stat label={`${scope}覆盖率`} value={formatPercent(o.coverage.ratio)}
+        <Stat tone="lavender" label={`${scope}覆盖率`} value={formatPercent(o.coverage.ratio)}
               hint={`已练 ${o.coverage.practiced_questions} / 共 ${o.coverage.total_questions} 题`} />
-        <Stat label="最近仍错" value={String(t.still_wrong_questions)}
+        <Stat tone="sakura" label="最近仍错" value={String(t.still_wrong_questions)}
               hint="最近一次有效作答为错的题" />
-        <Stat label="完成练习" value={String(t.completed_sessions)}
+        <Stat tone="apricot" label="完成练习" value={String(t.completed_sessions)}
               hint={t.last_practiced_at
                 ? `全部等级 · 最近 ${formatDate(t.last_practiced_at)}` : "全部等级"} />
       </div>
@@ -92,11 +97,23 @@ function OverviewTab({ level }: { level: ReturnType<typeof useLevel>["level"] })
           </thead>
           <tbody>
             {o.by_subject.map((s) => (
-              <tr key={s.subject}>
-                <th scope="row">{SUBJECT_LABEL[s.subject]}</th>
-                <td>{s.practiced_questions} / {s.total_questions}</td>
-                <td>{formatPercent(s.accuracy)}</td>
-                <td>{s.still_wrong}</td>
+              <tr key={s.subject} data-subject={s.subject}>
+                <th scope="row">
+                  <span className="subject-chip">{SUBJECT_LABEL[s.subject]}</span>
+                </th>
+                <td>
+                  <div className="coverage-cell">
+                    <span className="coverage-bar" aria-hidden="true">
+                      <span style={{ width: `${s.total_questions
+                        ? Math.max(2, (s.practiced_questions / s.total_questions) * 100) : 0}%` }} />
+                    </span>
+                    <span>{s.practiced_questions} / {s.total_questions}</span>
+                  </div>
+                </td>
+                <td><span className={`acc acc-${accuracyTone(s.accuracy)}`}>
+                  {formatPercent(s.accuracy)}</span></td>
+                <td>{s.still_wrong > 0
+                  ? <span className="pill pill-danger">{s.still_wrong}</span> : 0}</td>
               </tr>
             ))}
           </tbody>
@@ -112,12 +129,15 @@ function OverviewTab({ level }: { level: ReturnType<typeof useLevel>["level"] })
         ) : (
           <ul className="learning-list">
             {o.weak_types.map((w) => (
-              <li key={w.question_type_id} className="learning-row">
+              <li key={w.question_type_id} className="learning-row" data-subject={w.subject}>
                 <div>
                   <strong>{w.label_zh}</strong>
-                  <span className="text-aux">
-                    {SUBJECT_LABEL[w.subject]} · 正确率 {formatPercent(w.accuracy)}
-                    （{w.attempts} 次有效作答，答错 {w.wrong}）
+                  <span className="text-aux learning-meta">
+                    <span className="subject-chip">{SUBJECT_LABEL[w.subject]}</span>
+                    <span className={`acc acc-${accuracyTone(w.accuracy)}`}>
+                      正确率 {formatPercent(w.accuracy)}
+                    </span>
+                    <span>{w.attempts} 次有效作答，答错 {w.wrong}</span>
                   </span>
                 </div>
                 <ButtonLink variant="secondary"
@@ -134,21 +154,12 @@ function OverviewTab({ level }: { level: ReturnType<typeof useLevel>["level"] })
 }
 
 const RESULT_LABEL = { wrong: "最近答错", correct: "最近答对", none: "—" } as const;
+const RESULT_PILL = { wrong: "pill-danger", correct: "pill-success", none: "pill-muted" } as const;
+const SOURCE_LABEL = { topic: "专项", quick: "快速", exam: "试卷" } as const;
 
-function Pager({ page, total, onPage }: {
-  page: number; total: number; onPage: (p: number) => void;
-}) {
-  const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  if (pages <= 1) return null;
-  return (
-    <div className="learning-pager">
-      <Button variant="secondary" disabled={page === 0}
-              onClick={() => onPage(page - 1)}>上一页</Button>
-      <span className="text-aux">第 {page + 1} / {pages} 页</span>
-      <Button variant="secondary" disabled={page + 1 >= pages}
-              onClick={() => onPage(page + 1)}>下一页</Button>
-    </div>
-  );
+/** After a page change the list is replaced; bring its top back into view. */
+function scrollToTop() {
+  window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 function HistoryTab() {
@@ -170,17 +181,23 @@ function HistoryTab() {
         {q.data.items.map((h) => (
           <li key={h.session_id} className="learning-row">
             <div>
-              <strong>
-                {h.source.kind === "topic" ? "专项 · " : h.source.kind === "quick" ? "快速 · " : ""}
+              <strong className="learning-title">
+                <span className={`source-chip source-${h.source.kind}`}>
+                  {SOURCE_LABEL[h.source.kind]}
+                </span>
                 {h.source.label ?? "练习"}
               </strong>
               <span className="text-aux">
                 {formatDate(h.happened_at)}{h.level ? ` · ${h.level}` : ""}
                 {h.state === "ended_early" ? " · 提前结束" : ""}
               </span>
-              <span className="text-aux">
-                答对 {h.correct} · 答错 {h.wrong} · 未答 {h.skipped}
-                （已作答正确率 {formatPercent(h.answered_accuracy)}）
+              <span className="learning-counts">
+                <span className="pill pill-success">答对 {h.correct}</span>
+                <span className="pill pill-danger">答错 {h.wrong}</span>
+                <span className="pill pill-muted">未答 {h.skipped}</span>
+                <span className={`acc acc-${accuracyTone(h.answered_accuracy)}`}>
+                  已作答正确率 {formatPercent(h.answered_accuracy)}
+                </span>
               </span>
             </div>
             {h.has_result ? (
@@ -192,7 +209,8 @@ function HistoryTab() {
           </li>
         ))}
       </ul>
-      <Pager page={page} total={q.data.total} onPage={setPage} />
+      <Pagination page={page} total={q.data.total} pageSize={PAGE_SIZE}
+                  onPage={(p) => { setPage(p); scrollToTop(); }} />
     </>
   );
 }
@@ -231,17 +249,22 @@ function RecordsTab({ level }: { level: ReturnType<typeof useLevel>["level"] }) 
           <>
             <ul className="learning-list card">
               {q.data.items.map((r) => (
-                <li key={r.question_id} className="learning-row">
+                <li key={r.question_id} className="learning-row" data-subject={r.subject}>
                   <div>
                     <strong>{r.exam_title}</strong>
                     <span className="text-aux">
                       {[r.layer_label, r.printed_number
                         ? `第 ${r.printed_number.replace(/^0+(?=\d)/, "")} 题` : null]
                         .filter(Boolean).join(" · ")}
-                      {" · "}{r.question_type_label}
                     </span>
-                    <span className="text-aux">
-                      {RESULT_LABEL[r.last_result]} · 作答 {r.attempt_count} 次，答错 {r.wrong_count} 次
+                    <span className="learning-meta">
+                      <span className="subject-chip">{r.question_type_label}</span>
+                      <span className={`pill ${RESULT_PILL[r.last_result]}`}>
+                        {RESULT_LABEL[r.last_result]}
+                      </span>
+                      <span className="text-aux">
+                        作答 {r.attempt_count} 次，答错 {r.wrong_count} 次
+                      </span>
                     </span>
                   </div>
                   <Button variant="secondary" disabled={start.isPending}
@@ -253,7 +276,8 @@ function RecordsTab({ level }: { level: ReturnType<typeof useLevel>["level"] }) 
               ))}
             </ul>
             {start.error ? <p role="alert">无法开始练习：{start.error.message}</p> : null}
-            <Pager page={page} total={q.data.total} onPage={setPage} />
+            <Pagination page={page} total={q.data.total} pageSize={PAGE_SIZE}
+                        onPage={(p) => { setPage(p); scrollToTop(); }} />
           </>
         )}
     </>

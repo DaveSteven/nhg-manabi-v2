@@ -124,7 +124,8 @@ describe("LearningView", () => {
           source: { kind: "exam", label: "2018年12月 N2" }, correct: 0, wrong: 1,
           total: 2, has_result: false }] })));
     renderPage("/study/learning?tab=history");
-    expect(await screen.findByText(/专项 · 文法填空/)).toBeInTheDocument();
+    expect(await screen.findByText("文法填空")).toBeInTheDocument();
+    expect(screen.getByText("专项")).toBeInTheDocument();
     expect(screen.getByText(/提前结束/)).toBeInTheDocument();
     const links = screen.getAllByRole("link", { name: "查看结果" });
     expect(links).toHaveLength(1);
@@ -149,8 +150,10 @@ describe("LearningView", () => {
     const user = userEvent.setup();
     renderPage("/study/learning?tab=records");
     expect(await screen.findByText("2018年12月 N2")).toBeInTheDocument();
-    expect(screen.getByText(/問題7 · 第 3 题 · 文法填空/)).toBeInTheDocument();
-    expect(screen.getByText(/最近答错 · 作答 2 次，答错 1 次/)).toBeInTheDocument();
+    expect(screen.getByText("問題7 · 第 3 题")).toBeInTheDocument();
+    expect(screen.getByText("文法填空")).toBeInTheDocument();
+    expect(screen.getByText("最近答错")).toBeInTheDocument();
+    expect(screen.getByText(/作答 2 次，答错 1 次/)).toBeInTheDocument();
     expect(seen[0]).toBe("still_wrong|N2");               // default: 最近仍错
     await user.click(screen.getByRole("radio", { name: "曾经答错" }));
     await screen.findByText("2018年12月 N2");
@@ -166,6 +169,28 @@ describe("LearningView", () => {
       HttpResponse.json({ filter: "still_wrong", total: 0, items: [] })));
     renderPage("/study/learning?tab=records");
     expect(await screen.findByText("目前没有最近仍错的题。")).toBeInTheDocument();
+  });
+
+  it("history paginates 10 per page with a total and page numbers", async () => {
+    authStore.setSession("tok", USER);
+    const calls: string[] = [];
+    const mk = (n: number) => ({ feedback_mode: "end", happened_at: "2026-11-17T10:00:00+00:00",
+      level: "N2", exam_id: "e1", skipped: 0, answered_accuracy: 1, session_id: `s-${n}`,
+      mode: "practice", state: "completed", source: { kind: "exam", label: `试卷${n}` },
+      correct: 1, wrong: 0, total: 1, has_result: true });
+    server.use(http.get("*/api/me/learning/history", ({ request }) => {
+      const u = new URL(request.url);
+      calls.push(`${u.searchParams.get("limit")}@${u.searchParams.get("offset")}`);
+      const off = Number(u.searchParams.get("offset"));
+      return HttpResponse.json({ total: 25, items: [mk(off + 1)] });
+    }));
+    const user = userEvent.setup();
+    renderPage("/study/learning?tab=history");
+    expect(await screen.findByText("试卷1")).toBeInTheDocument();
+    expect(screen.getByText("共 25 条")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "第 3 页" }));
+    expect(await screen.findByText("试卷21")).toBeInTheDocument();
+    expect(calls).toEqual(["10@0", "10@20"]);
   });
 
   it("shows an alert when a tab fails to load", async () => {
