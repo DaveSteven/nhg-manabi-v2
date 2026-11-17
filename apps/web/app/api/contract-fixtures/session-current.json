@@ -23,6 +23,7 @@
         "id": "3dcb354c-49df-4cba-89b6-60bd014dcdb8",
         "position": 1,
         "release_id": "606352bc-845d-4019-84b2-6a65def6c1be",
+        "exam_id": "JLPTGO-N2-E2E-EX",
         "state": "pending",
         "submitted_at": null,
         "unit_id": "JLPTGO-N2-E2E-EX-ly-01-u01"
@@ -31,6 +32,7 @@
         "id": "057e9bcd-f385-4381-be2e-8bd15773ba1f",
         "position": 2,
         "release_id": "606352bc-845d-4019-84b2-6a65def6c1be",
+        "exam_id": "JLPTGO-N2-E2E-EX",
         "state": "pending",
         "submitted_at": null,
         "unit_id": "JLPTGO-N2-E2E-EX-ly-02-u01"

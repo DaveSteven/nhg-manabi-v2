@@ -11,6 +11,7 @@ import { useDraftManager } from "./useDraftManager";
 import { useSubmitUnit } from "./useSubmitUnit";
 import { useFeedback } from "./useFeedback";
 import { useFinishSession } from "./useStartPractice";
+import { PracticeBreadcrumb } from "./PracticeBreadcrumb";
 import { DraftConflictDialog, UnansweredConfirmDialog } from "./SubmitDialogs";
 import { clearSessionPendingRetries, loadPendingRetries } from "./pendingRetries";
 
@@ -163,6 +164,8 @@ export function PracticePage({ sessionId }: { sessionId: string }) {
   return (
     <div className="practice-shell">
       <main className="container">
+        <PracticeBreadcrumb current="练习"
+                            examId={session.units[0]?.exam_id ?? null} />
         <header className="practice-header">
           <h1>
             练习 · {vm.label ?? `组 ${vm.position}`}

@@ -66,7 +66,7 @@ const createdSession = {
   version: 1,
   created_at: "2026-11-16T00:00:00+00:00",
   ended_at: null,
-  units: [{ id: "su-1", release_id: "r-uuid-1", unit_id: "u-v1", position: 1,
+  units: [{ id: "su-1", release_id: "r-uuid-1", exam_id: "E-N2-2018-12", unit_id: "u-v1", position: 1,
             state: "pending", submitted_at: null }],
   units_meta: [{ release_id: "r-uuid-1", unit_id: "u-v1", layer_id: "ly-v1",
                  question_type_id: "vocabulary_kanji_reading", exam_id: "E",

@@ -78,9 +78,14 @@ def _session_payload(conn, session_id: uuid.UUID) -> dict | None:
         {"s": session_id}).mappings().first()
     if head is None:
         return None
+    # exam_id comes from the unit's own (possibly superseded) release, so a
+    # session pinned to an old release still knows which exam it belongs to
     units = conn.execute(text(
-        "SELECT id, release_id, unit_id, position, state, submitted_at"
-        " FROM study_session_units WHERE session_id = :s ORDER BY position"),
+        "SELECT su.id, su.release_id, su.unit_id, su.position, su.state,"
+        " su.submitted_at, r.exam_id"
+        " FROM study_session_units su"
+        " JOIN exam_releases r ON r.id = su.release_id"
+        " WHERE su.session_id = :s ORDER BY su.position"),
         {"s": session_id}).mappings().all()
     return {
         "id": str(head["id"]), "mode": head["mode"],
@@ -92,7 +97,7 @@ def _session_payload(conn, session_id: uuid.UUID) -> dict | None:
         "units": [{
             "id": str(u["id"]), "release_id": str(u["release_id"]),
             "unit_id": u["unit_id"], "position": u["position"],
-            "state": u["state"],
+            "exam_id": u["exam_id"], "state": u["state"],
             "submitted_at": (u["submitted_at"].isoformat()
                              if u["submitted_at"] else None),
         } for u in units],

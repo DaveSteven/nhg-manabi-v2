@@ -68,6 +68,8 @@ def test_create_session_pins_release_and_orders_units(
     # random practice later relies on this).
     assert all(u["release_id"] == published_release
                for u in session["units"])
+    # ... and carries its exam, so UI breadcrumbs can link back to the detail page
+    assert all(u["exam_id"] == EXAM_ID for u in session["units"])
     assert [m["unit_id"] for m in session["units_meta"]] == [
         CLOZE_UNIT, SINGLE_UNIT]
     assert session["units_meta"][0]["question_count"] == 2
@@ -112,6 +114,9 @@ def test_resume_current_and_by_id(pg_engine, published_release, monkeypatch):
                        headers=auth(USER_A))
     assert by_id.status_code == 200
     assert by_id.json()["units"] == created["units"]
+    # exam_id is present on every read path, not only on create
+    assert all(u["exam_id"] == EXAM_ID for u in by_id.json()["units"])
+    assert all(u["exam_id"] == EXAM_ID for u in current.json()["units"])
 
 
 @requires_db

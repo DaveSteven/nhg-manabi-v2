@@ -16,3 +16,9 @@
 ## 未做 / 风险
 - 面包屑目前只用在试卷详情页；练习页与结果页是否加（如 `试卷 › 详情 › 练习`）未做——这两页拿不到试卷标题/路径，需要先决定数据来源。
 - 窄屏下练习组胶囊内「名称 + 题数 + 开始练习」的拥挤情况未实测（名称允许换行）；深色模式未测；展开箭头沿用字符 ▸/▾，未改成 SVG。
+
+## 续：练习页与结果页加面包屑（同日，用户指示「也加上」）
+- **后端**：会话各 Unit 的载荷新增 `exam_id`（`_session_payload` 通过 Unit 自己的 release 关联 `exam_releases.exam_id`），所以即使会话固定在已被新版本取代的旧 release，也能知道所属试卷；create/get/current/finish 都带上。`test_practice_sessions` 断言创建、恢复、按 id 读取三条路径都有 `exam_id`。无 Alembic 迁移（只读联表）。
+- **前端**：`SessionUnitSchema` 增加 `exam_id`；契约夹具与各测试 mock 同步；新增 `PracticeBreadcrumb` 与 `useSessionExamId`。练习页：`试卷 › 详情 › 练习`；结果页（含「提前结束」「尚未完成」状态）：`试卷 › 详情 › 结果`；会话读不到时省略「详情」。
+- 测试：后端 162 passed + 2 skipped；前端新增 4 例（练习页面包屑与 详情 链接、结果页含详情、会话 404 时省略详情、提前结束页也有面包屑），vitest **24 文件 / 211 passed**；typecheck、build 通过。容器内浏览器：从试卷详情开始「問題1-1」，练习页面包屑为 `试卷 › 详情 › 练习`，链接分别为 `/study/exams` 与 `/study/exams/JLPTGO-N2-2025-12`。
+- 未在浏览器里查看：结果页与提前结束页的面包屑（仅单元测试覆盖）；窄屏。

@@ -27,6 +27,7 @@ const session = {
     {
       id: "su-1",
       release_id: "r-uuid",
+      exam_id: "JLPTGO-N2-2018-12",
       unit_id: "u01",
       position: 1,
       state: "pending",
@@ -35,6 +36,7 @@ const session = {
     {
       id: "su-2",
       release_id: "r-uuid",
+      exam_id: "JLPTGO-N2-2018-12",
       unit_id: "u02",
       position: 2,
       state: "submitted",

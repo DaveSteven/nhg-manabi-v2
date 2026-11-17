@@ -18,6 +18,8 @@ export type SessionState = z.infer<typeof SessionStateSchema>;
 export const SessionUnitSchema = z.strictObject({
   id: z.string(),
   release_id: z.string(),
+  /** The exam this unit's (pinned) release belongs to — for breadcrumbs. */
+  exam_id: z.string(),
   unit_id: z.string(),
   position: z.number().int(),
   state: z.enum(["pending", "submitted"]),

@@ -18,9 +18,9 @@ const session = {
   created_at: "2026-11-16T00:00:00+00:00",
   ended_at: null,
   units: [
-    { id: "su-1", release_id: "r", unit_id: "u01", position: 1,
+    { id: "su-1", release_id: "r", exam_id: "N2-2024-12", unit_id: "u01", position: 1,
       state: "submitted", submitted_at: "x" },
-    { id: "su-2", release_id: "r", unit_id: "u02", position: 2,
+    { id: "su-2", release_id: "r", exam_id: "N2-2024-12", unit_id: "u02", position: 2,
       state: "pending", submitted_at: null },
   ],
 };
