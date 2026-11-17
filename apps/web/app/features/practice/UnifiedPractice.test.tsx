@@ -97,13 +97,13 @@ function mount() {
 }
 
 describe("统一反馈 practice", () => {
-  it("shows ALL questions of a unit on one page; 下一篇 moves between units — never 提交本组 — and never judges or asks for feedback", async () => {
+  it("shows ALL questions of a unit on one page; 下一篇 moves between units — never 提交本题 — and never judges or asks for feedback", async () => {
     const spy = setup();
     const user = userEvent.setup();
     mount();
     expect(await screen.findByText(/第 1 \/ 2 组/)).toBeInTheDocument();
     expect(screen.getByText(/第 1–2 \/ 3 题/)).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /提交本组|提交本篇|提交答案/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /提交本题|提交本篇|提交答案/ })).not.toBeInTheDocument();
     expect(screen.getByText("共享材料正文")).toBeInTheDocument();
     // both questions of the unit are visible together, no per-question paging
     expect(screen.getByRole("radio", { name: "q1 选项 a" })).toBeInTheDocument();

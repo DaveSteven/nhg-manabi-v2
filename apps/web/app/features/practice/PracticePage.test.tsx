@@ -134,7 +134,7 @@ describe("PracticePage", () => {
     // the draft call above is the autosave-completed signal.
 
     // submit: unanswered confirm appears (q2 unanswered), then confirm
-    await user.click(screen.getByRole("button", { name: "提交本组" }));
+    await user.click(screen.getByRole("button", { name: "提交本题" }));
     const dialog = await screen.findByRole("dialog", { name: "还有题目未作答" });
     expect(dialog).toHaveTextContent("本组还有 1 题未作答");
     expect(submitCalls).toHaveLength(0); // not yet submitted
@@ -279,7 +279,7 @@ describe("PracticePage · quick_practice", () => {
   let quickCreates: Record<string, unknown>[];
   let submitted: boolean;
 
-  /** multi=true exercises the multi-question pager path (提交本组). */
+  /** multi=true exercises the multi-question pager path (提交本题). */
   function useQuickHandlers(opts: { multi?: boolean; lastUnit?: boolean } = {}) {
     draftCalls = []; submitCalls = []; quickCreates = [];
     submitted = false;
@@ -378,7 +378,7 @@ describe("PracticePage · quick_practice", () => {
       { timeout: 3000 });
   });
 
-  it("multi-question unit: all questions on one page, 提交本组, 下一组", async () => {
+  it("multi-question unit: all questions on one page, 提交本题, 下一组", async () => {
     const user = userEvent.setup();
     const { submitCalls, quickCreates } = useQuickHandlers({ multi: true });
     renderQuick();
@@ -390,7 +390,7 @@ describe("PracticePage · quick_practice", () => {
     await user.click(screen.getByRole("radio", { name: "选项 o1" }));
     await user.click(screen.getByRole("radio", { name: "选项 q2-1" }));
     // whole-unit submit copy + atomic transaction unchanged
-    await user.click(screen.getByRole("button", { name: "提交本组" }));
+    await user.click(screen.getByRole("button", { name: "提交本题" }));
     await waitFor(() => expect(submitCalls).toHaveLength(1));
     expect(submitCalls[0]).toMatchObject({ answers:
       [{ question_id: "q1", chosen_option_id: "o1" },

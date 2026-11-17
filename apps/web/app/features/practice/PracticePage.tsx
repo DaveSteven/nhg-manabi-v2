@@ -68,7 +68,7 @@ function StepPracticePage({ sessionId }: { sessionId: string }) {
 
   // Quick Practice copy derives from the Canonical unit kind + question
   // count (quick-practice.md v2.1 §6): 独立单题 提交答案/下一题,
-  // 文法多题组 提交本组/下一组, 阅读文章 提交本篇/下一篇. Multi-question
+  // 文法多题组 提交本题/下一组, 阅读文章 提交本篇/下一篇. Multi-question
   // units list ALL their questions on one page under the shared material
   // (ADR-0017); the whole-unit submit transaction is untouched.
 
@@ -248,7 +248,7 @@ function StepPracticePage({ sessionId }: { sessionId: string }) {
   const vm = content.unit;
   const materials = content.materials;
   const questions = content.questions;
-  const copy = quickCopy ?? { submitLabel: "提交本组", nextLabel: "下一组" };
+  const copy = quickCopy ?? { submitLabel: "提交本题", nextLabel: "下一组" };
   const title = isQuick
     ? (quickTitle ?? vm.label ?? "练习")
     : `练习 · ${vm.label ?? `组 ${vm.position}`}`;
@@ -266,7 +266,7 @@ function StepPracticePage({ sessionId }: { sessionId: string }) {
           </h1>
           <p className="text-aux">
             {session.feedback_mode === "immediate"
-              ? (isQuick ? "即时反馈：提交后即可查看解析" : "即时反馈：提交本组后即可查看解析")
+              ? (isQuick ? "即时反馈：提交后即可查看解析" : "即时反馈：提交本题后即可查看解析")
               : "统一反馈：整卷结束后统一揭晓答案"}
             {!isQuick ? ` · 第 ${currentIdx + 1} / ${units.length} 组` : null}
           </p>
