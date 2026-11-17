@@ -60,22 +60,6 @@
   }
 }
 
-/* Quick Practice multi-question pager (上一题/下一题) — display-only
-   navigation; the whole-unit submit stays atomic. */
-.question-pager {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  margin: var(--space-2) 0 var(--space-4);
-
-}
-
-.question-pager-pos {
-  font-size: 13px;
-  color: var(--color-text-muted);
-  font-variant-numeric: tabular-nums;
-}
-
 .question-fieldset {
   border: none;
   margin: 0;

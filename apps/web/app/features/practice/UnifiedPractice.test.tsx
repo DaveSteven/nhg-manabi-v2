@@ -97,28 +97,28 @@ function mount() {
 }
 
 describe("统一反馈 practice", () => {
-  it("walks question by question with only 下一题/上一题 — never 提交本组 — and never judges or asks for feedback", async () => {
+  it("shows ALL questions of a unit on one page; 下一篇 moves between units — never 提交本组 — and never judges or asks for feedback", async () => {
     const spy = setup();
     const user = userEvent.setup();
     mount();
-    expect(await screen.findByText(/第 1 \/ 3 题/)).toBeInTheDocument();
+    expect(await screen.findByText(/第 1 \/ 2 组/)).toBeInTheDocument();
+    expect(screen.getByText(/第 1–2 \/ 3 题/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /提交本组|提交本篇|提交答案/ })).not.toBeInTheDocument();
     expect(screen.getByText("共享材料正文")).toBeInTheDocument();
+    // both questions of the unit are visible together, no per-question paging
+    expect(screen.getByRole("radio", { name: "q1 选项 a" })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "q2 选项 a" })).toBeInTheDocument();
+    expect(screen.queryByRole("radio", { name: "q3 选项 a" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "上一题" })).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("radio", { name: "q1 选项 a" }));
-    await user.click(screen.getByRole("button", { name: "下一题" }));
-    // still the same Unit: material kept, second question of it
-    expect(await screen.findByText(/第 2 \/ 3 题/)).toBeInTheDocument();
-    expect(screen.getByText("共享材料正文")).toBeInTheDocument();
-    expect(screen.getByRole("radio", { name: "q2 选项 a" })).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "下一题" }));
-    // next Unit
-    expect(await screen.findByText(/第 3 \/ 3 题/)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "下一篇" }));
+    expect(await screen.findByText(/第 2 \/ 2 组/)).toBeInTheDocument();
+    expect(screen.getByText(/第 3 \/ 3 题/)).toBeInTheDocument();
     expect(screen.queryByText("共享材料正文")).not.toBeInTheDocument();
 
     expect(spy.submits).toHaveLength(0);
     expect(spy.feedbackCalls).toHaveLength(0);
-    // the draft of q1 was saved against ITS unit
     await waitFor(() => expect(spy.drafts).toHaveLength(1));
     expect(spy.drafts[0]).toMatchObject({ su: "su-1", question_id: "q1",
       chosen_option_id: "q1-a", expected_row_version: 0 });
@@ -128,23 +128,20 @@ describe("统一反馈 practice", () => {
     const spy = setup();
     const user = userEvent.setup();
     mount();
-    await screen.findByText(/第 1 \/ 3 题/);
+    await screen.findByText(/第 1 \/ 2 组/);
     await user.click(screen.getByRole("radio", { name: "q1 选项 a" }));
-    await user.click(screen.getByRole("button", { name: "下一题" }));
-    await user.click(screen.getByRole("button", { name: "下一题" }));
+    await user.click(screen.getByRole("button", { name: "下一篇" }));
     await user.click(screen.getByRole("radio", { name: "q3 选项 b" }));  // unit 2 draft
-    await user.click(screen.getByRole("button", { name: "上一题" }));
     await user.click(screen.getByRole("button", { name: "上一题" }));
     expect(screen.getByRole("radio", { name: "q1 选项 a" })).toBeChecked();
     await user.click(screen.getByRole("radio", { name: "q1 选项 b" }));  // change it
     await user.click(screen.getByRole("button", { name: /第 3 题/ }));    // jump via strip
-    expect(await screen.findByText(/第 3 \/ 3 题/)).toBeInTheDocument();
+    expect(await screen.findByText(/第 2 \/ 2 组/)).toBeInTheDocument();
     expect(screen.getByRole("radio", { name: "q3 选项 b" })).toBeChecked();
 
-    // autosave merges quick edits per question (debounced): q3 + q1's final value
     await waitFor(() => expect(spy.drafts.length).toBeGreaterThanOrEqual(2));
     const q3 = spy.drafts.find((d) => d.question_id === "q3");
-    expect(q3).toMatchObject({ su: "su-2", chosen_option_id: "q3-b" }); // unit-2 path
+    expect(q3).toMatchObject({ su: "su-2", chosen_option_id: "q3-b" });
     const q1Last = [...spy.drafts].reverse().find((d) => d.question_id === "q1");
     expect(q1Last).toMatchObject({ su: "su-1", chosen_option_id: "q1-b" });
     expect(spy.submits).toHaveLength(0);
@@ -154,10 +151,10 @@ describe("统一反馈 practice", () => {
     const spy = setup();
     const user = userEvent.setup();
     mount();
-    await screen.findByText(/第 1 \/ 3 题/);
+    await screen.findByText(/第 1 \/ 2 组/);
     await user.click(screen.getByRole("radio", { name: "q1 选项 b" }));
     await user.click(screen.getByRole("button", { name: /第 3 题/ }));
-    expect(screen.queryByRole("button", { name: "下一题" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^下一/ })).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "完成并提交练习" }));
     const dialog = await screen.findByRole("dialog", { name: "还有题目未作答" });
     expect(dialog).toHaveTextContent("本次练习还有 2 题未作答");
@@ -176,11 +173,10 @@ describe("统一反馈 practice", () => {
     const spy = setup();
     const user = userEvent.setup();
     mount();
-    await screen.findByText(/第 1 \/ 3 题/);
+    await screen.findByText(/第 1 \/ 2 组/);
     await user.click(screen.getByRole("radio", { name: "q1 选项 a" }));
-    await user.click(screen.getByRole("button", { name: "下一题" }));
     await user.click(screen.getByRole("radio", { name: "q2 选项 b" }));
-    await user.click(screen.getByRole("button", { name: "下一题" }));
+    await user.click(screen.getByRole("button", { name: "下一篇" }));
     await user.click(screen.getByRole("radio", { name: "q3 选项 a" }));
     await user.click(screen.getByRole("button", { name: "完成并提交练习" }));
     expect(await screen.findByText("results page")).toBeInTheDocument();
@@ -200,8 +196,7 @@ describe("统一反馈 practice", () => {
     });
     const user = userEvent.setup();
     mount();
-    await screen.findByText(/第 1 \/ 3 题/);
-    await user.click(screen.getByRole("button", { name: /第 2 题/ }));
+    await screen.findByText(/第 1 \/ 2 组/);
     expect(await screen.findByRole("radio", { name: "q2 选项 b" })).toBeChecked();
     await user.click(screen.getByRole("button", { name: /第 3 题/ }));
     expect(await screen.findByRole("radio", { name: "q3 选项 a" })).toBeChecked();
@@ -216,7 +211,7 @@ describe("统一反馈 practice", () => {
   it("an abandoned (replaced) session is a locked read-only view with a clear note", async () => {
     setup({ state: "abandoned" });
     mount();
-    expect(await screen.findByText(/第 1 \/ 3 题/)).toBeInTheDocument();
+    expect(await screen.findByText(/第 1 \/ 2 组/)).toBeInTheDocument();
     expect(screen.getByText(/已被新的专项练习取代/)).toBeInTheDocument();
     expect(screen.getByRole("radio", { name: "q1 选项 a" })).toBeDisabled();
     expect(screen.queryByRole("button", { name: "完成并提交练习" })).not.toBeInTheDocument();
@@ -226,7 +221,7 @@ describe("统一反馈 practice", () => {
   it("after the session is completed: locked review with answers and explanations, no submit", async () => {
     const spy = setup({ state: "completed" });
     mount();
-    expect(await screen.findByText(/第 1 \/ 3 题/)).toBeInTheDocument();
+    expect(await screen.findByText(/第 1 \/ 2 组/)).toBeInTheDocument();
     expect(await screen.findByText("解析 q1")).toBeInTheDocument();
     expect(screen.getByRole("radio", { name: "q1 选项 a" })).toBeDisabled();
     expect(screen.getByRole("radio", { name: "q1 选项 a" })).toBeChecked();

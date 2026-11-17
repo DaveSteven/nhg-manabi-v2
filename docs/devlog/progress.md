@@ -4,6 +4,8 @@
 
 ## 最新文档更新（2026-11-17）
 
+- 成组题一页展示全部小题（ADR-0017）：统一反馈专项与 Quick 多题 Unit 不再逐小题切换，按 Unit 翻页；前端 250 passed、typecheck 通过，未做浏览器视觉验收，详见 `2026-11-17-unit-per-page.md`。
+
 - 按钮标准化实现：学生端 `Button`/`ButtonLink` 组件与 `_button.scss` 已落地，练习、结果、专项配置、认证、账户与顶栏已迁移（typecheck/246+3 测试/build 通过）；未做浏览器视觉与 375px/缩放验收，详见 `2026-11-17-button-standardization-impl.md`。
 - 按钮标准（文档）：新增 `docs/design/button-spec.md`，统一胶囊操作按钮、44px 默认尺寸、主次层级、六种状态、题号/题型卡片的独立规则与专项/结果页映射；设计总则和文档入口已同步。仅文档落地，组件迁移及浏览器验收未执行。
 

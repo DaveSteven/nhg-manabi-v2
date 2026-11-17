@@ -69,12 +69,8 @@ function StepPracticePage({ sessionId }: { sessionId: string }) {
   // Quick Practice copy derives from the Canonical unit kind + question
   // count (quick-practice.md v2.1 §6): 独立单题 提交答案/下一题,
   // 文法多题组 提交本组/下一组, 阅读文章 提交本篇/下一篇. Multi-question
-  // units page one question at a time (上一题/下一题) — the material stays
-  // visible and the whole-unit submit transaction is untouched.
-  const [questionIdx, setQuestionIdx] = useState(0);
-  useEffect(() => {
-    setQuestionIdx(0); // reset pager when the unit changes
-  }, [current?.sessionUnitId]);
+  // units list ALL their questions on one page under the shared material
+  // (ADR-0017); the whole-unit submit transaction is untouched.
 
   const content = useMemo(
     () => (current ? toViewModel(current.unit) : null),
@@ -253,10 +249,6 @@ function StepPracticePage({ sessionId }: { sessionId: string }) {
   const materials = content.materials;
   const questions = content.questions;
   const copy = quickCopy ?? { submitLabel: "提交本组", nextLabel: "下一组" };
-  // Quick multi-question units page one question at a time (上一题/下一题);
-  // the whole-unit submit stays atomic — paging is display-only.
-  const paged = isQuick && questions.length > 1;
-  const visibleQuestions = paged ? [questions[questionIdx]!] : questions;
   const title = isQuick
     ? (quickTitle ?? vm.label ?? "练习")
     : `练习 · ${vm.label ?? `组 ${vm.position}`}`;
@@ -297,25 +289,8 @@ function StepPracticePage({ sessionId }: { sessionId: string }) {
 
         <MaterialDisplay unit={vm} materials={materials} />
 
-        {paged ? (
-          <nav aria-label="题目导航" className="question-pager">
-            <Button variant="secondary" className="pager-btn" disabled={questionIdx === 0}
-                    onClick={() => setQuestionIdx((i) => i - 1)}>
-              上一题
-            </Button>
-            <span className="question-pager-pos">
-              {questions[questionIdx]!.printedNumber ?? `第 ${questions[questionIdx]!.position} 题`}
-              {" · "}{questionIdx + 1} / {questions.length}
-            </span>
-            <Button variant="secondary" className="pager-btn" disabled={questionIdx === questions.length - 1}
-                    onClick={() => setQuestionIdx((i) => i + 1)}>
-              下一题
-            </Button>
-          </nav>
-        ) : null}
-
         <ol className="question-list">
-          {visibleQuestions.map((q) => {
+          {questions.map((q) => {
             const qState = manager.state.questions[q.id];
             const selected = qState
               ? (qState.pendingOptionId ?? qState.optionId) : null;

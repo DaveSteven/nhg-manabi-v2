@@ -16,19 +16,20 @@ import { PracticeBreadcrumb } from "./PracticeBreadcrumb";
 import { DraftConflictDialog, UnansweredConfirmDialog } from "./SubmitDialogs";
 import { clearSessionPendingRetries, loadPendingRetries } from "./pendingRetries";
 import { Button, ButtonLink } from "../../components/Button";
+import { quickPracticeCopy } from "./quickPracticeCopy";
 
 /**
  * 统一反馈 practice (frontend-spec 专项练习流程, practice-interactions):
  * the whole session is ONE flow of questions. Choosing an answer only saves
- * a draft; 上一题 / 下一题 / the number strip merely move around, so every
+ * a draft; 上一组 / 下一组 / the number strip merely move around, so every
  * answer stays editable until the single final submit
  * (POST /sessions/{id}/submit) which judges the entire session in one
  * server transaction. Correct answers, explanations and the score exist only
  * after that — this page never requests them before the session ends (the
  * backend gate is the real boundary).
  *
- * A Unit is never split: the question shown always carries its Unit's full
- * material; a multi-question Unit just spans several consecutive steps.
+ * A Unit is never split (ADR-0017): one page = one Unit, showing its shared
+ * material and ALL of its questions; paging moves between Units only.
  */
 export function UnifiedPracticeView({ sessionId, bundle }: {
   sessionId: string;
@@ -81,10 +82,14 @@ export function UnifiedPracticeView({ sessionId, bundle }: {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const [idx, setIdx] = useState(0);
-  const pos = flat[Math.min(idx, flat.length - 1)];
-  const content = pos ? contents[pos.ui] : undefined;
-  const question = content?.vm.questions[pos!.qi];
+  const [idx, setIdx] = useState(0); // Unit index
+  const content = contents[Math.min(idx, contents.length - 1)];
+  const [scrollTo, setScrollTo] = useState<string | null>(null);
+  useEffect(() => {
+    if (!scrollTo) return;
+    document.getElementById(`q-card-${scrollTo}`)?.scrollIntoView?.({ block: "center" });
+    setScrollTo(null);
+  }, [scrollTo, idx]);
   const sessionUnit = session.units.find((u) => u.id === content?.sessionUnitId);
   const unitSubmitted = sessionUnit?.state === "submitted";
 
@@ -178,17 +183,16 @@ export function UnifiedPracticeView({ sessionId, bundle }: {
     }
   }, [manager, sessionId]);
 
-  if (!pos || !content || !question) {
+  if (!content || content.vm.questions.length === 0) {
     return <p role="status">这次练习没有可作答的题目。</p>;
   }
 
   const vm = content.vm.unit;
-  const qState = manager.state.questions[question.id];
-  const selected = qState ? (qState.pendingOptionId ?? qState.optionId) : null;
-  const fq = feedback.data?.questions.find((x) => x.question_id === question.id);
-  const answeredCorrect = fq?.is_correct === true;
-  const isLast = idx === total - 1;
-  const unitQuestions = content.vm.questions.length;
+  const isLast = idx === contents.length - 1;
+  const unitQuestions = content.vm.questions;
+  const copy = quickPracticeCopy(content.vm.unit.kind, unitQuestions.length);
+  const prevLabel = copy.nextLabel.replace("下", "上");
+  const firstNo = flat.findIndex((f) => f.ui === idx) + 1;
 
   const audioMaterial = content.vm.materials.find((m) => m.audio?.kind === "url");
   const audioUrl = audioMaterial?.audio?.kind === "url" ? audioMaterial.audio.url : null;
@@ -201,9 +205,9 @@ export function UnifiedPracticeView({ sessionId, bundle }: {
           <h1>专项练习 · {vm.label ?? `组 ${vm.position}`}</h1>
           <p className="text-aux">
             统一反馈：全部提交后统一揭晓答案与成绩 ·{" "}
-            <span aria-live="polite">第 {idx + 1} / {total} 题</span>
-            {unitQuestions > 1
-              ? ` · 本篇/本组第 ${pos.qi + 1} / ${unitQuestions} 题` : null}
+            <span aria-live="polite">第 {idx + 1} / {contents.length} 组</span>
+            {` · 第 ${firstNo}${unitQuestions.length > 1
+              ? `–${firstNo + unitQuestions.length - 1}` : ""} / ${total} 题`}
           </p>
         </header>
 
@@ -217,11 +221,11 @@ export function UnifiedPracticeView({ sessionId, bundle }: {
               : answered ? "已选" : "未答";
             return (
               <button key={f.qid} type="button"
-                      aria-current={i === idx ? "step" : undefined}
+                      aria-current={f.ui === idx ? "step" : undefined}
                       aria-label={`第 ${i + 1} 题（${status}）`}
                       className={verdict ? `is-${verdict}`
                         : answered ? "is-answered" : undefined}
-                      onClick={() => setIdx(i)}>
+                      onClick={() => { setIdx(f.ui); setScrollTo(f.qid); }}>
                 {i + 1}
                 {verdict === "correct" ? <span aria-hidden="true" className="strip-mark">✓</span>
                   : verdict === "wrong" ? <span aria-hidden="true" className="strip-mark">✗</span>
@@ -234,38 +238,46 @@ export function UnifiedPracticeView({ sessionId, bundle }: {
         <MaterialDisplay unit={vm} materials={content.vm.materials} />
 
         <ol className="question-list">
-          <li key={question.id} className="question-card card">
-            <fieldset className="question-fieldset" disabled={ended}>
-              <legend>
-                {question.printedNumber ?? `第 ${question.position} 题`}
-                {qState?.status === "save_error" ? (
-                  <span className="save-state save-save_error" aria-live="polite">
-                    保存失败，可重试
-                  </span>
-                ) : null}
-              </legend>
-              {question.prompt !== null ? (
-                <div lang="ja">
-                  <RichText value={question.prompt} slotIds={vm.slotIds} />
-                </div>
-              ) : null}
-              <div role="radiogroup"
-                   aria-label={`第 ${question.printedNumber ?? question.position} 题选项`}>
-                {question.options.map((o) => (
-                  <label key={o.id} lang="ja"
-                         className={`option-row${selected === o.id ? " option-selected" : ""}${selected === o.id && answeredCorrect ? " option-correct" : ""}`}>
-                    <input type="radio" name={`q-${question.id}`} value={o.id}
-                           checked={selected === o.id}
-                           onChange={() => manager.select(question.id, o.id)} />
-                    <RichText value={o.content} slotIds={vm.slotIds} />
-                  </label>
-                ))}
-              </div>
-            </fieldset>
-            {ended && feedback.data
-              ? <FeedbackView feedback={feedback.data} questionId={question.id} />
-              : null}
-          </li>
+          {unitQuestions.map((question) => {
+            const qState = manager.state.questions[question.id];
+            const selected = qState ? (qState.pendingOptionId ?? qState.optionId) : null;
+            const fq = feedback.data?.questions.find((x) => x.question_id === question.id);
+            const answeredCorrect = fq?.is_correct === true;
+            return (
+              <li key={question.id} id={`q-card-${question.id}`} className="question-card card">
+                <fieldset className="question-fieldset" disabled={ended}>
+                  <legend>
+                    {question.printedNumber ?? `第 ${question.position} 题`}
+                    {qState?.status === "save_error" ? (
+                      <span className="save-state save-save_error" aria-live="polite">
+                        保存失败，可重试
+                      </span>
+                    ) : null}
+                  </legend>
+                  {question.prompt !== null ? (
+                    <div lang="ja">
+                      <RichText value={question.prompt} slotIds={vm.slotIds} />
+                    </div>
+                  ) : null}
+                  <div role="radiogroup"
+                       aria-label={`第 ${question.printedNumber ?? question.position} 题选项`}>
+                    {question.options.map((o) => (
+                      <label key={o.id} lang="ja"
+                             className={`option-row${selected === o.id ? " option-selected" : ""}${selected === o.id && answeredCorrect ? " option-correct" : ""}`}>
+                        <input type="radio" name={`q-${question.id}`} value={o.id}
+                               checked={selected === o.id}
+                               onChange={() => manager.select(question.id, o.id)} />
+                        <RichText value={o.content} slotIds={vm.slotIds} />
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
+                {ended && feedback.data
+                  ? <FeedbackView feedback={feedback.data} questionId={question.id} />
+                  : null}
+              </li>
+            );
+          })}
         </ol>
 
         {ended && feedback.error ? (
@@ -276,13 +288,13 @@ export function UnifiedPracticeView({ sessionId, bundle }: {
         <div className="practice-actions">
           <Button variant="secondary" className="pager-btn" disabled={idx === 0}
                   onClick={() => setIdx((i) => Math.max(0, i - 1))}>
-            上一题
+            {prevLabel}
           </Button>
           {!isLast ? (
             <Button variant={ended && completed ? "secondary" : "primary"}
                     className="pager-btn"
-                    onClick={() => setIdx((i) => Math.min(total - 1, i + 1))}>
-              下一题
+                    onClick={() => setIdx((i) => Math.min(contents.length - 1, i + 1))}>
+              {copy.nextLabel}
             </Button>
           ) : !ended ? (
             <Button variant="primary"

@@ -378,24 +378,16 @@ describe("PracticePage · quick_practice", () => {
       { timeout: 3000 });
   });
 
-  it("multi-question unit: 上一题/下一题 pager, 提交本组, 下一组", async () => {
+  it("multi-question unit: all questions on one page, 提交本组, 下一组", async () => {
     const user = userEvent.setup();
     const { submitCalls, quickCreates } = useQuickHandlers({ multi: true });
     renderQuick();
     await screen.findByRole("heading", { name: "問題1-3" });
-    // page 1: only q1 visible
+    // no paging: both questions are visible at once
     expect(screen.getByRole("radio", { name: "选项 o1" })).toBeInTheDocument();
-    expect(screen.queryByRole("radio", { name: "选项 q2-1" }))
-      .not.toBeInTheDocument();
-    const prev = screen.getByRole("button", { name: "上一题" });
-    const next = screen.getByRole("button", { name: "下一题" });
-    expect(prev).toBeDisabled(); // nothing before the first question
+    expect(screen.getByRole("radio", { name: "选项 q2-1" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "上一题" })).not.toBeInTheDocument();
     await user.click(screen.getByRole("radio", { name: "选项 o1" }));
-    await user.click(next);
-    expect(await screen.findByRole("radio", { name: "选项 q2-1" }))
-      .toBeInTheDocument();
-    expect(prev).toBeEnabled();
-    expect(next).toBeDisabled(); // last question
     await user.click(screen.getByRole("radio", { name: "选项 q2-1" }));
     // whole-unit submit copy + atomic transaction unchanged
     await user.click(screen.getByRole("button", { name: "提交本组" }));
