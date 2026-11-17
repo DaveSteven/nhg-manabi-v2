@@ -89,3 +89,5 @@
 - **次级按钮内边距修正（2026-11-17）**：`_practice.scss` 引用了不存在的 `--space-5` 致 padding 失效，改为 `--space-4`；前端 230 passed、build 通过，浏览器视觉复核待用户。
 
 - **答对选项变绿 / 已练习次数高亮 / 中文字体栈（2026-11-17）**：见 `docs/devlog/2026-11-17-correct-option-green-unit-count-fonts.md`；日文内容 `lang="ja"`，页面中文优先字体栈。浏览器视觉待用户确认。
+
+- **首页继续练习卡片去掉 continue-meta（2026-11-17）**：见 `docs/devlog/2026-11-17-remove-continue-meta.md`；web 231 passed、typecheck/build 通过，web 容器已重建。浏览器视觉待用户确认。

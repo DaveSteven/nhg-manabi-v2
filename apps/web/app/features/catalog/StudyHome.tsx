@@ -118,7 +118,6 @@ function ContinueSessionCard({ state, exams }: {
 }) {
   if (state.kind !== "active") return null;
   const session = state.session;
-  const submitted = session.units.filter((u) => u.state === "submitted").length;
   const title = continueExamTitle(session, exams) ?? "进行中的练习";
   return (
     <section className="card continue-card" aria-label="继续上次练习">
@@ -126,9 +125,6 @@ function ContinueSessionCard({ state, exams }: {
       <div className="continue-info">
         <p className="continue-eyebrow">继续上次练习</p>
         <h2>{title}</h2>
-        <p className="continue-meta">
-          已提交 {submitted} / {session.units.length} 组 · 从上次的位置继续
-        </p>
       </div>
       <Link className="primary-link"
             to={`/study/practice/${encodeURIComponent(session.id)}`}>

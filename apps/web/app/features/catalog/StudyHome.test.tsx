@@ -62,7 +62,6 @@ describe("StudyHome", () => {
     expect(card).toBeInTheDocument();
     const link = screen.getByRole("link", { name: "继续练习" });
     expect(link).toHaveAttribute("href", "/study/practice/s-1");
-    expect(screen.getByText(/已提交 1 \/ 2 组/).textContent).toContain("1");
   });
 
   it("labels the continue card with the exam bound to the session release", async () => {
