@@ -116,3 +116,5 @@
 - **专项练习单一最近进度（2026-11-17，ADR-0016，取代 ADR-0015）**：见 `docs/devlog/2026-11-17-single-recent-session.md`。Alembic 0011 恢复 `ux_one_active_practice`，创建专项/普通练习时同事务把旧进行中会话置 `abandoned` 再创建（失败整体回滚、并发后来者胜、已提交答案与历史保留、未提交草稿不计）；`/current` 即唯一可恢复练习，完成后保存结果；不做多练习列表/清理；Quick/模考不变。后端 205 passed + 2 skipped，web 246 passed，typecheck 通过，迁移 up/down/up（含多会话数据升级）已验证。真实浏览器验收未做。
 
 - **user_question_progress 缓存 + 专项「只复习最近仍错」（2026-11-17）**：见 `docs/devlog/2026-11-17-question-progress-wrong-only.md`。每题缓存在每次正式提交的同一事务内重算（skip 不覆盖最近正误，可由 `rebuild_user_progress` 整体重建），迁移 0012 回填历史（开发库 up/down/up 通过）；专项目录新增 `wrong_units`、创建接口新增 `selection=wrong_only`，配置页与「再练一组」接通。后端 212 passed + 2 skipped，web 257 passed，typecheck/build 通过。真实浏览器验收、容器重建、缓存性能评估未做；错题本/学习历史/统计与严格模拟规则文档尚未开始。
+
+- **严格模拟规则草案（2026-11-17，纯文档）**：新增 `docs/product/mock-exam-rules-draft.md`（待确认，非产品规则）。核查发现：Phase/时限表已建但**真实库 `release_exam_phases` 为 0 行**，转换器不产出 Phase，模考无任何接口/前端，practice 提交对 mock 返回 409。列出 M1–M10 待用户决定项（各级别 Phase 时限、听力播放、超时封存、Phase 间规则、成绩呈现、名额、答案泄漏边界）与确认后的实施顺序；未改代码，未新增 ADR（确认后再写）。
