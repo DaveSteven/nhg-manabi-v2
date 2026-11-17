@@ -51,9 +51,9 @@ function renderPage(url = "/study/practice") {
 }
 
 describe("TopicPracticeView", () => {
-  it("asks for a level when none is chosen", async () => {
+  it("asks guests to sign in (no level)", async () => {
     renderPage();
-    expect(await screen.findByText(/请先在右上角选择备考等级/)).toBeInTheDocument();
+    expect(await screen.findByText(/请先登录，再选择备考等级和题型/)).toBeInTheDocument();
   });
 
   it("lists real types of the preselected subject with counts and nouns", async () => {

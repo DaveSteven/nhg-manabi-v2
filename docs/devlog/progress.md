@@ -4,6 +4,8 @@
 
 ## 最新文档更新（2026-11-17）
 
+- 未登录顶栏不再显示等级选择（详见 `2026-11-17-guest-no-level-selector.md`）。
+
 - 长篇读解/文章填空桌面双栏 Sticky 答题面板（ADR-0018）：`SharedMaterialLayout`，slot↔题联动；前端 253 passed、build 通过，真实浏览器验收见 `2026-11-17-sticky-panel.md`。
 
 - 成组题一页展示全部小题（ADR-0017）：统一反馈专项与 Quick 多题 Unit 不再逐小题切换，按 Unit 翻页；前端 250 passed、typecheck 通过，未做浏览器视觉验收，详见 `2026-11-17-unit-per-page.md`。

@@ -78,7 +78,7 @@ export function TopicPracticeView() {
       </p>
 
       {level === null ? (
-        <p role="status">请先在右上角选择备考等级，再选择题型。</p>
+        <p role="status">请先登录，再选择备考等级和题型。</p>
       ) : query.isPending ? (
         <p role="status">题型加载中…</p>
       ) : query.error ? (

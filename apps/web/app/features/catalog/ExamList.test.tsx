@@ -117,9 +117,8 @@ describe("ExamList", () => {
     useExamsHandler();
     renderList();
     await screen.findByRole("listitem", { name: "2019年" });
-    // the only combobox left is the header's 备考等级 selector
-    expect(screen.getAllByRole("combobox").map((c) => c.getAttribute("aria-label")))
-      .toEqual(["备考等级"]);
+    // guests have no header level selector either
+    expect(screen.queryAllByRole("combobox")).toHaveLength(0);
     expect(screen.queryByText("年份")).not.toBeInTheDocument();
     expect(screen.queryByRole("combobox", { name: "年份" })).not.toBeInTheDocument();
   });
@@ -148,20 +147,5 @@ describe("ExamList", () => {
     renderList();
     expect(await screen.findByText(/暂无 N4 已发布试卷/)).toBeInTheDocument();
     expect(screen.queryByRole("listitem", { name: "2019年" })).not.toBeInTheDocument();
-  });
-
-  it("a guest changing the header level updates the list immediately", async () => {
-    const user = userEvent.setup();
-    useExamsHandler();
-    renderList();
-    await screen.findByRole("listitem", { name: "2019年" });
-    await chooseOption(user, "备考等级", "N5");
-    expect(screen.queryByRole("listitem", { name: "2019年" })).not.toBeInTheDocument();
-    expect(screen.getByRole("listitem", { name: "2018年" })).toBeInTheDocument();
-    expect(window.localStorage.getItem("jlptgo.level")).toBe("N5");
-    // and back to all levels
-    await chooseOption(user, "备考等级", "全部等级");
-    expect(screen.getByRole("listitem", { name: "2019年" })).toBeInTheDocument();
-    expect(window.localStorage.getItem("jlptgo.level")).toBeNull();
   });
 });
