@@ -125,7 +125,8 @@ export function TranscriptPanel({ id, view, currentTimeMs, follow, onFollowChang
         ) : view.kind === "error" ? (
           <p role="alert">
             原文加载失败：{view.message}
-            <button type="button" onClick={onRetry}>重试</button>
+            <button type="button" className="transcript-retry"
+                    onClick={onRetry}>重试</button>
           </p>
         ) : view.kind === "empty" || cues.length === 0 ? (
           <p role="status">该组暂无可用原文。</p>

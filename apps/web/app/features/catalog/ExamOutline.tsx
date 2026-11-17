@@ -107,7 +107,7 @@ function LayerBlock({ layer, counts, onOpen, opening }: {
         </span>
         <span className="layer-label">{label}</span>
         <span className="layer-meta">
-          已练习 {practiced} / {layer.units.length} 组 · {layer.units.reduce((n, u) => n + u.question_count, 0)} 题
+          已练习<span className="layer-progress">{practiced}/{layer.units.length}</span>
         </span>
       </button>
       {expanded ? (

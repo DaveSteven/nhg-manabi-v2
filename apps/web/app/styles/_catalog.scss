@@ -424,6 +424,14 @@
   white-space: nowrap;
 }
 
+/* 已练习N/M — the numbers carry the signal, so they read in the primary
+   colour while 已练习 stays muted. */
+.layer-progress {
+  color: var(--color-primary);
+  font-weight: 600;
+  margin-left: 2px;
+}
+
 .layer-toggle:hover .layer-meta { color: inherit; }
 
 .unit-list {

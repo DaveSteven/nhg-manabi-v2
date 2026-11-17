@@ -457,6 +457,24 @@
   transform: translateX(16px);
 }
 
+/* Transcript load-failure retry — outlined capsule, dock-aligned. */
+.transcript-retry {
+  min-height: 32px;
+  margin-left: var(--space-3);
+  padding: 0 var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font-size: 13px;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    border-color: var(--color-primary);
+    color: var(--color-primary-hover);
+  }
+}
+
 .transcript-close {
   display: inline-flex;
   align-items: center;

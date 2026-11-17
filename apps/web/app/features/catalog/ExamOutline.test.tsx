@@ -188,7 +188,7 @@ describe("ExamOutline", () => {
       unit_id: "u-v1",
     });
     // navigated to the practice page for the new session
-    expect(await screen.findByRole("heading", { name: /练习/ })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "問題1-1" })).toBeInTheDocument();
     // no active-session conflict dialog ever appears
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
@@ -207,7 +207,7 @@ describe("ExamOutline", () => {
     await user.click(document.querySelector("button.unit-row")!);
     // no resume probe, no dialog: the click itself is the whole flow
     expect(created).toBe(1);
-    expect(await screen.findByRole("heading", { name: /练习/ })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "問題1-1" })).toBeInTheDocument();
     expect(screen.queryByRole("dialog", { name: "继续旧练习？" }))
       .not.toBeInTheDocument();
   });
@@ -226,7 +226,7 @@ describe("ExamOutline", () => {
     const layerToggle = await screen.findByRole("button", { name: /問題1/ });
     // Layer header: X counts distinct practiced units of THIS layer
     await waitFor(() =>
-      expect(layerToggle).toHaveTextContent("已练习 1 / 1 组"));
+      expect(layerToggle).toHaveTextContent("已练习1/1"));
     await user.click(layerToggle);
     const row = document.querySelector("button.unit-row")!;
     expect(row).toHaveTextContent("已练习 2 次");
@@ -234,7 +234,7 @@ describe("ExamOutline", () => {
     // a unit without history shows 未练习, and an unpracticed layer is 0/Y
     await user.click(await screen.findByRole("tab", { name: "文法" }));
     const gToggle = screen.getByRole("button", { name: /問題9/ });
-    expect(gToggle).toHaveTextContent("已练习 0 / 1 组");
+    expect(gToggle).toHaveTextContent("已练习0/1");
     await user.click(gToggle);
     expect(document.querySelector("button.unit-row")!)
       .toHaveTextContent("未练习");

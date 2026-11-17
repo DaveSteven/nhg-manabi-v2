@@ -239,7 +239,7 @@ describe("ResultsPage", () => {
   });
 });
 
-// ------------------------------------------- quick_practice (v2.0 spec) ----
+// --------------------------------- quick_practice copy & pager (v2.1) ----
 
 const QUICK_SESSION = { ...SESSION, mode: "quick_practice" };
 const QUICK_OUTLINE = {
@@ -251,13 +251,23 @@ const QUICK_OUTLINE = {
       layer_id: "ly-1", position: 1, question_type_id: "vocabulary",
       display_label: "問題1", instruction: null,
       units: [
-        { unit_id: "u-1", position: 1, kind: "single", label: null,
+        // position 3: the title shows the REAL paper position 問題1-3
+        { unit_id: "u-1", position: 3, kind: "single", label: null,
+          question_type_id: "vocabulary", question_count: 1 },
+        { unit_id: "u-2", position: 4, kind: "single", label: null,
           question_type_id: "vocabulary", question_count: 2 },
-        { unit_id: "u-2", position: 2, kind: "single", label: null,
-          question_type_id: "vocabulary", question_count: 3 },
       ],
     }],
   }],
+};
+const SINGLE_PUBLIC_UNIT = {
+  ...PUBLIC_UNIT, questions: [PUBLIC_UNIT.questions[0]],
+};
+const FEEDBACK_SINGLE = { ...FEEDBACK, questions: [FEEDBACK.questions[0]] };
+const COMPLETED_QUICK = {
+  ...QUICK_SESSION, state: "completed", ended_at: "x",
+  units: [{ ...QUICK_SESSION.units[0], state: "submitted",
+            submitted_at: "x" }],
 };
 
 describe("PracticePage · quick_practice", () => {
@@ -266,19 +276,28 @@ describe("PracticePage · quick_practice", () => {
   let quickCreates: Record<string, unknown>[];
   let submitted: boolean;
 
-  function useQuickHandlers() {
+  /** multi=true exercises the multi-question pager path (提交本组). */
+  function useQuickHandlers(opts: { multi?: boolean; lastUnit?: boolean } = {}) {
     draftCalls = []; submitCalls = []; quickCreates = [];
     submitted = false;
-    const completed = {
-      ...QUICK_SESSION, state: "completed", ended_at: "x",
-      units: [{ ...QUICK_SESSION.units[0], state: "submitted",
-                submitted_at: "x" }],
+    const unitPayload = opts.multi ? PUBLIC_UNIT : SINGLE_PUBLIC_UNIT;
+    const feedback = opts.multi ? FEEDBACK : FEEDBACK_SINGLE;
+    const layerUnits = QUICK_OUTLINE.sections[0]!.layers[0]!.units;
+    const outline = {
+      ...QUICK_OUTLINE,
+      sections: [{
+        ...QUICK_OUTLINE.sections[0],
+        layers: [{
+          ...QUICK_OUTLINE.sections[0]!.layers[0],
+          units: opts.lastUnit ? [layerUnits[0]!] : layerUnits,
+        }],
+      }],
     };
     server.use(
       http.get(`*/api/practice/sessions/s-1`, () => HttpResponse.json(
-        submitted ? completed : QUICK_SESSION)),
+        submitted ? COMPLETED_QUICK : QUICK_SESSION)),
       http.get(`*/api/releases/r-1/units/u-1`, () =>
-        HttpResponse.json(PUBLIC_UNIT)),
+        HttpResponse.json(unitPayload)),
       http.get(`*/api/practice/sessions/s-1/drafts`, () =>
         HttpResponse.json({ drafts: [] })),
       http.put(`*/api/practice/sessions/s-1/units/su-1/drafts`,
@@ -293,15 +312,16 @@ describe("PracticePage · quick_practice", () => {
           submitted = true;
           return HttpResponse.json({
             session_unit_id: "su-1", unit_id: "u-1", release_id: "r-1",
-            state: "submitted", answered_count: 2, skipped_count: 0,
+            state: "submitted",
+            answered_count: unitPayload.questions.length, skipped_count: 0,
             idempotent: false, session_state: "completed",
-            feedback: FEEDBACK,
+            feedback,
           });
         }),
       http.get(`*/api/practice/sessions/s-1/units/su-1/feedback`, () =>
-        HttpResponse.json(FEEDBACK)),
+        HttpResponse.json(feedback)),
       http.get(`*/api/exams/E-N2-2018-12`, () =>
-        HttpResponse.json(QUICK_OUTLINE)),
+        HttpResponse.json(outline)),
       http.post(`*/api/quick-practice/sessions`, async ({ request }) => {
         quickCreates.push(await request.json() as Record<string, unknown>);
         return HttpResponse.json({ ...QUICK_SESSION, id: "next-session" },
@@ -317,85 +337,114 @@ describe("PracticePage · quick_practice", () => {
     ] }], "/study/practice/s-1");
   }
 
-  it("keeps selections in local state only: zero draft requests", async () => {
+  it("single question: real paper title, 提交答案, no 第1/1组, zero drafts", async () => {
     const user = userEvent.setup();
     const { draftCalls } = useQuickHandlers();
     renderQuick();
-    expect(await screen.findByRole("heading", { name: /問題1/ }))
+    // title is the real paper position from the outline, not 組 N
+    expect(await screen.findByRole("heading", { name: "問題1-3" }))
       .toBeInTheDocument();
+    // 单 Unit 快速练习 never shows 第 1 / 1 组
+    expect(screen.queryByText(/第 1 \/ 1 组/)).not.toBeInTheDocument();
     await user.click(screen.getByRole("radio", { name: "选项 o1" }));
     expect(screen.getByRole("radio", { name: "选项 o1" })).toBeChecked();
-    // no autosave traffic at all (900ms debounce would have fired by now)
+    // no autosave traffic at all (past the 800ms debounce window)
     await new Promise((r) => setTimeout(r, 1000));
     expect(draftCalls).toHaveLength(0);
   });
 
-  it("fully answered submit goes straight through; feedback, 下一组/返回试卷", async () => {
+  it("single question submit: 提交答案, feedback, 下一题 opens the NEXT unit", async () => {
     const user = userEvent.setup();
-    const { submitCalls } = useQuickHandlers();
-    renderQuick();
-    await screen.findByRole("heading", { name: /問題1/ });
+    const { submitCalls, quickCreates } = useQuickHandlers();
+    const rendered = renderQuick();
+    await screen.findByRole("heading", { name: "問題1-3" });
     await user.click(screen.getByRole("radio", { name: "选项 o1" }));
-    await user.click(screen.getByRole("radio", { name: "选项 q2-1" }));
-    // all answered: NO confirmation dialog, direct submit
-    await user.click(screen.getByRole("button", { name: "提交本组" }));
+    await user.click(screen.getByRole("button", { name: "提交答案" }));
     await waitFor(() => expect(submitCalls).toHaveLength(1));
     expect(await screen.findByText(/因为选 o1 正确/)).toBeInTheDocument();
-    // quick sessions auto-complete on submit: no finish button, but the
-    // post-submit nav (下一组 via the NEXT unit / 返回试卷) is present
+    // no lock badge next to the title, no finish button
+    expect(screen.queryByText(/已提交锁定/)).not.toBeInTheDocument();
     expect(screen.queryByRole("button",
       { name: /完成练习|交卷并查看结果/ })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "下一组" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "返回试卷" })).toBeInTheDocument();
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-  });
-
-  it("下一组 starts a NEW quick session for the next unit of the exam", async () => {
-    const user = userEvent.setup();
-    const { quickCreates } = useQuickHandlers();
-    const rendered = renderQuick();
-    await screen.findByRole("heading", { name: /問題1/ });
-    await user.click(screen.getByRole("radio", { name: "选项 o1" }));
-    await user.click(screen.getByRole("radio", { name: "选项 q2-1" }));
-    await user.click(screen.getByRole("button", { name: "提交本组" }));
-    await user.click(await screen.findByRole("button", { name: "下一组" }));
+    // post-submit nav: 下一题 (next unit in exam order) + 返回试卷
+    await user.click(screen.getByRole("button", { name: "下一题" }));
     await waitFor(() => expect(quickCreates).toHaveLength(1));
     expect(quickCreates[0]).toEqual({ release_id: "r-1", unit_id: "u-2" });
-    // navigated to the fresh session
     await waitFor(() =>
       rendered.router.state.location.pathname === "/study/practice/next-session",
       { timeout: 3000 });
   });
 
-  it("unanswered quick submit keeps the one confirmation; unanswered counted as practice once", async () => {
+  it("multi-question unit: 上一题/下一题 pager, 提交本组, 下一组", async () => {
+    const user = userEvent.setup();
+    const { submitCalls, quickCreates } = useQuickHandlers({ multi: true });
+    renderQuick();
+    await screen.findByRole("heading", { name: "問題1-3" });
+    // page 1: only q1 visible
+    expect(screen.getByRole("radio", { name: "选项 o1" })).toBeInTheDocument();
+    expect(screen.queryByRole("radio", { name: "选项 q2-1" }))
+      .not.toBeInTheDocument();
+    const prev = screen.getByRole("button", { name: "上一题" });
+    const next = screen.getByRole("button", { name: "下一题" });
+    expect(prev).toBeDisabled(); // nothing before the first question
+    await user.click(screen.getByRole("radio", { name: "选项 o1" }));
+    await user.click(next);
+    expect(await screen.findByRole("radio", { name: "选项 q2-1" }))
+      .toBeInTheDocument();
+    expect(prev).toBeEnabled();
+    expect(next).toBeDisabled(); // last question
+    await user.click(screen.getByRole("radio", { name: "选项 q2-1" }));
+    // whole-unit submit copy + atomic transaction unchanged
+    await user.click(screen.getByRole("button", { name: "提交本组" }));
+    await waitFor(() => expect(submitCalls).toHaveLength(1));
+    expect(submitCalls[0]).toMatchObject({ answers:
+      [{ question_id: "q1", chosen_option_id: "o1" },
+       { question_id: "q2", chosen_option_id: "o1q2" }] });
+    await user.click(await screen.findByRole("button", { name: "下一组" }));
+    await waitFor(() => expect(quickCreates).toHaveLength(1));
+    expect(quickCreates[0]).toEqual({ release_id: "r-1", unit_id: "u-2" });
+  });
+
+  it("unanswered submit keeps the one confirmation dialog", async () => {
     const user = userEvent.setup();
     const { submitCalls } = useQuickHandlers();
     renderQuick();
-    await screen.findByRole("heading", { name: /問題1/ });
-    await user.click(screen.getByRole("radio", { name: "选项 o1" }));
-    await user.click(screen.getByRole("button", { name: "提交本组" }));
+    await screen.findByRole("heading", { name: "問題1-3" });
+    await user.click(screen.getByRole("button", { name: "提交答案" }));
     const dialog = await screen.findByRole("dialog", { name: "还有题目未作答" });
+    expect(dialog).toHaveTextContent("本组还有 1 题未作答");
+    expect(submitCalls).toHaveLength(0);
     await user.click(screen.getByRole("button", { name: "确认提交" }));
     await waitFor(() => expect(submitCalls).toHaveLength(1));
-    expect(dialog).toHaveTextContent("本组还有 1 题未作答");
     expect(await screen.findByText(/因为选 o1 正确/)).toBeInTheDocument();
   });
 
   it("reviewing a completed quick session shows submitted choices, no drafts", async () => {
     const { draftCalls } = useQuickHandlers();
-    // simulate a revisit/refresh AFTER completion
-    server.use(http.get(`*/api/practice/sessions/s-1`, () => HttpResponse.json({
-      ...QUICK_SESSION, state: "completed", ended_at: "x",
-      units: [{ ...QUICK_SESSION.units[0], state: "submitted",
-                submitted_at: "x" }],
-    })));
+    server.use(http.get(`*/api/practice/sessions/s-1`, () =>
+      HttpResponse.json(COMPLETED_QUICK)));
     renderQuick();
-    await screen.findByRole("heading", { name: /問題1/ });
-    // submitted choices are shown (from the gated feedback payload, which
-    // is the only legal source — no drafts exist for quick sessions)
+    await screen.findByRole("heading", { name: "問題1-3" });
+    // submitted choices shown from the gated feedback payload (the only
+    // legal source — quick sessions have no drafts); no lock badge
     expect(await screen.findByRole("radio", { name: "选项 o1" }))
       .toBeChecked();
     expect(screen.getByText("正确")).toBeInTheDocument();
+    expect(screen.queryByText(/已提交锁定/)).not.toBeInTheDocument();
     expect(draftCalls).toHaveLength(0);
+  });
+
+  it("exam's last unit shows no next button — only 返回试卷", async () => {
+    const user = userEvent.setup();
+    const { quickCreates } = useQuickHandlers({ lastUnit: true });
+    renderQuick();
+    await screen.findByRole("heading", { name: "問題1-3" });
+    await user.click(screen.getByRole("radio", { name: "选项 o1" }));
+    await user.click(screen.getByRole("button", { name: "提交答案" }));
+    await screen.findByText(/因为选 o1 正确/);
+    expect(screen.queryByRole("button", { name: "下一题" }))
+      .not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "返回试卷" })).toBeInTheDocument();
+    expect(quickCreates).toHaveLength(0);
   });
 });

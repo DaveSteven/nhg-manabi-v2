@@ -13,6 +13,7 @@ import { useDraftManager } from "./useDraftManager";
 import { useSubmitUnit } from "./useSubmitUnit";
 import { useFeedback } from "./useFeedback";
 import { useFinishSession, useQuickPracticeStart } from "./useStartPractice";
+import { outlineUnitLabel, quickPracticeCopy } from "./quickPracticeCopy";
 import { PracticeBreadcrumb } from "./PracticeBreadcrumb";
 import { DraftConflictDialog, UnansweredConfirmDialog } from "./SubmitDialogs";
 import { clearSessionPendingRetries, loadPendingRetries } from "./pendingRetries";
@@ -48,6 +49,16 @@ export function PracticePage({ sessionId }: { sessionId: string }) {
   const sessionEnded = session !== undefined && session.state !== "in_progress";
   const isQuick = session?.mode === "quick_practice";
 
+  // Quick Practice copy derives from the Canonical unit kind + question
+  // count (quick-practice.md v2.1 §6): 独立单题 提交答案/下一题,
+  // 文法多题组 提交本组/下一组, 阅读文章 提交本篇/下一篇. Multi-question
+  // units page one question at a time (上一题/下一题) — the material stays
+  // visible and the whole-unit submit transaction is untouched.
+  const [questionIdx, setQuestionIdx] = useState(0);
+  useEffect(() => {
+    setQuestionIdx(0); // reset pager when the unit changes
+  }, [current?.sessionUnitId]);
+
   const content = useMemo(
     () => (current ? toViewModel(current.unit) : null),
     [current],
@@ -55,6 +66,12 @@ export function PracticePage({ sessionId }: { sessionId: string }) {
   const questionIds = useMemo(
     () => content?.questions.map((q) => q.id) ?? [],
     [content],
+  );
+  const quickCopy = useMemo(
+    () => (isQuick && content
+      ? quickPracticeCopy(content.unit.kind, content.questions.length)
+      : null),
+    [isQuick, content],
   );
 
   const manager = useDraftManager(sessionId, current?.sessionUnitId ?? "",
@@ -64,7 +81,7 @@ export function PracticePage({ sessionId }: { sessionId: string }) {
     if (outcome.kind === "submitted") {
       manager.markSubmitted(questionIds);
       setSubmitMsg(outcome.result.idempotent
-        ? "本组已提交（重复请求返回同一结果）"
+        ? "已提交（重复请求返回同一结果）"
         : `已提交：答 ${outcome.result.answered_count} 题，未答 ${outcome.result.skipped_count} 题`);
     } else if (outcome.kind === "alreadySubmitted") {
       manager.markSubmitted(questionIds);
@@ -138,6 +155,14 @@ export function PracticePage({ sessionId }: { sessionId: string }) {
     const idx = flat.findIndex((u) => u.unit_id === current.unit.id);
     return idx >= 0 && idx + 1 < flat.length ? flat[idx + 1]! : null;
   }, [isQuick, current, outline.data]);
+  // The unit's real position in the paper (問題1-3) for the page title —
+  // same derivation as the exam outline rows, never a DB label.
+  const quickTitle = useMemo(
+    () => (isQuick && current && outline.data
+      ? outlineUnitLabel(outline.data, current.unit.id)
+      : null),
+    [isQuick, current, outline.data],
+  );
   const startQuick = useQuickPracticeStart((s) => {
     navigate(`/study/practice/${encodeURIComponent(s.id)}`);
   });
@@ -208,6 +233,14 @@ export function PracticePage({ sessionId }: { sessionId: string }) {
   const vm = content.unit;
   const materials = content.materials;
   const questions = content.questions;
+  const copy = quickCopy ?? { submitLabel: "提交本组", nextLabel: "下一组" };
+  // Quick multi-question units page one question at a time (上一题/下一题);
+  // the whole-unit submit stays atomic — paging is display-only.
+  const paged = isQuick && questions.length > 1;
+  const visibleQuestions = paged ? [questions[questionIdx]!] : questions;
+  const title = isQuick
+    ? (quickTitle ?? vm.label ?? "练习")
+    : `练习 · ${vm.label ?? `组 ${vm.position}`}`;
 
   return (
     <div className="practice-shell">
@@ -216,14 +249,15 @@ export function PracticePage({ sessionId }: { sessionId: string }) {
                             examId={session.units[0]?.exam_id ?? null} />
         <header className="practice-header">
           <h1>
-            练习 · {vm.label ?? `组 ${vm.position}`}
-            {unitSubmitted ? <span className="unit-locked">（已提交锁定）</span> : null}
+            {title}
+            {!isQuick && unitSubmitted
+              ? <span className="unit-locked">（已提交锁定）</span> : null}
           </h1>
           <p className="text-aux">
             {session.feedback_mode === "immediate"
-              ? "即时反馈：提交本组后即可查看解析"
+              ? (isQuick ? "即时反馈：提交后即可查看解析" : "即时反馈：提交本组后即可查看解析")
               : "统一反馈：整卷结束后统一揭晓答案"}
-            {" · "}第 {currentIdx + 1} / {units.length} 组
+            {!isQuick ? ` · 第 ${currentIdx + 1} / ${units.length} 组` : null}
           </p>
         </header>
 
@@ -244,8 +278,25 @@ export function PracticePage({ sessionId }: { sessionId: string }) {
 
         <MaterialDisplay unit={vm} materials={materials} />
 
+        {paged ? (
+          <nav aria-label="题目导航" className="question-pager">
+            <button type="button" disabled={questionIdx === 0}
+                    onClick={() => setQuestionIdx((i) => i - 1)}>
+              上一题
+            </button>
+            <span className="question-pager-pos">
+              {questions[questionIdx]!.printedNumber ?? `第 ${questions[questionIdx]!.position} 题`}
+              {" · "}{questionIdx + 1} / {questions.length}
+            </span>
+            <button type="button" disabled={questionIdx === questions.length - 1}
+                    onClick={() => setQuestionIdx((i) => i + 1)}>
+              下一题
+            </button>
+          </nav>
+        ) : null}
+
         <ol className="question-list">
-          {questions.map((q) => {
+          {visibleQuestions.map((q) => {
             const qState = manager.state.questions[q.id];
             const selected = qState
               ? (qState.pendingOptionId ?? qState.optionId) : null;
@@ -299,7 +350,7 @@ export function PracticePage({ sessionId }: { sessionId: string }) {
                       if (unanswered > 0) setConfirming(true);
                       else onConfirmSubmit();
                     }}>
-              提交本组
+              {copy.submitLabel}
             </button>
           ) : null}
           {!isQuick && allSubmitted && !sessionEnded ? (
@@ -335,7 +386,7 @@ export function PracticePage({ sessionId }: { sessionId: string }) {
                             release_id: outline.data!.release_id,
                             unit_id: nextQuickUnit.unit_id,
                           })}>
-                    下一组
+                    {copy.nextLabel}
                   </button>
                 ) : null
               ) : currentIdx + 1 < units.length ? (
@@ -369,7 +420,7 @@ export function PracticePage({ sessionId }: { sessionId: string }) {
       </main>
       {audioUrl ? (
         <AudioDock src={audioUrl}
-                   subtitle={`练习 · ${vm.label ?? `组 ${vm.position}`}`}
+                   subtitle={isQuick ? title : `练习 · ${vm.label ?? `组 ${vm.position}`}`}
                    transcript={current
                      ? { sessionId, sessionUnitId: current.sessionUnitId,
                          allowed: transcriptAllowed }
