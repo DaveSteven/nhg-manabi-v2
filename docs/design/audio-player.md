@@ -34,7 +34,7 @@
 | 距离视口底部 | 20px |
 | 背景 | `--color-surface`（#FFFFFF） |
 | 圆角 | 胶囊全圆角 999px（2026-11-17 用户调整，原 24px） |
-| 边框 | `1px solid var(--color-border)` |
+| 边框 | 无（2026-11-17 用户调整，仅阴影；原 `1px solid var(--color-border)`） |
 | 阴影 | `0 8px 32px rgba(43,43,51,0.10)` |
 
 页面预留底部空间：dock 高度 + 20px + 安全区，防止遮挡题目或提交按钮。
