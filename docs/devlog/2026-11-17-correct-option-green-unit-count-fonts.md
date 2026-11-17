@@ -17,3 +17,6 @@
 
 ## 追加修复：option-correct 被 :has() 覆盖
 `.option-row:has(input[type=radio]:checked)` 特异性 (0,3,1) 高于 `.option-row.option-correct` (0,2,0)，绿色被选中粉色覆盖（DevTools 中被划线）。新增 `.option-row.option-correct:has(input[type=radio]:checked)` 提升至 (0,4,1)。构建产物已确认含该规则，web 镜像已重建；未跑浏览器目视。
+
+## 追加：去掉提交成功横幅
+提交成功后不再渲染 `<p role="status">已提交：答 N 题，未答 M 题</p>`（含幂等「已提交（重复请求…）」与 alreadySubmitted 的确认文案），结果由反馈卡片展示。提交**失败**文案保留。typecheck 通过，vitest 230 passed；web 镜像已重建。

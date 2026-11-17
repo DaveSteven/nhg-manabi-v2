@@ -80,12 +80,10 @@ export function PracticePage({ sessionId }: { sessionId: string }) {
     setConfirming(false);
     if (outcome.kind === "submitted") {
       manager.markSubmitted(questionIds);
-      setSubmitMsg(outcome.result.idempotent
-        ? "已提交（重复请求返回同一结果）"
-        : `已提交：答 ${outcome.result.answered_count} 题，未答 ${outcome.result.skipped_count} 题`);
+      setSubmitMsg(null); // success needs no banner; the feedback card shows the result
     } else if (outcome.kind === "alreadySubmitted") {
       manager.markSubmitted(questionIds);
-      setSubmitMsg("提交结果已确认（此前已提交成功）");
+      setSubmitMsg(null);
     } else {
       setSubmitMsg(`提交失败：${outcome.error.message}`);
     }
