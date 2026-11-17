@@ -84,12 +84,7 @@ export function UnifiedPracticeView({ sessionId, bundle }: {
 
   const [idx, setIdx] = useState(0); // Unit index
   const content = contents[Math.min(idx, contents.length - 1)];
-  const [scrollTo, setScrollTo] = useState<string | null>(null);
-  useEffect(() => {
-    if (!scrollTo) return;
-    document.getElementById(`q-card-${scrollTo}`)?.scrollIntoView?.({ block: "center" });
-    setScrollTo(null);
-  }, [scrollTo, idx]);
+
   const sessionUnit = session.units.find((u) => u.id === content?.sessionUnitId);
   const unitSubmitted = sessionUnit?.state === "submitted";
 
@@ -211,21 +206,28 @@ export function UnifiedPracticeView({ sessionId, bundle }: {
           </p>
         </header>
 
-        <nav aria-label="题号导航" className="unit-nav question-strip">
-          {flat.map((f, i) => {
-            const v = manager.displayValue(f.qid);
-            const answered = v !== null && v !== "";
-            const verdict = ended ? verdictOf.get(f.qid) : undefined;
+        <nav aria-label="题组导航" className="unit-nav question-strip">
+          {contents.map((c, i) => {
+            const qids = c.vm.questions.map((q) => q.id);
+            const answeredN = qids.filter((id) => {
+              const v = manager.displayValue(id);
+              return v !== null && v !== "";
+            }).length;
+            const vs = ended ? qids.map((id) => verdictOf.get(id)) : [];
+            const verdict = !ended || vs.some((v) => v === undefined) ? undefined
+              : vs.includes("wrong") ? "wrong"
+              : vs.every((v) => v === "correct") ? "correct" : "skipped";
             const status = verdict
-              ? { correct: "正确", wrong: "错误", skipped: "未答" }[verdict]
-              : answered ? "已选" : "未答";
+              ? { correct: "全对", wrong: "有错", skipped: "有未答" }[verdict]
+              : answeredN === qids.length ? "已选"
+              : answeredN > 0 ? "部分已选" : "未答";
             return (
-              <button key={f.qid} type="button"
-                      aria-current={f.ui === idx ? "step" : undefined}
-                      aria-label={`第 ${i + 1} 题（${status}）`}
+              <button key={c.sessionUnitId} type="button"
+                      aria-current={i === idx ? "step" : undefined}
+                      aria-label={`第 ${i + 1} 组（${status}）`}
                       className={verdict ? `is-${verdict}`
-                        : answered ? "is-answered" : undefined}
-                      onClick={() => { setIdx(f.ui); setScrollTo(f.qid); }}>
+                        : answeredN === qids.length ? "is-answered" : undefined}
+                      onClick={() => setIdx(i)}>
                 {i + 1}
                 {verdict === "correct" ? <span aria-hidden="true" className="strip-mark">✓</span>
                   : verdict === "wrong" ? <span aria-hidden="true" className="strip-mark">✗</span>
@@ -244,7 +246,7 @@ export function UnifiedPracticeView({ sessionId, bundle }: {
             const fq = feedback.data?.questions.find((x) => x.question_id === question.id);
             const answeredCorrect = fq?.is_correct === true;
             return (
-              <li key={question.id} id={`q-card-${question.id}`} className="question-card card">
+              <li key={question.id} className="question-card card">
                 <fieldset className="question-fieldset" disabled={ended}>
                   <legend>
                     {question.printedNumber ?? `第 ${question.position} 题`}

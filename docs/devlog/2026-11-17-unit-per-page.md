@@ -4,7 +4,7 @@
 按用户要求，文法成组/阅读多问不再逐小题切换（ADR-0017）。纯前端。
 
 ## 改动
-- `UnifiedPractice.tsx`：步进单位改为 Unit；一页渲染材料 + 全部小题；按钮 上一/下一 组/篇/题（复用 `quickPracticeCopy`）；题号条点击跳转 Unit 并滚动到小题；进度「第 x/M 组 · 第 a–b/N 题」。复盘时每题下显示解析。
+- `UnifiedPractice.tsx`：步进单位改为 Unit；一页渲染材料 + 全部小题；按钮 上一/下一 组/篇/题（复用 `quickPracticeCopy`）；顶部导航条改为题组条（一组一格，不展示小题号）；进度「第 x/M 组 · 第 a–b/N 题」。复盘时每题下显示解析。
 - `PracticePage.tsx`：移除 Quick 多题 Unit 的小题分页；删 `.question-pager` 样式。
 - 测试：`UnifiedPractice.test.tsx`、`PracticePage.test.tsx` 相应改写（同页可见全部小题、无小题级翻页）。
 - 文档：practice-interactions、frontend-spec、quick-practice 同步；新增 ADR-0017。

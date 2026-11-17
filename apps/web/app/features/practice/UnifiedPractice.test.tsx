@@ -135,7 +135,7 @@ describe("统一反馈 practice", () => {
     await user.click(screen.getByRole("button", { name: "上一题" }));
     expect(screen.getByRole("radio", { name: "q1 选项 a" })).toBeChecked();
     await user.click(screen.getByRole("radio", { name: "q1 选项 b" }));  // change it
-    await user.click(screen.getByRole("button", { name: /第 3 题/ }));    // jump via strip
+    await user.click(screen.getByRole("button", { name: /第 2 组/ }));    // jump via strip
     expect(await screen.findByText(/第 2 \/ 2 组/)).toBeInTheDocument();
     expect(screen.getByRole("radio", { name: "q3 选项 b" })).toBeChecked();
 
@@ -153,7 +153,7 @@ describe("统一反馈 practice", () => {
     mount();
     await screen.findByText(/第 1 \/ 2 组/);
     await user.click(screen.getByRole("radio", { name: "q1 选项 b" }));
-    await user.click(screen.getByRole("button", { name: /第 3 题/ }));
+    await user.click(screen.getByRole("button", { name: /第 2 组/ }));
     expect(screen.queryByRole("button", { name: /^下一/ })).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "完成并提交练习" }));
     const dialog = await screen.findByRole("dialog", { name: "还有题目未作答" });
@@ -198,7 +198,7 @@ describe("统一反馈 practice", () => {
     mount();
     await screen.findByText(/第 1 \/ 2 组/);
     expect(await screen.findByRole("radio", { name: "q2 选项 b" })).toBeChecked();
-    await user.click(screen.getByRole("button", { name: /第 3 题/ }));
+    await user.click(screen.getByRole("button", { name: /第 2 组/ }));
     expect(await screen.findByRole("radio", { name: "q3 选项 a" })).toBeChecked();
     await user.click(screen.getByRole("button", { name: "完成并提交练习" }));
     await user.click(await screen.findByRole("button", { name: "确认提交" }));
@@ -230,11 +230,11 @@ describe("统一反馈 practice", () => {
     expect(spy.feedbackCalls).toContain("su-1");
   });
 
-  it("review: the number strip marks each question's verdict across all units", async () => {
+  it("review: the number strip marks each group's verdict across all units", async () => {
     setup({ state: "completed" });
     mount();
     // mock marks every question wrong (is_correct: false), q3 lives in su-2
-    expect(await screen.findByRole("button", { name: "第 1 题（错误）" })).toHaveClass("is-wrong");
-    expect(await screen.findByRole("button", { name: "第 3 题（错误）" })).toHaveClass("is-wrong");
+    expect(await screen.findByRole("button", { name: "第 1 组（有错）" })).toHaveClass("is-wrong");
+    expect(await screen.findByRole("button", { name: "第 2 组（有错）" })).toHaveClass("is-wrong");
   });
 });
