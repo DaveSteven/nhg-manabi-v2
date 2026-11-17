@@ -211,7 +211,7 @@ export function PracticePage({ sessionId }: { sessionId: string }) {
                 <fieldset className="question-fieldset" disabled={unitSubmitted}>
                   <legend>
                     {q.printedNumber ?? `第 ${q.position} 题`}
-                    {qState ? (
+                    {qState && qState.status !== "saved" ? (
                       <span className={`save-state save-${qState.status}`}
                             aria-live="polite">
                         {STATUS_TEXT[qState.status]}

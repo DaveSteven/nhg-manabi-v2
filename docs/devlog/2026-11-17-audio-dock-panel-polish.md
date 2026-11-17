@@ -58,6 +58,12 @@ Panel 做最小改动优化；不触碰 Canonical Schema、音频引擎、提交
   把文字块撑高、相对 radio 偏上。`.option-row .richtext p { margin: 0 }` 修复，radio 加
   `flex: none`。web 全量 224 passed、build 通过，容器重建冒烟 200。
 
+## 「已保存」状态移除（用户要求）
+
+- 练习题号旁不再渲染 `save-saved`「已保存」徽标（saving/保存失败/冲突等状态保留）；自动保存
+  行为本身不变。测试原以 `已保存` 文本等待自动保存完成，改为以 draft 请求发出为信号。
+  web 全量 224 passed，容器重建冒烟 200。
+
 ## 未执行 / 剩余风险
 
 - Firefox/Safari、深色模式、200% 缩放未测（既有缺口）。

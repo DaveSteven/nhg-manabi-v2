@@ -130,7 +130,8 @@ describe("PracticePage", () => {
     await waitFor(() => expect(draftCalls).toHaveLength(1));
     expect(draftCalls[0]).toMatchObject({ question_id: "q1",
       chosen_option_id: "o1", expected_row_version: 0 });
-    await screen.findByText("已保存");
+    // "已保存" badge intentionally not rendered any more (user decision);
+    // the draft call above is the autosave-completed signal.
 
     // submit: unanswered confirm appears (q2 unanswered), then confirm
     await user.click(screen.getByRole("button", { name: "提交本组" }));
