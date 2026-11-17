@@ -118,3 +118,5 @@
 - **user_question_progress 缓存 + 专项「只复习最近仍错」（2026-11-17）**：见 `docs/devlog/2026-11-17-question-progress-wrong-only.md`。每题缓存在每次正式提交的同一事务内重算（skip 不覆盖最近正误，可由 `rebuild_user_progress` 整体重建），迁移 0012 回填历史（开发库 up/down/up 通过）；专项目录新增 `wrong_units`、创建接口新增 `selection=wrong_only`，配置页与「再练一组」接通。后端 212 passed + 2 skipped，web 257 passed，typecheck/build 通过。真实浏览器验收、容器重建、缓存性能评估未做；错题本/学习历史/统计与严格模拟规则文档尚未开始。
 
 - **严格模拟规则草案（2026-11-17，纯文档）**：新增 `docs/product/mock-exam-rules-draft.md`（待确认，非产品规则）。核查发现：Phase/时限表已建但**真实库 `release_exam_phases` 为 0 行**，转换器不产出 Phase，模考无任何接口/前端，practice 提交对 mock 返回 409。列出 M1–M10 待用户决定项（各级别 Phase 时限、听力播放、超时封存、Phase 间规则、成绩呈现、名额、答案泄漏边界）与确认后的实施顺序；未改代码，未新增 ADR（确认后再写）。
+
+- **严格模拟规则确认（2026-11-17，ADR-0019，纯文档）**：用户逐条确认 M1–M10（M8 改为练习/模考互相直接替换、无确认）；各级别 Phase 时限取自 JLPT 官网并写入 ADR；回填决策表 P-023、business-rules、feature-scope、page-structure。见 `docs/devlog/2026-11-17-mock-exam-rules-adr.md`。**规则已定、实现未开始**（真实库无 Phase 数据；单进程约束需迁移）；未改代码。
