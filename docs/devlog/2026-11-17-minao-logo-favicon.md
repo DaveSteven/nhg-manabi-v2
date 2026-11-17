@@ -25,3 +25,6 @@
 
 ## 追加：去掉 2.0 角标
 顶栏/认证页的 `2.0` 角标与首页 eyebrow 的「2.0」移除，删除 `.brand-version` 样式；web 镜像重建并重启。web vitest/typecheck/build 结果见提交时的实际运行。
+
+## 追加：品牌文字改用 minao 字标
+顶栏与认证页的「MINAO」文字改为 `public/minao-wordmark.svg`（用户提供的字标，20px 高，alt=MINAO），图标 + 字标并排。web vitest 272 passed、typecheck/build 通过；web 镜像重建重启，浏览器实测 `/study` 顶栏显示正常。管理端仍是文字。
