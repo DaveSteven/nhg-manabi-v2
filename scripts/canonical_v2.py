@@ -103,6 +103,58 @@ def subject_of(qtype: int) -> str:
     raise ValueError(f"unknown questionType: {qtype}")
 
 
+# ---------------------------------------------------------------------------
+# Strict-mock Phases (ADR-0019). Section = content category; Phase = the
+# timed stage of the real exam. Durations come from the official JLPT
+# "Test Sections and Time Allotted" table (checked 2026-11-17); a release
+# stores its own copy, so a later change here only affects NEW releases.
+# ---------------------------------------------------------------------------
+
+PHASE_RULES_SOURCE = "https://www.jlpt.jp/e/guideline/testsections.html"
+PHASE_RULES_CHECKED = "2026-11-17"
+_VGR = ("vocabulary", "grammar", "reading")
+PHASE_RULES: dict[str, list[tuple[str, int, tuple[str, ...]]]] = {
+    "N1": [("言語知識（文字・語彙・文法）・読解", 110, _VGR), ("聴解", 55, ("listening",))],
+    "N2": [("言語知識（文字・語彙・文法）・読解", 105, _VGR), ("聴解", 50, ("listening",))],
+    "N3": [("言語知識（文字・語彙）", 30, ("vocabulary",)),
+           ("言語知識（文法）・読解", 70, ("grammar", "reading")), ("聴解", 40, ("listening",))],
+    "N4": [("言語知識（文字・語彙）", 25, ("vocabulary",)),
+           ("言語知識（文法）・読解", 55, ("grammar", "reading")), ("聴解", 35, ("listening",))],
+    "N5": [("言語知識（文字・語彙）", 20, ("vocabulary",)),
+           ("言語知識（文法）・読解", 40, ("grammar", "reading")), ("聴解", 30, ("listening",))],
+}
+STRICT_LISTENING_POLICY = {
+    "playback": "once", "pausable": False, "seekable": False, "speed_control": False,
+}
+
+
+def build_phases(exam_id: str, level: str, section_subjects: list[str]) -> list[dict] | None:
+    """Phase records for an exam, or None when it cannot be mocked.
+
+    None (no phases at all, never a partial mock) when the level has no rule
+    or the exam lacks any subject its phases need (M10: 缺 Phase 的试卷不开放).
+    """
+    rules = PHASE_RULES.get(level)
+    if rules is None:
+        return None
+    needed = {s for _, _, subjects in rules for s in subjects}
+    if not needed <= set(section_subjects):
+        return None
+    return [{
+        "record_type": "exam_phase",
+        "schema_version": SCHEMA_VERSION,
+        "id": f"{exam_id}-ph{pos}",
+        "exam_id": exam_id,
+        "position": pos,
+        "title": title,
+        "duration_seconds": minutes * 60,
+        "subjects": list(subjects),
+        "playback_policy": dict(STRICT_LISTENING_POLICY) if subjects == ("listening",) else None,
+        "rule_source": PHASE_RULES_SOURCE,
+        "rule_checked": PHASE_RULES_CHECKED,
+    } for pos, (title, minutes, subjects) in enumerate(rules, start=1)]
+
+
 def qtype_id(qtype: int) -> str:
     return QUESTION_TYPE_IDS[qtype]
 
@@ -784,12 +836,20 @@ class Converter:
                 "title": SECTION_TITLES[subject],
             })
 
+        phases = build_phases(self.exam_id, self.level, [s["subject"] for s in sections])
+        if phases is None:
+            self.warn(
+                "phases_skipped",
+                f"无法生成严格模拟 Phase（级别规则缺失或缺少科目）: {self.exam_id}",
+            )
+
         counts = {
             "sections": len(sections),
             "layers": len(layers),
             "units": len(units),
             "questions": len(questions),
             "assets": len(asset_records),
+            "phases": len(phases or []),
             "explanations": len(explanations),
             "source_groups_21": sum(1 for u in units if u["_source_group"]),
             "single_units": sum(1 for u in units if u["kind"] == "single"),
@@ -810,6 +870,8 @@ class Converter:
         write_jsonl(self.out_dir / "questions.jsonl", [self._public_question(q) for q in questions])
         write_jsonl(self.out_dir / "answer_keys.private.jsonl", answer_keys)
         write_jsonl(self.out_dir / "explanations.jsonl", explanations)
+        if phases:  # absent file == no mock; never an empty placeholder
+            write_jsonl(self.out_dir / "phases.jsonl", phases)
         write_jsonl(
             self.out_dir / "assets.jsonl",
             [{k: v for k, v in a.items() if k != "_source"} for a in asset_records],
@@ -870,6 +932,7 @@ class Converter:
             "questions.jsonl",
             "answer_keys.private.jsonl",
             "explanations.jsonl",
+            *(["phases.jsonl"] if phases else []),
             "assets.jsonl",
             "provenance/source_refs.private.jsonl",
             "reports/import_report.json",
@@ -1651,10 +1714,14 @@ def main() -> None:
     parser.add_argument("--all", action="store_true",
                         help="convert EVERY exam found under data-dir/N1..N5 "
                              "(skips packages that already exist)")
+    parser.add_argument("--overwrite", action="store_true",
+                        help="with --all: regenerate packages that already exist "
+                             "(e.g. to add phases.jsonl); default keeps them untouched")
     args = parser.parse_args()
 
     if args.all:
-        print(json.dumps(convert_all(args.data_dir, args.output_dir),
+        print(json.dumps(convert_all(args.data_dir, args.output_dir,
+                                     skip_existing=not args.overwrite),
                          ensure_ascii=False, indent=2))
         return
 

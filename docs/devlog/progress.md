@@ -120,3 +120,5 @@
 - **严格模拟规则草案（2026-11-17，纯文档）**：新增 `docs/product/mock-exam-rules-draft.md`（待确认，非产品规则）。核查发现：Phase/时限表已建但**真实库 `release_exam_phases` 为 0 行**，转换器不产出 Phase，模考无任何接口/前端，practice 提交对 mock 返回 409。列出 M1–M10 待用户决定项（各级别 Phase 时限、听力播放、超时封存、Phase 间规则、成绩呈现、名额、答案泄漏边界）与确认后的实施顺序；未改代码，未新增 ADR（确认后再写）。
 
 - **严格模拟规则确认（2026-11-17，ADR-0019，纯文档）**：用户逐条确认 M1–M10（M8 改为练习/模考互相直接替换、无确认）；各级别 Phase 时限取自 JLPT 官网并写入 ADR；回填决策表 P-023、business-rules、feature-scope、page-structure。见 `docs/devlog/2026-11-17-mock-exam-rules-adr.md`。**规则已定、实现未开始**（真实库无 Phase 数据；单进程约束需迁移）；未改代码。
+
+- **严格模拟 Phase 数据层（2026-11-17，ADR-0019 首步）**：见 `docs/devlog/2026-11-17-mock-exam-phase-data.md`。Canonical 新增可选 `phases.jsonl`（计入内容哈希，缺省包哈希不变），转换器按官方规则表生成（N1/N2 两个、N3–N5 三个 Phase；缺科目则不生成），导入校验与发布写入 `release_exam_phases`/`release_phase_units`。后端 235 passed + 2 skipped；N2 2018-12 在临时库验证 88 个 Unit 全覆盖。**现有 105 套库内试卷仍无 Phase**（需 `--overwrite` 重新转换+导入，会改本机发布，待你决定）；模考会话/计时/接口/前端未开始。

@@ -79,7 +79,7 @@ def test_valid_fixture_package_passes_validation(tmp_path):
     assert vr.counts == {
         "exam": 1, "sections": 2, "layers": 2, "question_types": 2,
         "units": 2, "questions": 3, "answer_keys": 3, "explanations": 1,
-        "assets": 1, "source_mappings": 2,
+        "assets": 1, "phases": 0, "source_mappings": 2,
     }
 
 

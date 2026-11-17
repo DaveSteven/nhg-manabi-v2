@@ -23,7 +23,7 @@ CONTENT_FILES = (
     "answer_keys.private.jsonl",
 )
 REQUIRED_RECORD_FIELDS = ("record_type", "schema_version")
-COUNT_KEYS = ("sections", "layers", "units", "questions", "assets")
+COUNT_KEYS = ("sections", "layers", "units", "questions", "assets", "phases")
 
 
 @dataclass
@@ -126,7 +126,7 @@ def _read_file_opener(open_binary):
         for filename in ("exam.json", "sections.jsonl", "layers.jsonl",
                          "question_types.jsonl", "units.jsonl", "questions.jsonl",
                          "answer_keys.private.jsonl", "explanations.jsonl",
-                         "assets.jsonl"):
+                         "assets.jsonl", "phases.jsonl"):
             try:
                 raw = read_bytes(prefix + filename)
             except (KeyError, FileNotFoundError, OSError):
@@ -151,6 +151,7 @@ def _read_file_opener(open_binary):
             "units": len(records["units.jsonl"]),
             "questions": len(records["questions.jsonl"]),
             "assets": len(records["assets.jsonl"]),
+            "phases": len(records["phases.jsonl"]),
         }
         for key in COUNT_KEYS:
             if key in manifest_counts and manifest_counts[key] != actual_counts[key]:

@@ -33,6 +33,7 @@ RECORD_TYPE_TO_FILE = {
     "answer_key": "answer_keys.private.jsonl",
     "explanation": "explanations.jsonl",
     "media_asset": "assets.jsonl",
+    "exam_phase": "phases.jsonl",
 }
 
 
@@ -102,6 +103,46 @@ def confirm_rights(engine: Engine, exam_id: str, reviewer_id: str,
             {"id": _uuid.uuid4(), "e": exam_id, "reviewer": reviewer_id,
              "notes": notes})
     return {"ok": True, "exam_id": exam_id, "decision": "rights_confirmed"}
+
+
+def _insert_phases(conn, release_id, package: CanonicalPackage) -> None:
+    """Strict-mock Phases (ADR-0019) — snapshot rows, absent for packages
+    without `phases.jsonl` (those releases simply offer no mock)."""
+    for ph in package.records.get("phases.jsonl", []):
+        conn.execute(text(
+            "INSERT INTO release_exam_phases (release_id, phase_id, position,"
+            " title, duration_seconds, playback_policy)"
+            " VALUES (:r, :pid, :pos, :title, :dur, CAST(:pol AS jsonb))"),
+            {"r": release_id, "pid": ph["id"], "pos": ph["position"],
+             "title": ph["title"], "dur": ph["duration_seconds"],
+             "pol": json.dumps(ph["playback_policy"], ensure_ascii=False)
+             if ph.get("playback_policy") is not None else None})
+
+
+def _insert_phase_units(conn, release_id, package: CanonicalPackage) -> None:
+    """Assign every Unit to the one Phase owning its section subject, in
+    exam order (section → layer → unit position). Validation guarantees full
+    coverage; this runs after release_units exist (composite FK)."""
+    phases = package.records.get("phases.jsonl", [])
+    if not phases:
+        return
+    rec = package.records
+    phase_by_subject = {s: ph["id"] for ph in phases for s in ph["subjects"]}
+    section_pos = {s["subject"]: s["position"] for s in rec["sections.jsonl"]}
+    layer = {l["id"]: l for l in rec["layers.jsonl"]}
+
+    def order(u):
+        ly = layer[u["layer_id"]]
+        return (section_pos[ly["section"]], ly["position"], u["position"])
+
+    counters: dict[str, int] = {}
+    for u in sorted(rec["units.jsonl"], key=order):
+        pid = phase_by_subject[layer[u["layer_id"]]["section"]]
+        counters[pid] = counters.get(pid, 0) + 1
+        conn.execute(text(
+            "INSERT INTO release_phase_units (release_id, phase_id, unit_id,"
+            " position) VALUES (:r, :pid, :uid, :pos)"),
+            {"r": release_id, "pid": pid, "uid": u["id"], "pos": counters[pid]})
 
 
 def publish_package(engine: Engine, package_id: str,
@@ -211,6 +252,8 @@ def publish_package(engine: Engine, package_id: str,
                  "instr": json.dumps(l.get("instruction"), ensure_ascii=False)
                  if l.get("instruction") is not None else None})
 
+        _insert_phases(conn, release_id, package)
+
         for u in package.records["units.jsonl"]:
             conn.execute(text(
                 "INSERT INTO release_units (release_id, unit_id, layer_id,"
@@ -240,6 +283,8 @@ def publish_package(engine: Engine, package_id: str,
                      if m.get("cues") is not None else None,
                      "asset": m.get("asset_id"),
                      "tfm": m.get("translated_from_material_id")})
+
+        _insert_phase_units(conn, release_id, package)
 
         for q in package.records["questions.jsonl"]:
             conn.execute(text(

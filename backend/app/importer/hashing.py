@@ -21,6 +21,7 @@ FILE_ORDER = (
     "answer_keys.private.jsonl",
     "explanations.jsonl",
     "assets.jsonl",
+    "phases.jsonl",  # last: packages without it keep their existing hash
 )
 
 _VOLATILE_FIELDS = frozenset({"generated_at", "imported_at"})

@@ -22,7 +22,7 @@ CLOZE_UNIT = "JLPTGO-N5-TEST-EX-ly-01-u01"
 SINGLE_UNIT = "JLPTGO-N5-TEST-EX-ly-02-u01"
 
 RELEASE_TABLES = (
-    "release_answer_keys", "release_explanations", "release_option_media",
+    "release_phase_units", "release_exam_phases", "release_answer_keys", "release_explanations", "release_option_media",
     "release_question_media", "release_exam_media", "release_options",
     "release_questions", "release_unit_materials", "release_units",
     "release_layers", "release_sections",

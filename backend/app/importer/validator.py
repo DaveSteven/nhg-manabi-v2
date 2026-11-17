@@ -107,6 +107,68 @@ def _positive_int(value) -> bool:
     return isinstance(value, int) and not isinstance(value, bool) and value > 0
 
 
+def _validate_phases(vr: ValidationResult, package: CanonicalPackage,
+                     exam_id: str) -> None:
+    """Strict-mock Phases (ADR-0019). Optional: a package without phases is
+    simply not mockable. When present, every Unit must belong to exactly one
+    Phase (via its section subject) and no Phase may be empty — a partial
+    mock would silently skip content."""
+    rec = package.records
+    loc = package.package_id
+    phases = rec.get("phases.jsonl", [])
+    if not phases:
+        return
+    seen_ids: set[str] = set()
+    seen_pos: set[int] = set()
+    subject_phase: dict[str, str] = {}
+    for ph in phases:
+        pid = ph.get("id")
+        ploc = f"{loc}.phase[{pid}]"
+        if ph.get("record_type") != "exam_phase":
+            vr.error("record_type", ploc, f"expected 'exam_phase', got {ph.get('record_type')!r}")
+        if pid in seen_ids:
+            vr.error("duplicate_id", ploc, "duplicate id within package")
+        seen_ids.add(pid)
+        if ph.get("exam_id") != exam_id:
+            vr.error("fk_phase_exam", ploc, f"exam_id {ph.get('exam_id')!r} does not match exam")
+        pos = ph.get("position")
+        if not _positive_int(pos) or pos in seen_pos:
+            vr.error("phase_position", ploc, f"position must be a unique positive int, got {pos!r}")
+        else:
+            seen_pos.add(pos)
+        if not ph.get("title"):
+            vr.error("phase_title", ploc, "title required")
+        if not _positive_int(ph.get("duration_seconds")):
+            vr.error("phase_duration", ploc,
+                     f"duration_seconds must be a positive int, got {ph.get('duration_seconds')!r}")
+        subjects = ph.get("subjects")
+        if (not isinstance(subjects, list) or not subjects
+                or any(s not in SUBJECTS for s in subjects)):
+            vr.error("phase_subjects", ploc, f"subjects must be a non-empty list of {sorted(SUBJECTS)}")
+            continue
+        for s in subjects:
+            if s in subject_phase:
+                vr.error("phase_subject_overlap", ploc,
+                         f"subject {s!r} already belongs to phase {subject_phase[s]!r}")
+            subject_phase[s] = pid
+        pol = ph.get("playback_policy")
+        if pol is not None and not isinstance(pol, dict):
+            vr.error("phase_playback_policy", ploc, "playback_policy must be an object or null")
+
+    layer_subject = {l["id"]: l.get("section") for l in rec["layers.jsonl"]}
+    covered: dict[str, int] = {pid: 0 for pid in seen_ids}
+    for u in rec["units.jsonl"]:
+        pid = subject_phase.get(layer_subject.get(u.get("layer_id")))
+        if pid is None:
+            vr.error("phase_unit_uncovered", f"{loc}.unit[{u.get('id')}]",
+                     "unit's section subject belongs to no phase")
+        else:
+            covered[pid] += 1
+    for pid, n in covered.items():
+        if n == 0:
+            vr.error("phase_empty", f"{loc}.phase[{pid}]", "phase contains no units")
+
+
 def validate_package(package: CanonicalPackage) -> ValidationResult:
     vr = ValidationResult()
     rec = package.records
@@ -546,8 +608,11 @@ def validate_package(package: CanonicalPackage) -> ValidationResult:
             vr.error("provenance_fields", f"{loc}.provenance",
                      "canonical_type and canonical_id required")
 
+    _validate_phases(vr, package, exam_id)
+
     vr.counts = {
         "exam": len(exam_records),
+        "phases": len(rec.get("phases.jsonl", [])),
         "sections": len(rec["sections.jsonl"]),
         "layers": len(rec["layers.jsonl"]),
         "question_types": len(rec["question_types.jsonl"]),

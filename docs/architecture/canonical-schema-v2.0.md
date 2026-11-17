@@ -257,6 +257,23 @@ JLPTGO-N2-2018-12-r1/
 
 链接关系：`Exam.full_audio_asset_id` 关联整卷音频；`Unit.materials[].asset_id` 关联共用媒体；`Question/Option.media_asset_ids` 用于题目或选项专属媒体。不能假设源 `images/` 路径内只有图片。
 
+### 4.10a `ExamPhase`（`phases.jsonl`，可选，ADR-0019）
+
+严格模拟的计时阶段，与 `Section`（内容分类）分开建模。**文件可缺省**：无 `phases.jsonl` 的包照常导入发布，只是不提供模拟入口；不得写空占位文件。纳入内容哈希且排在哈希顺序最后，因此缺省的旧包哈希不变，加入 Phase 后产生新哈希、新 Release。
+
+| 字段 | 类型 | 约束 / 说明 |
+|---|---|---|
+| `id` | string | `<exam_id>-ph<position>`，包内唯一 |
+| `exam_id` | string | 必须等于 exam |
+| `position` | integer | 正整数，包内唯一，即考试顺序 |
+| `title` | string | 如「言語知識（文法）・読解」 |
+| `duration_seconds` | integer | 正整数；官方时限，随 Release 固化 |
+| `subjects` | string[] | 非空，取自 `vocabulary/grammar/reading/listening`；同一科目只属于一个 Phase |
+| `playback_policy` | object/null | 听力 Phase：`{"playback":"once","pausable":false,"seekable":false,"speed_control":false}`；其他为 `null` |
+| `rule_source` / `rule_checked` | string | 时限规则的来源 URL 与核对日期（说明性） |
+
+校验：每个 Unit 通过其 Layer 的科目恰好落入一个 Phase；不允许空 Phase；缺任一所需科目的试卷由转换器**整体不生成** Phase（不做部分模拟）。发布时写入 `release_exam_phases`，Unit 归属按「Section → Layer → Unit」顺序写入 `release_phase_units`。各级别时限规则表在转换器 `PHASE_RULES`（来源 jlpt.jp，见 ADR-0019）；规则表变化只影响新生成的 Release。
+
 ### 4.11 `Provenance`（仅内部）
 
 | 字段 | 类型 | 说明 |

@@ -37,6 +37,7 @@ _RECORD_SOURCES = (
     ("answer_keys.private.jsonl", "question_id"),
     ("explanations.jsonl", "id"),
     ("assets.jsonl", "id"),
+    ("phases.jsonl", "id"),
 )
 
 
