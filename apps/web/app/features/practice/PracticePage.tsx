@@ -16,11 +16,7 @@ import { DraftConflictDialog, UnansweredConfirmDialog } from "./SubmitDialogs";
 import { clearSessionPendingRetries, loadPendingRetries } from "./pendingRetries";
 
 const STATUS_TEXT: Record<string, string> = {
-  idle: "",
-  saving: "保存中…",
-  saved: "已保存",
   save_error: "保存失败，可重试",
-  conflict: "版本冲突",
 };
 
 /**
@@ -210,11 +206,10 @@ export function PracticePage({ sessionId }: { sessionId: string }) {
                 <fieldset className="question-fieldset" disabled={unitSubmitted}>
                   <legend>
                     {q.printedNumber ?? `第 ${q.position} 题`}
-                    {qState && qState.status !== "saved"
-                           && qState.status !== "dirty" ? (
-                      <span className={`save-state save-${qState.status}`}
+                    {qState?.status === "save_error" ? (
+                      <span className="save-state save-save_error"
                             aria-live="polite">
-                        {STATUS_TEXT[qState.status]}
+                        {STATUS_TEXT.save_error}
                       </span>
                     ) : null}
                   </legend>
