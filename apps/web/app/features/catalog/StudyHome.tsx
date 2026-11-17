@@ -7,7 +7,7 @@ import { ButtonLink } from "../../components/Button";
 
 /** Page header copy per design-system.md v1.1 §5.2 + the confirmed home
  * UI reference (docs/design/JLPT GO 2.0 首页.png). */
-const PAGE_TITLE = "开始今天的日语练习";
+const PAGE_TITLE = "从 JLPT 开始，不止于考试";
 const PAGE_SUBTITLE = "选一个科目，继续提升你的日语能力。";
 
 /** Four-subject entries: first visual focus. Each opens 专项练习 with that

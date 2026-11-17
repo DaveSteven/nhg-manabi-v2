@@ -46,7 +46,7 @@ describe("StudyHome", () => {
   it("renders the page header and four subject entries", async () => {
     renderHome();
     expect(screen.getByRole("heading", { level: 1 }))
-      .toHaveTextContent("开始今天的日语练习");
+      .toHaveTextContent("从 JLPT 开始，不止于考试");
     const grid = await screen.findByRole("region", { name: "专项练习入口" });
     expect(grid).toBeInTheDocument();
     for (const label of ["文字词汇", "文法", "读解", "听力"]) {
