@@ -144,8 +144,6 @@
   > span { display: block; height: 100%; border-radius: inherit; background: var(--subj, var(--color-primary)); }
 }
 
-/* weak types / records: a subject-coloured edge on each row */
-.learning-row[data-subject] { box-shadow: inset 3px 0 0 var(--subj); padding-left: var(--space-3); }
 .learning-title { display: flex; align-items: center; flex-wrap: wrap; }
 
 .learning-chip.is-selected { color: var(--color-primary); font-weight: 600; }
