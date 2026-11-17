@@ -4,8 +4,6 @@ import type { TopicType } from "../../api/dto/topic";
 import { describeLoadError } from "../../api/errors";
 import type { FeedbackMode } from "../../api/dto/practice";
 import { useLevel } from "../auth/useLevel";
-import { ActiveSessionConflictDialog } from "../practice/ActiveSessionConflictDialog";
-import { isConflict, type ActiveSessionConflict } from "../practice/useStartPractice";
 import { useStartTopicPractice, useTopicTypes } from "./useTopicPractice";
 import { COUNT_PRESETS, TOPIC_SUBJECTS, checkCount, defaultCount, isTopicSubject,
          maxCount, unitNoun, type TopicSubject } from "./topicModel";
@@ -34,7 +32,6 @@ export function TopicPracticeView() {
   const [typeId, setTypeId] = useState<string | null>(null);
   const [countText, setCountText] = useState("10");
   const [feedback, setFeedback] = useState<FeedbackMode>("immediate");
-  const [conflict, setConflict] = useState<ActiveSessionConflict | null>(null);
 
   // keep the selection valid when the subject/level/catalog changes
   useEffect(() => {
@@ -57,17 +54,15 @@ export function TopicPracticeView() {
   const count = Number(countText);
   const check = selected ? checkCount(selected, count) : null;
 
-  function begin(replaceActive: boolean) {
+  // Starting is always allowed: sessions hold study data, they never gate
+  // a new practice (ADR-0015) — no conflict check, no dialog.
+  function begin() {
     if (!selected || !level || !check?.ok) return;
-    setConflict(null);
-    start.mutate(
-      { level, question_type_id: selected.question_type_id, count,
-        feedback_mode: feedback, replace_active: replaceActive },
-      { onError: (e) => setConflict(isConflict(e)) },
-    );
+    start.mutate({ level, question_type_id: selected.question_type_id, count,
+                   feedback_mode: feedback });
   }
 
-  const startError = start.error && !isConflict(start.error)
+  const startError = start.error
     ? (start.error.code === "count_exceeds_available"
         ? "可选数量已变化，请调整后重试。"
         : `无法开始练习：${start.error.message}`)
@@ -154,12 +149,12 @@ export function TopicPracticeView() {
 
               <div className="topic-field" role="radiogroup" aria-label="反馈方式">
                 <span className="topic-field-label">反馈方式</span>
-                <label>
+                <label className="topic-feedback-option">
                   <input type="radio" name="topic-feedback" checked={feedback === "immediate"}
                          onChange={() => setFeedback("immediate")} />
                   即时反馈（每组提交后看解析）
                 </label>
-                <label>
+                <label className="topic-feedback-option">
                   <input type="radio" name="topic-feedback" checked={feedback === "end"}
                          onChange={() => setFeedback("end")} />
                   统一反馈（全部结束后揭晓）
@@ -172,7 +167,7 @@ export function TopicPracticeView() {
 
               <button type="button" className="primary"
                       disabled={!check?.ok || start.isPending}
-                      onClick={() => begin(false)}>
+                      onClick={begin}>
                 {start.isPending ? "正在抽题…" : "开始练习"}
               </button>
               {startError ? <p role="alert">{startError}</p> : null}
@@ -183,15 +178,6 @@ export function TopicPracticeView() {
         </>
       )}
 
-      {conflict ? (
-        <ActiveSessionConflictDialog
-          conflict={conflict}
-          onContinue={() => navigate(conflict.activeSessionId
-            ? `/study/practice/${encodeURIComponent(conflict.activeSessionId)}`
-            : "/study")}
-          onEndAndStart={() => begin(true)}
-          onCancel={() => setConflict(null)} />
-      ) : null}
       <p className="text-aux"><Link to="/study/exams">想按年份做完整试卷？去历年试卷</Link></p>
     </section>
   );

@@ -2,9 +2,10 @@
 
 Session lifecycle (Task 04):
 
-- One active practice session per user, enforced by the DB partial unique
-  index `ux_one_active_practice` AND a pre-check that returns the conflicting
-  session id so the frontend can ask "continue or end the old one?".
+- A user may hold any number of in-progress practice sessions (ADR-0015):
+  a session stores study data, it never limits what the student may start.
+  Creating a session never ends, alters or conflicts with another one;
+  resuming is the student's explicit choice, by session id.
 - Session units are pinned to a concrete release_id at creation time, so a
   later publish never changes what an in-progress session refers to.
 - Every route resolves the caller via get_current_user_id and scopes reads
@@ -57,10 +58,6 @@ class SessionUnitRequest(BaseModel):
 class PracticeSessionCreate(BaseModel):
     feedback_mode: Literal["immediate", "end"]
     units: list[SessionUnitRequest]
-    # Quick Practice: atomically end the active practice session (ended_early,
-    # submitted answers kept) and create the new one in ONE transaction —
-    # no finish→create failure window, no second confirmation (§5.4).
-    replace_active: bool = False
 
     @field_validator("units")
     @classmethod
@@ -122,44 +119,13 @@ def create_practice_session(
     body: PracticeSessionCreate,
     user_id: uuid.UUID = Depends(get_current_user_id),
 ) -> dict:
-    engine = get_engine()
-    try:
-        return _create_session_tx(engine, body, user_id)
-    except IntegrityError:
-        # Lost a race against a concurrent create for the same user: the
-        # partial unique index ux_one_active_practice rejected us.
-        raise HTTPException(
-            status_code=409,
-            detail={"code": "active_session_exists",
-                    "message": "an active practice session already exists"})
+    return _create_session_tx(get_engine(), body, user_id)
 
 
 def _create_session_tx(engine, body: PracticeSessionCreate,
                        user_id: uuid.UUID,
                        config_extra: dict | None = None) -> dict:
     with engine.begin() as conn:
-        active = conn.execute(text(
-            "SELECT id FROM study_sessions"
-            " WHERE user_id = :u AND mode = 'practice'"
-            " AND state = 'in_progress'"),
-            {"u": user_id}).scalar()
-        if active is not None:
-            if not body.replace_active:
-                raise HTTPException(
-                    status_code=409,
-                    detail={"code": "active_session_exists",
-                            "message": "an active practice session already"
-                                       " exists",
-                            "active_session_id": str(active)})
-            # Atomic replace (same transaction as the new INSERT): the old
-            # session ends exactly like finish-with-pending — ended_early,
-            # submitted answers kept, no fabricated result. A concurrent
-            # duplicate create still loses at the partial unique index.
-            conn.execute(text(
-                "UPDATE study_sessions SET state = 'ended_early',"
-                " ended_at = now(), version = version + 1"
-                " WHERE id = :a AND state = 'in_progress'"), {"a": active})
-
         # Pin every requested unit to its CURRENT published release content.
         # Draft / non-current releases must not enter a practice session.
         metas = []
@@ -227,9 +193,9 @@ def create_quick_practice_session(
 ) -> dict:
     """Quick Practice (quick-practice.md v2.0): click a unit, practice now.
 
-    - Own mode `quick_practice`, so the 专项练习 single-active constraint
-      (ux_one_active_practice) never applies and 409 conflicts with an
-      in-progress 专项 session are structurally impossible.
+    - Own mode `quick_practice`, so it never interacts with 专项 sessions
+      (which may be many, ADR-0015); only a concurrent quick double-click
+      can 409 at ux_one_active_quick.
     - A stale in-progress QUICK session (user left without submitting) is
       ended silently (ended_early, same transaction) — unsubmitted quick
       selections reset by design, so there is nothing to resume and no
@@ -309,11 +275,16 @@ def create_quick_practice_session(
 def get_current_practice_session(
     user_id: uuid.UUID = Depends(get_current_user_id),
 ) -> dict:
+    """The caller's most recently created in-progress practice session —
+    a convenience for entry points like 首页「继续练习」. It never gates
+    starting anything; any session is resumable by id."""
     with get_engine().connect() as conn:
         session_id = conn.execute(text(
             "SELECT id FROM study_sessions"
             " WHERE user_id = :u AND mode = 'practice'"
-            " AND state = 'in_progress'"), {"u": user_id}).scalar()
+            " AND state = 'in_progress'"
+            " ORDER BY created_at DESC, id DESC LIMIT 1"),
+            {"u": user_id}).scalar()
         if session_id is None:
             raise HTTPException(status_code=404, detail="no active practice")
         payload = _session_payload(conn, session_id)

@@ -23,21 +23,6 @@ import {
   type PracticeStatus,
 } from "../dto/practice";
 
-export interface CreateSessionInput {
-  feedback_mode: FeedbackMode;
-  units: { release_id: string; unit_id: string }[];
-  /** Quick Practice: atomically end the active session (ended_early,
-   * submitted answers kept) and create the new one in one transaction. */
-  replace_active?: boolean;
-}
-
-export function createSession(input: CreateSessionInput,
-                              signal?: AbortSignal): Promise<PracticeSession> {
-  return apiFetch("/api/practice/sessions",
-    { method: "POST", body: input, signal })
-    .then((p) => parseDto(CreateSessionResponseSchema, "POST /api/practice/sessions", p));
-}
-
 /**
  * 404 with detail "no active practice" is the normal idle state — callers
  * translate it via ApiError (status 404) into "no active session", never

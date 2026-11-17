@@ -17,8 +17,6 @@ export interface CreateTopicSessionInput {
   question_type_id: string;
   count: number;
   feedback_mode: FeedbackMode;
-  /** Atomically end the active practice (submitted answers kept). */
-  replace_active?: boolean;
 }
 
 /** The server samples the Units; the client only sends the configuration. */

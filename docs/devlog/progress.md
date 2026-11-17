@@ -95,3 +95,5 @@
 - **首页移除历年试卷模块（2026-11-17）**：见 `docs/devlog/2026-11-17-remove-home-exam-entry.md`；web 225 passed、typecheck/build 通过，web 容器已重建。浏览器视觉待用户确认。
 
 - **专项练习首版闭环（2026-11-17）**：见 `docs/devlog/2026-11-17-topic-practice.md`。后端新增题型目录与服务端智能抽样接口（复用 practice 会话事务），前端新增 `/study/practice` 配置页、顶栏/首页入口、结果页「再练一组」；后端 195 passed + 2 skipped，web 237 passed，typecheck/build 通过，容器已重建，真实开发库只读冒烟通过。真实浏览器验收、`user_question_progress` 缓存、「只复习最近仍错」、Firefox/Safari/深色模式未做。
+
+- **取消专项/普通练习单活跃限制（2026-11-17，ADR-0015）**：见 `docs/devlog/2026-11-17-multi-active-sessions.md`。Alembic 0010 删除 `ux_one_active_practice`（Quick/模考单名额不变），创建练习不再检查/结束/覆盖其他会话，无 409 与 `replace_active`，前端删除冲突弹窗与 `ActiveSessionConflictDialog`；`/current` 改为最近进行中练习。后端 197 passed + 2 skipped，web 通过，开发库迁移 up/down/up 通过。真实浏览器验收、进行中练习列表入口未做。

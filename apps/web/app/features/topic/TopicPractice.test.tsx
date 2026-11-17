@@ -1,5 +1,5 @@
 import { beforeAll, afterAll, afterEach, describe, expect, it } from "vitest";
-import { screen, waitFor } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { server } from "../../test/mocks/server";
@@ -86,7 +86,7 @@ describe("TopicPracticeView", () => {
     await user.click(start);
     expect(await screen.findByText("practice page")).toBeInTheDocument();
     expect(body).toEqual({ level: "N2", question_type_id: "vocabulary_kanji_reading",
-      count: 5, feedback_mode: "end", replace_active: false });
+      count: 5, feedback_mode: "end" });
   });
 
   it("blocks starting when the count exceeds what is available", async () => {
@@ -103,29 +103,42 @@ describe("TopicPracticeView", () => {
     expect(screen.getByRole("button", { name: "开始练习" })).toBeDisabled();
   });
 
-  it("an active session offers continue / replace instead of silently replacing", async () => {
+  it("never shows a conflict dialog: starting is always allowed and goes straight in", async () => {
     authStore.setSession("tok", USER);
-    const bodies: any[] = [];
+    let posts = 0;
     server.use(
+      // an unfinished practice exists — it must not matter at all
+      http.get("*/api/practice/sessions/current", () => HttpResponse.json(SESSION)),
       http.get("*/api/topic-practice/types", () => HttpResponse.json(TYPES)),
-      http.post("*/api/topic-practice/sessions", async ({ request }) => {
-        const b = await request.json() as any;
-        bodies.push(b);
-        return b.replace_active
-          ? HttpResponse.json(SESSION, { status: 201 })
-          : HttpResponse.json({ detail: { code: "active_session_exists",
-              message: "x", active_session_id: "s-old" } }, { status: 409 });
+      http.post("*/api/topic-practice/sessions", () => {
+        posts += 1;
+        return HttpResponse.json({ ...SESSION, id: `s-new-${posts}` }, { status: 201 });
       }));
     const user = userEvent.setup();
     renderPage("/study/practice?subject=vocabulary");
     await user.click(await screen.findByLabelText(/汉字读音/));
-    await user.click(screen.getByRole("button", { name: "开始练习" }));
-    expect(await screen.findByRole("dialog", { name: "已有进行中的练习" }))
-      .toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "结束旧练习后开始" }));
-    await user.click(screen.getByRole("button", { name: "确认结束并开始新练习" }));
+    const start = screen.getByRole("button", { name: "开始练习" });
+    expect(start).toBeEnabled();
+    await user.click(start);
     expect(await screen.findByText("practice page")).toBeInTheDocument();
-    await waitFor(() => expect(bodies.map((b) => b.replace_active)).toEqual([false, true]));
+    expect(posts).toBe(1);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("a failed start shows the error normally, with no conflict flow", async () => {
+    authStore.setSession("tok", USER);
+    server.use(
+      http.get("*/api/topic-practice/types", () => HttpResponse.json(TYPES)),
+      http.post("*/api/topic-practice/sessions", () =>
+        HttpResponse.json({ detail: { code: "no_candidates", message: "没有可练习的题" } },
+                          { status: 422 })));
+    const user = userEvent.setup();
+    renderPage("/study/practice?subject=vocabulary");
+    await user.click(await screen.findByLabelText(/汉字读音/));
+    await user.click(screen.getByRole("button", { name: "开始练习" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("无法开始练习");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "开始练习" })).toBeEnabled();
   });
 
   it("shows an alert when the catalog fails to load", async () => {

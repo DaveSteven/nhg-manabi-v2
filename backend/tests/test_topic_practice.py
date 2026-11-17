@@ -49,11 +49,10 @@ def types(client, user, level="N5"):
 
 
 def create(client, user, qtype="grammar_cloze", count=1, level="N5",
-           feedback="immediate", replace=False):
+           feedback="immediate"):
     return client.post("/api/topic-practice/sessions", json={
         "level": level, "question_type_id": qtype, "count": count,
-        "feedback_mode": feedback, "replace_active": replace},
-        headers=auth(user))
+        "feedback_mode": feedback}, headers=auth(user))
 
 
 def submit(client, user, sid, suid, answers):
@@ -124,17 +123,16 @@ def test_create_validation_errors(pg_engine, published_release, monkeypatch):
 
 
 @requires_db
-def test_active_conflict_and_atomic_replace_keeps_submitted(
+def test_starting_another_topic_session_never_conflicts_or_ends_the_old_one(
         pg_engine, published_release, monkeypatch):
     client = make_client(monkeypatch, pg_engine)
     first = create(client, USER_A).json()
     suid = first["units"][0]["id"]
-    submit(client, USER_A, first["id"], suid, [(Q1, Q1 + "-o2"), (Q2, Q2 + "-o1")])
-    conflict = create(client, USER_A, qtype="vocabulary_kanji_reading")
-    assert conflict.status_code == 409
-    assert conflict.json()["detail"]["active_session_id"] == first["id"]
-    new = create(client, USER_A, qtype="vocabulary_kanji_reading", replace=True)
-    assert new.status_code == 201
+    submit(client, USER_A, first["id"], suid,
+           [(Q1, Q1 + "-o2"), (Q2, Q2 + "-o1")])
+    other = create(client, USER_A, qtype="vocabulary_kanji_reading")  # 词汇 while 文法 open
+    again = create(client, USER_A)  # same type again
+    assert other.status_code == 201 and again.status_code == 201
     with pg_engine.connect() as conn:
         st = dict(conn.execute(sa.text(
             "SELECT id::text, state FROM study_sessions WHERE user_id=:u"),
@@ -142,7 +140,9 @@ def test_active_conflict_and_atomic_replace_keeps_submitted(
         kept = conn.execute(sa.text(
             "SELECT count(*) FROM study_submitted_answers WHERE session_unit_id=:s"),
             {"s": suid}).scalar()
-    assert st[first["id"]] == "ended_early" and st[new.json()["id"]] == "in_progress"
+    assert st[first["id"]] == "in_progress"
+    assert st[other.json()["id"]] == "in_progress"
+    assert st[again.json()["id"]] == "in_progress"
     assert kept == 2
 
 

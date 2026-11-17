@@ -9,7 +9,8 @@ Stage 2 (sampling): the server — never the client — picks whole Units of
 ONE question type across exams/releases, weighted by the caller's formal
 practice history (submitted answers only; drafts never count), then creates
 an ordinary `practice` session through the same transaction used by
-POST /api/practice/sessions. That reuses single-active-session semantics,
+POST /api/practice/sessions. A user may hold many in-progress sessions
+(ADR-0015): starting one never ends or conflicts with another. Reuses
 release pinning per Unit, draft/submit/feedback gates and results. The
 response carries ids only; answers are never part of it.
 """
@@ -21,7 +22,6 @@ from typing import Literal
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy import text
-from sqlalchemy.exc import IntegrityError
 
 from app.api.practice import (MAX_SESSION_UNITS, PracticeSessionCreate,
                               SessionUnitRequest, _create_session_tx)
@@ -126,7 +126,6 @@ class TopicSessionCreate(BaseModel):
     question_type_id: str
     count: int = Field(ge=1, le=MAX_SESSION_UNITS)
     feedback_mode: Literal["immediate", "end"]
-    replace_active: bool = False
 
 
 @router.post("/api/topic-practice/sessions", status_code=201)
@@ -157,15 +156,9 @@ def create_topic_session(
     create = PracticeSessionCreate(
         feedback_mode=body.feedback_mode,
         units=[SessionUnitRequest(release_id=uuid.UUID(c.release_id),
-                                  unit_id=c.unit_id) for c in picked],
-        replace_active=body.replace_active)
+                                  unit_id=c.unit_id) for c in picked])
     topic = {"kind": "topic", "level": body.level,
              "question_type_id": body.question_type_id,
              "requested_count": body.count}
-    try:
-        return _create_session_tx(engine, create, user_id,
-                                  config_extra={"topic": topic})
-    except IntegrityError:
-        raise HTTPException(status_code=409, detail={
-            "code": "active_session_exists",
-            "message": "an active practice session already exists"})
+    return _create_session_tx(engine, create, user_id,
+                              config_extra={"topic": topic})

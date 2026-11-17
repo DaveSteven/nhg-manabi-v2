@@ -56,7 +56,67 @@
   align-items: center;
   gap: var(--space-2);
 
-  input[type="number"] { width: 5.5em; }
+  button,
+  input[type="number"] {
+    box-sizing: border-box;
+    height: 40px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-pill);
+    background: var(--color-surface);
+    color: var(--color-ink);
+    font: inherit;
+    font-variant-numeric: tabular-nums;
+    transition: border-color var(--motion-fast), background var(--motion-fast),
+                color var(--motion-fast);
+  }
+
+  button {
+    min-width: 56px;
+    padding: 0 var(--space-4);
+    cursor: pointer;
+
+    &:hover { border-color: var(--color-primary); color: var(--color-primary-hover); }
+    &[aria-pressed="true"] {
+      border-color: var(--color-primary);
+      background: var(--color-primary-soft);
+      color: var(--color-primary-hover);
+      font-weight: 600;
+    }
+  }
+
+  input[type="number"] {
+    width: 96px;
+    padding: 0 var(--space-4);
+    text-align: center;
+
+    &:hover { border-color: var(--color-primary); }
+    &:focus-visible {
+      outline: 2px solid var(--color-primary);
+      outline-offset: 2px;
+      border-color: var(--color-primary);
+    }
+  }
 }
 
 .topic-warn { color: var(--color-danger); }
+
+/* feedback mode: two selectable capsules instead of bare radios */
+.topic-field .topic-feedback-option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  cursor: pointer;
+  transition: border-color var(--motion-fast), background var(--motion-fast);
+
+  input { accent-color: var(--color-primary); }
+  &:hover { border-color: var(--color-primary); }
+  &:has(input:checked) {
+    border-color: var(--color-primary);
+    background: var(--color-primary-soft);
+  }
+  &:has(input:focus-visible) { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+}

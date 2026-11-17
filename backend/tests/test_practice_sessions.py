@@ -1,7 +1,7 @@
 """M2 Task 04 tests: practice session lifecycle.
 
-Covers: creation with pinned release binding, the one-active-practice rule
-(409 with the conflicting session id), resume, ownership isolation, finish
+Covers: creation with pinned release binding, many concurrent in-progress
+practice sessions (ADR-0015: never a conflict), resume, ownership isolation, finish
 (ended_early, idempotent, no fabricated score), and rejection of draft /
 non-current content.
 """
@@ -84,17 +84,31 @@ def test_single_unit_session(pg_engine, published_release, monkeypatch):
 
 
 @requires_db
-def test_one_active_practice_conflict(pg_engine, published_release,
-                                      monkeypatch):
+def test_many_in_progress_practice_sessions_never_conflict(
+        pg_engine, published_release, monkeypatch):
     client = make_client(monkeypatch, pg_engine)
     first = create_session(client, USER_A, published_release, [CLOZE_UNIT])
-    assert first.status_code == 201
     second = create_session(client, USER_A, published_release, [SINGLE_UNIT])
-    assert second.status_code == 409
-    detail = second.json()["detail"]
-    assert detail["code"] == "active_session_exists"
-    assert detail["active_session_id"] == first.json()["id"]
-    # A different user is NOT blocked by user A's active session.
+    third = create_session(client, USER_A, published_release, [SINGLE_UNIT])
+    assert [r.status_code for r in (first, second, third)] == [201, 201, 201]
+    ids = {r.json()["id"] for r in (first, second, third)}
+    assert len(ids) == 3
+    # none was ended or altered by a later creation
+    for r in (first, second, third):
+        got = client.get(f"/api/practice/sessions/{r.json()['id']}",
+                         headers=auth(USER_A)).json()
+        assert got["state"] == "in_progress"
+    # /current is only a convenience: the newest in-progress session
+    cur = client.get("/api/practice/sessions/current", headers=auth(USER_A))
+    assert cur.json()["id"] == third.json()["id"]
+    # a legacy client still sending replace_active changes nothing
+    legacy = client.post("/api/practice/sessions", json={
+        "feedback_mode": "end", "replace_active": True,
+        "units": [{"release_id": str(published_release),
+                   "unit_id": SINGLE_UNIT}]}, headers=auth(USER_A))
+    assert legacy.status_code == 201
+    assert client.get(f"/api/practice/sessions/{first.json()['id']}",
+                      headers=auth(USER_A)).json()["state"] == "in_progress"
     assert create_session(
         client, USER_B, published_release, [SINGLE_UNIT]).status_code == 201
 
@@ -136,7 +150,7 @@ def test_cross_account_access_isolated(pg_engine, published_release,
 
 
 @requires_db
-def test_finish_ends_early_idempotent_and_frees_slot(
+def test_finish_ends_early_idempotent(
         pg_engine, published_release, monkeypatch):
     client = make_client(monkeypatch, pg_engine)
     created = create_session(client, USER_A, published_release,
@@ -161,9 +175,9 @@ def test_finish_ends_early_idempotent_and_frees_slot(
     assert refin.status_code == 200
     assert refin.json()["idempotent"] is True
 
-    # Ending the old session frees the single active slot.
-    nxt = create_session(client, USER_A, published_release, [SINGLE_UNIT])
-    assert nxt.status_code == 201
+    # Finishing one session leaves /current empty when it was the only one.
+    assert client.get("/api/practice/sessions/current",
+                      headers=auth(USER_A)).status_code == 404
 
 
 @requires_db

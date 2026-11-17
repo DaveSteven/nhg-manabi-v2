@@ -23,7 +23,7 @@
 | 场景 | 交互 | 草稿/恢复 |
 |---|---|---|
 | 历年试卷单 Unit 快速练习 | Quick Practice，点 Unit 直接练 | 无（纯页面状态） |
-| 专项练习 | 配置等级、题型、数量及反馈方式 | 服务端草稿 + 单活跃会话恢复 |
+| 专项练习 | 配置等级、题型、数量及反馈方式 | 服务端草稿 + 按 Session ID 恢复（可有多个进行中，ADR-0015） |
 | 完整模拟考试 | 独立严格考试流程 | 独立会话机制 |
 
 可复用渲染/判题/提交/反馈机制，但页面流程与会话模型不强行统一。
@@ -31,8 +31,8 @@
 ## 3. 会话模型（v2.0）
 
 - 新增独立会话模式 `quick_practice`（`study_sessions.mode`，ADR-0014）：
-  - **不占专项练习的单活跃名额**（`ux_one_active_practice` 只约束 `mode='practice'`），
-    与专项/模考会话互不影响；quick 自己有单活跃索引 `ux_one_active_quick`。
+  - 与专项/模考会话互不影响（专项自 ADR-0015 起不再有单活跃限制，原 `ux_one_active_practice` 已删除）；
+    quick 自己有单活跃索引 `ux_one_active_quick`。
   - 反馈方式固定 `immediate`，不接受配置。
 - **静默替换**：开始新的 Quick Practice 时，同一事务内把旧的**进行中 quick 会话**置为
   `ended_early`（无弹窗、无二次确认）。旧 quick 会话最多只有未提交的本地选择（见 §4），
