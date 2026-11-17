@@ -18,8 +18,10 @@ export function usesSplitLayout(c: VmContentUnit): boolean {
   return hasText && (c.unit.kind === "passage" || c.unit.slotIds.length > 0);
 }
 
-export function SharedMaterialLayout({ content, material, footer, children }: {
+export function SharedMaterialLayout({ content, material, footer, children, numberOf }: {
   content: VmContentUnit;
+  /** Display number for a question chip (default: the paper's printed number). */
+  numberOf?: (q: VmContentUnit["questions"][number]) => string | number;
   material: ReactNode;
   footer: ReactNode;
   children: ReactNode; // the question list (<li data-question-id>)
@@ -91,7 +93,7 @@ export function SharedMaterialLayout({ content, material, footer, children }: {
               <button key={q.id} type="button"
                       aria-current={q.id === active ? "true" : undefined}
                       onClick={() => gotoQuestion(q.id)}>
-                {q.printedNumber ?? q.position}
+                {numberOf ? numberOf(q) : (q.printedNumber ?? q.position)}
               </button>
             ))}
             <button type="button" aria-label="下一小题"

@@ -188,6 +188,14 @@ export function UnifiedPracticeView({ sessionId, bundle }: {
   const unitQuestions = content.vm.questions;
   const copy = quickPracticeCopy(content.vm.unit.kind, unitQuestions.length);
   const prevLabel = copy.nextLabel.replace("下", "上");
+  // Topic practice mixes papers, so a paper's printed number (68, 69 …) means
+  // nothing across articles and repeats between them. Slot-less questions are
+  // shown by their position in this practice (matching 第 a–b / N 题); cloze
+  // questions keep the printed number because the article text shows (48).
+  const seqNo = new Map(flat.map((f, i) => [f.qid, i + 1]));
+  const hasSlots = content.vm.unit.slotIds.length > 0;
+  const displayNo = (q: { id: string; printedNumber: string | null; position: number }) =>
+    hasSlots ? (q.printedNumber ?? q.position) : (seqNo.get(q.id) ?? q.position);
   const firstNo = flat.findIndex((f) => f.ui === idx) + 1;
 
   const audioMaterial = content.vm.materials.find((m) => m.audio?.kind === "url");
@@ -238,7 +246,7 @@ export function UnifiedPracticeView({ sessionId, bundle }: {
           })}
         </nav>
 
-        <SharedMaterialLayout content={content.vm}
+        <SharedMaterialLayout content={content.vm} numberOf={displayNo}
           material={<MaterialDisplay unit={vm} materials={content.vm.materials} />}
           footer={<>
         {ended && feedback.error ? (
@@ -292,7 +300,7 @@ export function UnifiedPracticeView({ sessionId, bundle }: {
               <li key={question.id} data-question-id={question.id} className="question-card card">
                 <fieldset className="question-fieldset" disabled={ended}>
                   <legend>
-                    {question.printedNumber ?? `第 ${question.position} 题`}
+                    {hasSlots && question.printedNumber ? question.printedNumber : `第 ${displayNo(question)} 题`}
                     {qState?.status === "save_error" ? (
                       <span className="save-state save-save_error" aria-live="polite">
                         保存失败，可重试
@@ -305,7 +313,7 @@ export function UnifiedPracticeView({ sessionId, bundle }: {
                     </div>
                   ) : null}
                   <div role="radiogroup"
-                       aria-label={`第 ${question.printedNumber ?? question.position} 题选项`}>
+                       aria-label={`第 ${displayNo(question)} 题选项`}>
                     {question.options.map((o) => (
                       <label key={o.id} lang="ja"
                              className={`option-row${selected === o.id ? " option-selected" : ""}${selected === o.id && answeredCorrect ? " option-correct" : ""}`}>
