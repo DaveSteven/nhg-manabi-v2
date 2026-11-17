@@ -29,14 +29,12 @@ describe("TopNav", () => {
     expect(screen.getByText("试卷").closest("a")).toHaveClass("active");
   });
 
-  it("专项 links to the topic practice page; 学习 stays 暂未开放", () => {
+  it("专项 and 学习 link to their pages", () => {
     renderRoutes([{ path: "study", Component: StudyLayout }], "/study");
     expect(screen.getByText("专项").closest("a"))
       .toHaveAttribute("href", "/study/practice");
-    const btn = screen.getByText("学习").closest("button");
-    expect(btn).toHaveAttribute("aria-disabled", "true");
-    expect(screen.getByRole("button", { name: /学习\s*（暂未开放）/ }))
-      .toBeInTheDocument();
+    expect(screen.getByText("学习").closest("a"))
+      .toHaveAttribute("href", "/study/learning");
   });
 });
 

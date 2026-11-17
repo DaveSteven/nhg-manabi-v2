@@ -6,6 +6,7 @@
 @use "account";
 @use "select";
 @use "topic";
+@use "learning";
 
 /* Global base styles built on 樱与墨 tokens. */
 *,
@@ -298,12 +299,6 @@ button {
   background: var(--color-primary-soft);
   color: var(--color-primary);
   font-weight: 600;
-}
-
-.topnav-unavailable {
-  color: var(--color-text-muted);
-  opacity: 0.6;
-  cursor: not-allowed;
 }
 
 @media (max-width: 767px) {

@@ -14,6 +14,7 @@ export default [
     route("account", "routes/study.account.tsx"),
     route("exams", "routes/study.exams._index.tsx"),
     route("exams/:examId", "routes/study.exams.$examId.tsx"),
+    route("learning", "routes/study.learning.tsx"),
     route("practice", "routes/study.practice._index.tsx"),
     route("practice/:sessionId", "routes/study.practice.$sessionId.tsx"),
     route(

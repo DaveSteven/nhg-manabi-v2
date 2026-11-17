@@ -7,7 +7,7 @@ import { NavLink } from "react-router";
  * nav item owns them. The page declares it (via its breadcrumb) and the nav
  * highlights that item. Outside a provider this is a no-op.
  */
-export type NavSection = "topic" | "exams";
+export type NavSection = "topic" | "exams" | "learning";
 const NavSectionContext = createContext<{
   section: NavSection | null;
   setSection: (s: NavSection | null) => void;
@@ -111,12 +111,11 @@ export function TopNav() {
         <ExamIcon />
         <span>试卷</span>
       </NavLink>
-      <button type="button" className="topnav-link topnav-unavailable"
-              aria-disabled="true">
+      <NavLink to="/study/learning"
+               className={({ isActive }) => cls(isActive, "learning")}>
         <StudyIcon />
         <span>学习</span>
-        <span className="sr-only">（暂未开放）</span>
-      </button>
+      </NavLink>
     </nav>
   );
 }

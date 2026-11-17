@@ -122,3 +122,5 @@
 - **严格模拟规则确认（2026-11-17，ADR-0019，纯文档）**：用户逐条确认 M1–M10（M8 改为练习/模考互相直接替换、无确认）；各级别 Phase 时限取自 JLPT 官网并写入 ADR；回填决策表 P-023、business-rules、feature-scope、page-structure。见 `docs/devlog/2026-11-17-mock-exam-rules-adr.md`。**规则已定、实现未开始**（真实库无 Phase 数据；单进程约束需迁移）；未改代码。
 
 - **严格模拟 Phase 数据层（2026-11-17，ADR-0019 首步）**：见 `docs/devlog/2026-11-17-mock-exam-phase-data.md`。Canonical 新增可选 `phases.jsonl`（计入内容哈希，缺省包哈希不变），转换器按官方规则表生成（N1/N2 两个、N3–N5 三个 Phase；缺科目则不生成），导入校验与发布写入 `release_exam_phases`/`release_phase_units`。后端 235 passed + 2 skipped；N2 2018-12 在临时库验证 88 个 Unit 全覆盖。已按用户授权全量重新转换并导入本机开发库：105 套 current release 均带 Phase（N1/N2 各 2 个，N3–N5 各 3 个），每个 Unit 恰属一个 Phase，内容文件与旧包零差异；已 pg_dump 备份。模考会话/计时/接口/前端未开始，尚无用户可见变化。
+
+- **我的学习：学习概览/练习历史/题目记录（2026-11-17）**：见 `docs/devlog/2026-11-17-learning-stats.md`。新增 `/api/me/learning/{overview,history,questions}`（正式作答口径、skip 不入分母、覆盖率、薄弱题型 ≥5 次样本、错题策略 B）与 `/study/learning` 三 tab 页、顶栏「学习」入口。后端 243 passed + 2 skipped，web 266 passed，typecheck/build 通过，容器重建并用真实数据在浏览器核对文本。**视觉走查未做**（浏览器窗格隐藏）；收藏、统计时间范围、趋势、阈值待产品确认。
