@@ -83,7 +83,8 @@
   --audio-dock-bottom: 20px;
   --audio-dock-radius: 999px; /* capsule (user decision 2026-11-17) */
   --audio-dock-shadow: 0 8px 32px rgba(43, 43, 51, 0.10);
-  --transcript-panel-height: 320px;
+  --transcript-panel-height: 300px;
+  --transcript-panel-max-height: 360px;
   --transcript-panel-radius: 20px;
 }
 

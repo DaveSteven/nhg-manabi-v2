@@ -3,6 +3,10 @@
    Panel: non-modal, expands upward, independent inner scroll; expanding it
    never changes page height or scroll position (position:fixed only). */
 
+/* One floating component (audio-player.md Task 2): the transcript panel
+   (in-flow, expands upward) + the control bar share a single background,
+   shadow and outer radius. Column + fixed bottom means the panel grows
+   upward; the page never changes height or scroll position. */
 .audio-dock {
   position: fixed;
   bottom: var(--audio-dock-bottom);
@@ -12,15 +16,14 @@
   /* 100px narrower than the content box on wide screens
      (user decision 2026-11-17); narrow viewports follow the side insets */
   max-width: calc(var(--page-max-width) - var(--space-8) * 2 - 100px);
-  min-height: var(--audio-dock-height);
   display: flex;
-  align-items: center;
-  gap: var(--space-4);
-  padding: 0 var(--space-6);
+  flex-direction: column;
   background: var(--color-surface);
   border: none; /* user decision 2026-11-17: shadow only, no border */
-  border-radius: var(--audio-dock-radius);
+  border-radius: var(--radius-pill);
   box-shadow: var(--audio-dock-shadow);
+  /* clip the panel's top corners to the container radius */
+  overflow: hidden;
   /* page content < dock/panel < modal < popover */
   z-index: 15;
 
@@ -32,6 +35,22 @@
     left: var(--space-8);
     right: var(--space-8);
   }
+}
+
+/* expanded: small radius on top (panel), capsule on the bottom (bar) */
+.audio-dock.is-expanded {
+  border-radius: var(--transcript-panel-radius) var(--transcript-panel-radius)
+    var(--radius-pill) var(--radius-pill) /
+    var(--transcript-panel-radius) var(--transcript-panel-radius)
+    calc(var(--audio-dock-height) / 2) calc(var(--audio-dock-height) / 2);
+}
+
+.audio-dock-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: 0 var(--space-6);
+  min-height: var(--audio-dock-height);
 }
 
 /* ---------------------------------------------------------- zone A ---- */
@@ -355,32 +374,17 @@
 }
 
 .transcript-panel {
-  /* fixed: expanding never changes page height or scroll position */
-  position: fixed;
-  bottom: calc(var(--audio-dock-height) + var(--audio-dock-bottom) + 12px);
-  left: var(--space-4);
-  right: var(--space-4);
-  margin: 0 auto;
-  max-width: calc(var(--page-max-width) - var(--space-8) * 2 - 100px);
+  /* in-flow upper half of the fixed float — expanding never changes page
+     height or scroll position; default 300px, capped 360px, and clamped
+     to what the viewport can afford (top never leaves the screen) */
   height: min(var(--transcript-panel-height),
               calc(100vh - var(--audio-dock-height) - var(--audio-dock-bottom) - 40px));
+  max-height: var(--transcript-panel-max-height);
   display: flex;
   flex-direction: column;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--transcript-panel-radius) var(--transcript-panel-radius) var(--radius-card) var(--radius-card);
-  box-shadow: var(--shadow-floating);
-  z-index: 15;
+  /* light divider: the ONLY visual separation from the control bar */
+  border-bottom: 1px solid var(--color-border);
   animation: transcript-in 220ms ease-out;
-
-  @media (min-width: 768px) {
-    left: var(--space-6);
-    right: var(--space-6);
-  }
-  @media (min-width: 1024px) {
-    left: var(--space-8);
-    right: var(--space-8);
-  }
 }
 
 @keyframes transcript-in {
@@ -397,13 +401,13 @@
 .transcript-header {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-4);
   padding: var(--space-3) var(--space-6);
   border-bottom: 1px solid var(--color-border);
 
   h2 {
     margin: 0;
-    font-size: 15px;
+    font-size: 18px;
     font-weight: 600;
     color: var(--color-ink);
     flex: 1;
@@ -416,15 +420,41 @@
   gap: var(--space-2);
   font-size: 13px;
   color: var(--color-text-secondary);
-  cursor: pointer;
   user-select: none;
+}
 
-  input[type="checkbox"] {
-    accent-color: var(--color-primary);
-    width: 15px;
-    height: 15px;
-    cursor: pointer;
+/* token-styled switch (audio-player.md Task 5): no checkbox */
+.follow-switch {
+  width: 36px;
+  height: 20px;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: var(--color-border);
+  cursor: pointer;
+  position: relative;
+  transition: background var(--motion-fast);
+  padding: 0;
+
+  &[aria-checked="true"] { background: var(--color-primary); }
+  &:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
   }
+}
+
+.follow-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform var(--motion-fast);
+}
+
+.follow-switch[aria-checked="true"] .follow-thumb {
+  transform: translateX(16px);
 }
 
 .transcript-close {
@@ -449,10 +479,13 @@
 .transcript-scroll {
   flex: 1;
   overflow-y: auto;
-  padding: var(--space-3) var(--space-6);
+  width: 100%;
+  max-width: 800px; /* reading line width, centred (audio-player.md Task 1) */
+  margin: 0 auto;
+  padding: var(--space-4) var(--space-6);
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: var(--space-3); /* paragraph spacing 12px */
 
   &:focus-visible {
     outline: 2px solid var(--color-primary);
@@ -460,7 +493,7 @@
   }
 
   /* status text (loading/empty/error) only — must NOT hit cue paragraphs,
-     a direct rule on p would beat the active cue's color inheritance */
+     a direct rule on p would beat inherited styles inside cues */
   > p { color: var(--color-text-muted); font-size: var(--text-body); }
 }
 
@@ -468,10 +501,9 @@
   display: block;
   padding: var(--space-1) var(--space-3);
   border-radius: var(--radius-sm);
-  border-left: 3px solid transparent;
-  font-size: var(--text-body);
+  font-size: 16px;
   color: var(--color-ink);
-  line-height: 1.7;
+  line-height: 1.8;
   text-align: left;
   white-space: pre-wrap; /* keep original line breaks */
 
@@ -482,7 +514,6 @@
 .transcript-cue.is-seekable {
   width: 100%;
   border: none;
-  border-left: 3px solid transparent;
   background: transparent;
   font: inherit;
   cursor: pointer;
@@ -496,9 +527,9 @@
 }
 
 .transcript-cue.is-active {
-  /* active cue = color change only (user decision 2026-11-17): no
-     background, no indicator line, no time labels */
-  color: var(--color-primary);
+  /* active cue = sakura fill (audio-player.md Task 3, supersedes the
+     earlier color-only tweak); text keeps ink contrast */
+  background: var(--color-primary-soft);
 }
 
 /* ---------------------------------------------------------- states ---- */

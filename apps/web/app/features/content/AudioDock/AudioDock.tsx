@@ -86,7 +86,10 @@ export function AudioDock({ src, title = "音声", subtitle = null, disabledReas
   const currentTimeMs = api.currentTime * 1000;
 
   return (
-    <div className="audio-dock" role="region" aria-label="音频播放器">
+    // One floating component: panel (expands upward, in-flow) + control bar
+    // share a single shadow/radius/background (audio-player.md Task 2).
+    <div className={`audio-dock${expanded ? " is-expanded" : ""}`}
+         role="region" aria-label="音频播放器">
       {expanded ? (
         <TranscriptPanel id={panelId} view={view ?? { kind: "loading" }}
                          currentTimeMs={currentTimeMs} follow={follow}
@@ -100,37 +103,39 @@ export function AudioDock({ src, title = "音声", subtitle = null, disabledReas
                            }
                          }} />
       ) : null}
-      <AudioInfo title={unavailable ? disabledReason : title} subtitle={subtitle} />
-      {failed ? (
-        <div className="audio-error" role="alert">
-          <span>音频加载失败</span>
-          <button type="button" className="audio-retry" onClick={api.retry}>
-            重试
-          </button>
-        </div>
-      ) : (
-        <>
-          <PlaybackControls state={state} disabled={controlsDisabled}
-                            onToggle={api.toggle} onSkip={api.skip} />
-          <AudioProgress currentTime={api.currentTime} duration={api.duration}
-                         disabled={controlsDisabled} onSeek={api.seek} />
-          <PlaybackSpeedSelect value={api.playbackRate} disabled={controlsDisabled}
-                               onChange={api.setPlaybackRate} />
-          <VolumeControl volume={api.volume} muted={api.muted}
-                         disabled={controlsDisabled}
-                         onVolume={api.setVolume} onToggleMute={api.toggleMute} />
-          {transcript ? (
-            <TranscriptToggle expanded={expanded} locked={!transcript.allowed}
-                              panelId={panelId}
-                              disabled={controlsDisabled || !transcript.allowed}
-                              onToggle={onToggleTranscript} />
-          ) : null}
-        </>
-      )}
-      <span className="sr-only" aria-live="polite">
-        {state === "buffering" ? "正在缓冲" : ""}
-      </span>
-      <audio ref={api.setElement} src={src ?? undefined} preload="metadata" />
+      <div className="audio-dock-bar">
+        <AudioInfo title={unavailable ? disabledReason : title} subtitle={subtitle} />
+        {failed ? (
+          <div className="audio-error" role="alert">
+            <span>音频加载失败</span>
+            <button type="button" className="audio-retry" onClick={api.retry}>
+              重试
+            </button>
+          </div>
+        ) : (
+          <>
+            <PlaybackControls state={state} disabled={controlsDisabled}
+                              onToggle={api.toggle} onSkip={api.skip} />
+            <AudioProgress currentTime={api.currentTime} duration={api.duration}
+                           disabled={controlsDisabled} onSeek={api.seek} />
+            <PlaybackSpeedSelect value={api.playbackRate} disabled={controlsDisabled}
+                                 onChange={api.setPlaybackRate} />
+            <VolumeControl volume={api.volume} muted={api.muted}
+                           disabled={controlsDisabled}
+                           onVolume={api.setVolume} onToggleMute={api.toggleMute} />
+            {transcript ? (
+              <TranscriptToggle expanded={expanded} locked={!transcript.allowed}
+                                panelId={panelId}
+                                disabled={controlsDisabled || !transcript.allowed}
+                                onToggle={onToggleTranscript} />
+            ) : null}
+          </>
+        )}
+        <span className="sr-only" aria-live="polite">
+          {state === "buffering" ? "正在缓冲" : ""}
+        </span>
+        <audio ref={api.setElement} src={src ?? undefined} preload="metadata" />
+      </div>
     </div>
   );
 }

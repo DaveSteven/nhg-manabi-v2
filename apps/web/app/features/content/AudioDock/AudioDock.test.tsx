@@ -258,6 +258,18 @@ describe("AudioDock transcript panel", () => {
     expect(document.querySelector('.transcript-cue[data-cue-index="3"].is-seekable')).toBeNull();
   });
 
+  it("follow control is a switch, default on, toggleable", async () => {
+    mockTranscript.mockResolvedValue(transcriptPayload());
+    renderWithQuery(<AudioDock {...DOCK_PROPS} transcript={TRANSCRIPT} />);
+    fireEvent.click(screen.getByRole("button", { name: "原文" }));
+    const sw = await screen.findByRole("switch", { name: "跟随播放" });
+    expect(sw).toHaveAttribute("aria-checked", "true");
+    fireEvent.click(sw);
+    expect(sw).toHaveAttribute("aria-checked", "false");
+    fireEvent.click(sw);
+    expect(sw).toHaveAttribute("aria-checked", "true");
+  });
+
   it("no cue materials shows the empty state", async () => {
     mockTranscript.mockResolvedValue(transcriptPayload([]));
     renderWithQuery(<AudioDock {...DOCK_PROPS} transcript={TRANSCRIPT} />);

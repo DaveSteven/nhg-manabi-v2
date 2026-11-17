@@ -26,9 +26,8 @@ export function cueIsActive(cue: TranscriptCue, currentTimeMs: number): boolean 
 }
 
 /** One transcript paragraph (audio-player.md §4.2). Time-range labels are
- * intentionally NOT shown (user decision 2026-11-17) — timestamps drive
- * highlight/seek only. Active state is a font-color change; aria-current
- * keeps it from being color-only. */
+ * intentionally NOT shown (user decision 2026-11-17, reaffirmed) —
+ * timestamps drive highlight/seek only. Active cue: sakura background. */
 export function TranscriptCueItem({ cue, active, currentTimeMs, onSeek }: {
   cue: TranscriptCue;
   active: boolean;
