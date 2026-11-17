@@ -1,5 +1,5 @@
 import { beforeAll, afterAll, afterEach, describe, expect, it } from "vitest";
-import { screen } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 import { server } from "../../test/mocks/server";
 import { createQueryClient } from "../../api/queryClient";
@@ -52,6 +52,18 @@ describe("StudyHome", () => {
     for (const label of ["文字词汇", "文法", "读解", "听力"]) {
       expect(screen.getByText(label)).toBeInTheDocument();
     }
+  });
+
+  it("subject entries open 专项练习 with that subject preselected", async () => {
+    renderHome();
+    const grid = await screen.findByRole("region", { name: "专项练习入口" });
+    const hrefs = within(grid).getAllByRole("link")
+      .map((a) => a.getAttribute("href"));
+    expect(hrefs).toEqual([
+      "/study/practice?subject=vocabulary", "/study/practice?subject=grammar",
+      "/study/practice?subject=reading", "/study/practice?subject=listening",
+    ]);
+    expect(within(grid).queryByText(/暂未开放/)).not.toBeInTheDocument();
   });
 
   it("shows a continue card when an active session exists", async () => {

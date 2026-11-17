@@ -70,7 +70,7 @@
 - **Quick Practice 文案动态化 + 按钮样式补齐（2026-11-17，quick-practice.md v2.1）**：文案按 Canonical Unit 类型映射（独立单题=提交答案/下一题、文法多题组=提交本组/下一组、阅读文章=提交本篇/下一篇）；标题用大纲真实位置（問題1-3）；多题 Unit 组内「上一题/下一题」分页（纯展示，整组提交事务不变）；单 Unit 不再显示「第1/1组」与「已提交锁定」（专项练习保留）；Layer 头部简化为「已练习X/Y」数字主色高亮；按钮样式补齐（practice/dialog/post-submit 次级描边胶囊、原文面板重试、分页器）；web **230 passed**、typecheck/build 通过。真实浏览器走查与 Firefox/Safari/深色模式未测。
 ## 后续工作（2026-11-17 核查调整）
 
-1. 专项练习完整闭环（题型目录、可用数量、智能抽样、配置页、恢复与结果验收）。
+1. 专项练习首版验收与遗留项（真实浏览器走查、历史缓存、「只复习最近仍错」）。
 2. 错题、学习历史与统计；正式作答历史为事实源，skip 不覆盖最近有效正误。
 3. 现有快速练习/听力的真实浏览器回归与响应式验收。
 4. 内容质量遗留、管理端导入任务与发布快照 DB 级不可变约束。
@@ -93,3 +93,5 @@
 - **首页继续练习卡片去掉 continue-meta（2026-11-17）**：见 `docs/devlog/2026-11-17-remove-continue-meta.md`；web 231 passed、typecheck/build 通过，web 容器已重建。浏览器视觉待用户确认。
 
 - **首页移除历年试卷模块（2026-11-17）**：见 `docs/devlog/2026-11-17-remove-home-exam-entry.md`；web 225 passed、typecheck/build 通过，web 容器已重建。浏览器视觉待用户确认。
+
+- **专项练习首版闭环（2026-11-17）**：见 `docs/devlog/2026-11-17-topic-practice.md`。后端新增题型目录与服务端智能抽样接口（复用 practice 会话事务），前端新增 `/study/practice` 配置页、顶栏/首页入口、结果页「再练一组」；后端 195 passed + 2 skipped，web 237 passed，typecheck/build 通过，容器已重建，真实开发库只读冒烟通过。真实浏览器验收、`user_question_progress` 缓存、「只复习最近仍错」、Firefox/Safari/深色模式未做。

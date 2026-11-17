@@ -135,7 +135,8 @@ def create_practice_session(
 
 
 def _create_session_tx(engine, body: PracticeSessionCreate,
-                       user_id: uuid.UUID) -> dict:
+                       user_id: uuid.UUID,
+                       config_extra: dict | None = None) -> dict:
     with engine.begin() as conn:
         active = conn.execute(text(
             "SELECT id FROM study_sessions"
@@ -192,6 +193,7 @@ def _create_session_tx(engine, body: PracticeSessionCreate,
             " 'in_progress', NULL, CAST(:cfg AS jsonb)) RETURNING id"),
             {"u": user_id, "f": body.feedback_mode,
              "cfg": json.dumps({
+                 **(config_extra or {}),
                  "requested_units": [
                      {"release_id": str(u.release_id), "unit_id": u.unit_id}
                      for u in body.units]})}).scalar()

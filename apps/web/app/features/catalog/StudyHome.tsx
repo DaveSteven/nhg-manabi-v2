@@ -9,10 +9,9 @@ import { useCurrentSession, useExamList } from "./useExamCatalog";
 const PAGE_TITLE = "开始今天的日语练习";
 const PAGE_SUBTITLE = "选一个科目，继续提升你的日语能力。";
 
-/** Four-subject entries: first visual focus. Topic practice by subject is
- * not in M2.2 scope — entries show an explicit 暂未开放 state (P-002 keeps
- * them visible; no fake navigation). Descriptions follow the home UI
- * reference; accent colors are small-area decorative tokens (§2.3). */
+/** Four-subject entries: first visual focus. Each opens 专项练习 with that
+ * subject preselected (`/study/practice?subject=`). Descriptions follow the
+ * home UI reference; accent colors are small-area decorative tokens (§2.3). */
 const SUBJECTS: {
   key: string;
   label: string;
@@ -141,14 +140,14 @@ export function StudyHome() {
         </div>
         <div className="subject-grid">
           {SUBJECTS.map((s) => (
-            <div key={s.key}
-                 className={`card subject-card subject-${s.key}`}>
+            <Link key={s.key}
+                  to={`/study/practice?subject=${s.key}`}
+                  className={`card subject-card subject-${s.key}`}>
               <span className="subject-icon" aria-hidden="true">{s.icon}</span>
               <span className="subject-label">{s.label}</span>
               <span className="subject-hint">{s.hint}</span>
-              <span className="subject-status">专项练习暂未开放 · 可先用历年试卷</span>
               <span className="subject-arrow" aria-hidden="true">→</span>
-            </div>
+            </Link>
           ))}
         </div>
       </section>

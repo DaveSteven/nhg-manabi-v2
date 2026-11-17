@@ -1,0 +1,62 @@
+/* 专项练习 config page (page-structure.md「专项练习」). */
+.topic-page { display: grid; gap: var(--space-4); }
+
+.topic-types {
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: 1fr;
+
+  @media (min-width: 720px) { grid-template-columns: repeat(2, 1fr); }
+}
+
+.topic-type {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--space-1) var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  cursor: pointer;
+  transition: border-color var(--motion-fast), background var(--motion-fast);
+
+  input { position: absolute; opacity: 0; pointer-events: none; }
+
+  &:hover { border-color: var(--color-primary); }
+  &:has(input:focus-visible) { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+  &.is-selected {
+    border-color: var(--color-primary);
+    background: var(--color-primary-soft);
+  }
+}
+
+.topic-type-label { font-weight: 600; }
+.topic-type-ja { color: var(--color-text-muted); font-size: 13px; text-align: right; }
+.topic-type-meta {
+  grid-column: 1 / -1;
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.topic-config {
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-6);
+
+  .module-title { margin: 0; }
+  .primary { justify-self: start; }
+}
+
+.topic-field { display: grid; gap: var(--space-2); }
+.topic-field-label { font-weight: 600; }
+.topic-field label { display: flex; align-items: center; gap: var(--space-2); }
+
+.topic-count {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+
+  input[type="number"] { width: 5.5em; }
+}
+
+.topic-warn { color: var(--color-danger); }

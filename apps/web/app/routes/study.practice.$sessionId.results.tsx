@@ -1,16 +1,22 @@
-import { Link, useParams } from "react-router";
+import { Link, useNavigate, useParams } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import { getSessionResults } from "../api/endpoints/sessions";
 import type { ResultsResponse } from "../api/dto/practice";
 import type { ApiError } from "../api/errors";
 import { resultVerdict, summarizeResults } from "../features/practice/resultsModel";
-import { PracticeBreadcrumb, useSessionExamId } from "../features/practice/PracticeBreadcrumb";
+import { PracticeBreadcrumb, useSessionInfo } from "../features/practice/PracticeBreadcrumb";
+import { useStartTopicPractice } from "../features/topic/useTopicPractice";
 
 /** Session results: completed numbers + per-question review; ended_early
  * renders an explicit early-end view with NO fabricated score. */
 export default function ResultsRoute() {
   const { sessionId } = useParams<{ sessionId: string }>();
-  const examId = useSessionExamId(sessionId);
+  const info = useSessionInfo(sessionId);
+  const examId = info.examId;
+  const isTopic = info.topic !== null;
+  const navigate = useNavigate();
+  const again = useStartTopicPractice((s) =>
+    navigate(`/study/practice/${encodeURIComponent(s.id)}`));
   const results = useQuery<ResultsResponse, ApiError>({
     queryKey: ["results", sessionId],
     queryFn: ({ signal }) => getSessionResults(sessionId!, signal),
@@ -25,17 +31,21 @@ export default function ResultsRoute() {
     if (e.status === 409 && e.code === "no_results_early_end") {
       return (
         <section className="container" aria-label="练习结果">
-          <PracticeBreadcrumb current="结果" examId={examId} />
+          <PracticeBreadcrumb current="结果" examId={examId} topic={isTopic} />
           <h1>练习已提前结束</h1>
           <p>本次练习有未提交的题目，因此没有生成完整成绩。已提交的答案保留在历史中。</p>
-          <p><Link to="/study/exams">返回试卷列表</Link></p>
+          <p>
+            {isTopic
+              ? <Link to="/study/practice">返回专项练习</Link>
+              : <Link to="/study/exams">返回试卷列表</Link>}
+          </p>
         </section>
       );
     }
     if (e.status === 409 && e.code === "session_not_finished") {
       return (
         <section className="container" aria-label="练习结果">
-          <PracticeBreadcrumb current="结果" examId={examId} />
+          <PracticeBreadcrumb current="结果" examId={examId} topic={isTopic} />
           <h1>练习尚未完成</h1>
           <p>完成并交卷后才能查看结果。</p>
           <p>
@@ -63,7 +73,7 @@ export default function ResultsRoute() {
 
   return (
     <section className="container results-page" aria-label="练习结果">
-      <PracticeBreadcrumb current="结果" examId={examId} />
+      <PracticeBreadcrumb current="结果" examId={examId} topic={isTopic} />
       <h1>练习结果</h1>
       <dl className="results-summary">
         <div><dt>正确</dt><dd>{summary.correct}</dd></div>
@@ -93,7 +103,25 @@ export default function ResultsRoute() {
           );
         })}
       </ol>
-      <p><Link to="/study/exams">返回试卷列表</Link></p>
+      {info.topic ? (
+        <div className="practice-actions">
+          <button type="button" className="primary" disabled={again.isPending}
+                  onClick={() => again.mutate({
+                    level: info.topic!.level,
+                    question_type_id: info.topic!.question_type_id,
+                    count: info.topic!.requested_count,
+                    feedback_mode: info.feedbackMode ?? "immediate",
+                  })}>
+            {again.isPending ? "正在抽题…" : "再练一组"}
+          </button>
+          <Link to="/study/practice">返回专项练习</Link>
+        </div>
+      ) : (
+        <p><Link to="/study/exams">返回试卷列表</Link></p>
+      )}
+      {again.error ? (
+        <p role="alert">无法再练一组：{again.error.message}</p>
+      ) : null}
     </section>
   );
 }

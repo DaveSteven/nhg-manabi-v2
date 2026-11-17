@@ -1,6 +1,6 @@
 # 专项练习：下一阶段实施拆分
 
-日期：2026-11-17。状态：待实施；沿用现有已确认规则，未新增架构决策。
+日期：2026-11-17。状态：阶段 1–4 首版已实现（见 `docs/devlog/2026-11-17-topic-practice.md`），真实浏览器验收待用户；沿用现有已确认规则，未新增架构决策。
 
 ## 当前缺口与复用范围
 
@@ -36,3 +36,10 @@
 本阶段不扩展严格模拟、AI 功能或支付。专项闭环之后补错题本、学习历史及统计。开发完成不自动推送、部署或合并 main。
 
 依据：`../product/business-rules.md`、`../design/page-structure.md`、`../design/practice-interactions.md`、`../decisions/ADR-0014-quick-practice-lightweight-mode.md`。
+
+## 首版实现记录（2026-11-17）
+
+- 接口：`GET /api/topic-practice/types?level=`（真实题型目录与数量，需登录）、`POST /api/topic-practice/sessions`（服务端抽样并复用普通 practice 会话事务；`replace_active` 原子替换）。会话 `config.topic` 保存等级/题型/数量，供「再练一组」复用配置。
+- 抽样参数（可调，非产品规则）：复习占比 25%，其余新题；任一池不足由另一池补足；复习权重 = 0.2 + 2×平滑最近答错率 + 0.7×久未练习(上限 30 天) + 0.5/(1+练习次数)，加权无放回抽样保持随机。历史来自正式提交（practice + quick_practice），草稿不计，未答不覆盖最近有效正误；每次请求现算，未建缓存/物化（`user_question_progress` 仍未接入）。
+- 前端：`/study/practice` 配置页（学科下划线 Tab → 题型 → 数量 → 反馈方式），顶栏「专项」与首页四科入口接通；冲突复用 `ActiveSessionConflictDialog`；结果页「再练一组」。
+- 未做/待办：`user_question_progress` 缓存、「只复习最近仍错」独立入口、同题型邻近重复规避、跨卷 Unit 的来源展示、真实浏览器与响应式验收。

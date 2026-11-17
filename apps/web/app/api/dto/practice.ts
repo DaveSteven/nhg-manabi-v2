@@ -39,6 +39,14 @@ export const PracticeSessionSchema = z.strictObject({
     requested_units: z.array(
       z.strictObject({ release_id: z.string(), unit_id: z.string() }),
     ),
+    /** Present on 专项练习 sessions: lets 再练一组 reuse the configuration
+     * (never the previously drawn units). */
+    topic: z.strictObject({
+      kind: z.literal("topic"),
+      level: z.enum(["N1", "N2", "N3", "N4", "N5"]),
+      question_type_id: z.string(),
+      requested_count: z.number().int(),
+    }).optional(),
   }),
   version: z.number().int(),
   created_at: z.string(),

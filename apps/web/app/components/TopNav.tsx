@@ -68,12 +68,10 @@ export function TopNav() {
         <HomeIcon />
         <span>首页</span>
       </NavLink>
-      <button type="button" className="topnav-link topnav-unavailable"
-              aria-disabled="true">
+      <NavLink to="/study/practice" end className="topnav-link">
         <TopicIcon />
         <span>专项</span>
-        <span className="sr-only">（暂未开放）</span>
-      </button>
+      </NavLink>
       <NavLink to="/study/exams" className="topnav-link">
         <ExamIcon />
         <span>试卷</span>

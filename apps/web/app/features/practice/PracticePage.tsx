@@ -49,6 +49,7 @@ export function PracticePage({ sessionId }: { sessionId: string }) {
   const unitSubmitted = sessionUnit?.state === "submitted";
   const sessionEnded = session !== undefined && session.state !== "in_progress";
   const isQuick = session?.mode === "quick_practice";
+  const isTopic = session?.config.topic !== undefined;
 
   // Quick Practice copy derives from the Canonical unit kind + question
   // count (quick-practice.md v2.1 §6): 独立单题 提交答案/下一题,
@@ -248,7 +249,7 @@ export function PracticePage({ sessionId }: { sessionId: string }) {
   return (
     <div className="practice-shell">
       <main className="container">
-        <PracticeBreadcrumb current="练习"
+        <PracticeBreadcrumb current="练习" topic={isTopic}
                             examId={session.units[0]?.exam_id ?? null} />
         <header className="practice-header">
           <h1>
@@ -402,7 +403,12 @@ export function PracticePage({ sessionId }: { sessionId: string }) {
                   下一组
                 </button>
               ) : null}
-              {session.units[0]?.exam_id ? (
+              {isTopic ? (
+                <button type="button"
+                        onClick={() => navigate("/study/practice")}>
+                  返回专项练习
+                </button>
+              ) : session.units[0]?.exam_id ? (
                 <button type="button"
                         onClick={() => navigate(
                           `/study/exams/${encodeURIComponent(session.units[0]!.exam_id)}`)}>

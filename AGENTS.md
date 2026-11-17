@@ -71,6 +71,6 @@
 
 - 已有 PostgreSQL 真实迁移记录、Canonical staging 导入与发布、媒体同步、React 学生端与独立管理端，不能再按“仅骨架”安排开发。
 - 已实现历年试卷目录、单 Unit Quick Practice、作答判题与解析、听力播放器及原文面板、学生账户与用户中心、管理端登录及试卷上下架。具体测试与验收边界见 `docs/devlog/progress.md` 和对应日期日志。
-- 普通 practice 会话已有自动保存/恢复、提交与结果基础；**专项练习尚未接通**，缺题型目录、服务端智能抽样、配置页及入口联动。Quick Practice 使用独立名额，不替代专项会话。
-- 下一阶段优先补专项练习闭环，实施拆分与验收清单见 `docs/development/topic-practice-next.md`；之后完善错题、学习历史与统计。
+- 普通 practice 会话已有自动保存/恢复、提交与结果基础；**专项练习首版已接通**（题型目录、服务端智能抽样、`/study/practice` 配置页、顶栏与首页入口、再练一组），真实浏览器验收与 `user_question_progress` 缓存未做。Quick Practice 使用独立名额，不替代专项会话。
+- 下一阶段：专项练习验收与遗留项见 `docs/development/topic-practice-next.md`；之后完善错题、学习历史与统计。
 - 历史记录中的本地入库、容器冒烟与测试通过不代表生产已上线、内容答案已验证或全部浏览器已验收。严格模考规则、生产部署硬化与部分浏览器验收仍待完成。

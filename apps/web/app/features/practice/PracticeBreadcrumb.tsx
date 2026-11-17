@@ -9,10 +9,19 @@ import { examRoute } from "../catalog/viewModels";
  * exam_id); when that isn't known (still loading, or the session can't be
  * read) the crumb is omitted rather than pointing somewhere wrong.
  */
-export function PracticeBreadcrumb({ current, examId }: {
+export function PracticeBreadcrumb({ current, examId, topic = false }: {
   current: string;
   examId: string | null;
+  /** 专项练习 sessions draw Units from many exams: trail is 专项练习 ›
+   * 练习|结果 and never points at one exam. */
+  topic?: boolean;
 }) {
+  if (topic) {
+    return (
+      <Breadcrumb items={[{ label: "专项练习", to: "/study/practice" },
+                          { label: current }]} />
+    );
+  }
   return (
     <Breadcrumb items={[
       { label: "试卷", to: "/study/exams" },
@@ -24,6 +33,10 @@ export function PracticeBreadcrumb({ current, examId }: {
 
 /** exam_id of the session's first unit, via the session endpoint. */
 export function useSessionExamId(sessionId: string | undefined): string | null {
+  return useSessionInfo(sessionId).examId;
+}
+
+export function useSessionInfo(sessionId: string | undefined) {
   const q = useQuery({
     queryKey: ["session-exam", sessionId],
     queryFn: ({ signal }) => getSession(sessionId!, signal),
@@ -31,5 +44,9 @@ export function useSessionExamId(sessionId: string | undefined): string | null {
     retry: 0,
     staleTime: Infinity,
   });
-  return q.data?.units[0]?.exam_id ?? null;
+  return {
+    examId: q.data?.units[0]?.exam_id ?? null,
+    topic: q.data?.config.topic ?? null,
+    feedbackMode: q.data?.feedback_mode ?? null,
+  };
 }

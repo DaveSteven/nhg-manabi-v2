@@ -28,15 +28,12 @@ describe("TopNav", () => {
     expect(screen.getByText("试卷").closest("a")).toHaveClass("active");
   });
 
-  it("marks unimplemented entries as aria-disabled 暂未开放", () => {
+  it("专项 links to the topic practice page; 学习 stays 暂未开放", () => {
     renderRoutes([{ path: "study", Component: StudyLayout }], "/study");
-    for (const name of ["专项", "学习"]) {
-      const btn = screen.getByText(name).closest("button");
-      expect(btn).toHaveAttribute("aria-disabled", "true");
-    }
-    // accessible names carry the 暂未开放 hint via sr-only text
-    expect(screen.getByRole("button", { name: /专项\s*（暂未开放）/ }))
-      .toBeInTheDocument();
+    expect(screen.getByText("专项").closest("a"))
+      .toHaveAttribute("href", "/study/practice");
+    const btn = screen.getByText("学习").closest("button");
+    expect(btn).toHaveAttribute("aria-disabled", "true");
     expect(screen.getByRole("button", { name: /学习\s*（暂未开放）/ }))
       .toBeInTheDocument();
   });

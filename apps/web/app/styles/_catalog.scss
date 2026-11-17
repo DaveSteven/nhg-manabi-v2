@@ -167,7 +167,14 @@
   text-align: left;
   font: inherit;
   color: var(--color-ink);
-  cursor: default; /* plain, non-interactive card (practice by subject isn't open yet) */
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform var(--motion-fast), box-shadow var(--motion-fast);
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-floating);
+  }
   /* no corner decoration (::after removed, 2026-11-16) */
 }
 
@@ -193,12 +200,6 @@
 }
 
 .subject-hint { color: var(--color-text-secondary); }
-
-.subject-status {
-  margin-top: auto;
-  font-size: var(--text-aux);
-  color: var(--color-text-muted);
-}
 
 .subject-arrow {
   position: absolute;
