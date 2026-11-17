@@ -59,7 +59,7 @@ const outline = {
 
 const createdSession = {
   id: "new-session",
-  mode: "practice",
+  mode: "quick_practice",
   feedback_mode: "immediate",
   state: "in_progress",
   config: { requested_units: [{ release_id: "r-uuid-1", unit_id: "u-v1" }] },
@@ -73,12 +73,6 @@ const createdSession = {
                  question_count: 5 }],
 };
 
-const { units_meta: _omitted, ...sessionBase } = createdSession;
-const oldSession = {
-  ...sessionBase, id: "old-session",
-  units: [{ id: "su-old", release_id: "r-uuid-1", exam_id: "E-N2-2018-12",
-            unit_id: "u-v2", position: 1, state: "pending", submitted_at: null }],
-};
 const noActive = { detail: "no active practice" };
 const practiceUnit = {
   release_id: "r-uuid-1", id: "u-v1", layer_id: "ly-v1",
@@ -97,17 +91,18 @@ function useOutlineHandler() {
     http.get(`*/api/exams/E-N2-2018-12`, () => HttpResponse.json(outline)),
     http.get(`*/api/exams/E-N2-2018-12/practice-status`, () =>
       HttpResponse.json({ exam_id: "E-N2-2018-12", units: [] })),
-    http.get(`*/api/practice/sessions/current`, () =>
-      HttpResponse.json(noActive, { status: 404 })),
-    http.get(`*/api/practice/sessions/:sessionId`, ({ params }) =>
-      HttpResponse.json(params.sessionId === "old-session"
-        ? oldSession : sessionBase)),
+    http.post(`*/api/quick-practice/sessions`, () =>
+      HttpResponse.json(createdSession, { status: 201 })),
     http.get(`*/api/releases/r-uuid-1/units/u-v1`, () =>
       HttpResponse.json(practiceUnit)),
     http.get(`*/api/releases/r-uuid-1/units/u-v2`, () =>
       HttpResponse.json({ ...practiceUnit, id: "u-v2", label: "文章語彙" })),
     http.get(`*/api/practice/sessions/:sessionId/drafts`, () =>
       HttpResponse.json({ drafts: [] })),
+    http.get(`*/api/practice/sessions/:sessionId`, () => {
+      const { units_meta: _drop, ...session } = createdSession;
+      return HttpResponse.json(session);
+    }),
   );
 }
 
@@ -171,95 +166,86 @@ describe("ExamOutline", () => {
     expect(screen.getByRole("button", { name: /問題9/ })).toBeInTheDocument();
   });
 
-  it("clicking a unit row creates an immediate single-unit session directly", async () => {
+  it("clicking a unit row creates a quick_practice session directly", async () => {
     const user = userEvent.setup();
     useOutlineHandler();
     const created: Record<string, unknown>[] = [];
-    server.use(http.post(`*/api/practice/sessions`, async ({ request }) => {
-      created.push(await request.json() as Record<string, unknown>);
-      return HttpResponse.json(createdSession, { status: 201 });
-    }));
+    server.use(http.post(`*/api/quick-practice/sessions`,
+      async ({ request }) => {
+        created.push(await request.json() as Record<string, unknown>);
+        return HttpResponse.json(createdSession, { status: 201 });
+      }));
 
     renderDetail();
     const toggle = await screen.findByRole("button", { name: /問題1/ });
     await user.click(toggle); // expand layer
     await user.click(document.querySelector("button.unit-row")!);
 
+    // exactly one POST, one single unit, no start-confirmation round-trip
     expect(created).toHaveLength(1);
-    expect(created[0]).toMatchObject({
-      feedback_mode: "immediate",
-      units: [{ release_id: "r-uuid-1", unit_id: "u-v1" }],
-      replace_active: false,
+    expect(created[0]).toEqual({
+      release_id: "r-uuid-1",
+      unit_id: "u-v1",
     });
     // navigated to the practice page for the new session
     expect(await screen.findByRole("heading", { name: /练习/ })).toBeInTheDocument();
+    // no active-session conflict dialog ever appears
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
-  it("an active session containing the unit resumes it instead of replacing", async () => {
+  it("starts a NEW quick session even when a session for the unit exists", async () => {
     const user = userEvent.setup();
     useOutlineHandler();
-    const current = {
-      ...oldSession, id: "old-session",
-      units: [{ id: "su-old", release_id: "r-uuid-1", exam_id: "E-N2-2018-12",
-                unit_id: "u-v1", position: 1, state: "pending",
-                submitted_at: null }],
-    };
     let created = 0;
-    server.use(
-      http.get(`*/api/practice/sessions/current`, () =>
-        HttpResponse.json(current)),
-      http.post(`*/api/practice/sessions`, () => {
-        created += 1;
-        return HttpResponse.json(createdSession, { status: 201 });
-      }),
-    );
+    server.use(http.post(`*/api/quick-practice/sessions`, () => {
+      created += 1;
+      return HttpResponse.json(createdSession, { status: 201 });
+    }));
 
     renderDetail();
     await user.click(await screen.findByRole("button", { name: /問題1/ }));
     await user.click(document.querySelector("button.unit-row")!);
-    // resumed the SAME session, no new session created
-    expect(created).toBe(0);
+    // no resume probe, no dialog: the click itself is the whole flow
+    expect(created).toBe(1);
     expect(await screen.findByRole("heading", { name: /练习/ })).toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: "继续旧练习？" }))
+      .not.toBeInTheDocument();
   });
 
-  it("shows ONE conflict dialog with three actions; 开始新练习 replaces atomically", async () => {
+  it("shows practice counts from the server and 已练习 X / Y 组 per layer", async () => {
     const user = userEvent.setup();
     useOutlineHandler();
-    const created: Record<string, unknown>[] = [];
-    server.use(
-      http.get(`*/api/practice/sessions/current`, () =>
-        HttpResponse.json(oldSession)),
-      http.post(`*/api/practice/sessions`, async ({ request }) => {
-        created.push(await request.json() as Record<string, unknown>);
-        return HttpResponse.json(createdSession, { status: 201 });
-      }),
-    );
+    server.use(http.get(`*/api/exams/E-N2-2018-12/practice-status`, () =>
+      HttpResponse.json({
+        exam_id: "E-N2-2018-12",
+        units: [{ unit_id: "u-v1", submitted_count: 2,
+                  last_submitted_at: "2026-11-17T00:00:00+00:00" }],
+      })));
 
-    const rendered = renderDetail();
-    await user.click(await screen.findByRole("button", { name: /問題1/ }));
-    await user.click(document.querySelector("button.unit-row")!);
+    renderDetail();
+    const layerToggle = await screen.findByRole("button", { name: /問題1/ });
+    // Layer header: X counts distinct practiced units of THIS layer
+    await waitFor(() =>
+      expect(layerToggle).toHaveTextContent("已练习 1 / 1 组"));
+    await user.click(layerToggle);
+    const row = document.querySelector("button.unit-row")!;
+    expect(row).toHaveTextContent("已练习 2 次");
 
-    const dialog = await screen.findByRole("dialog", { name: "继续旧练习？" });
-    expect(dialog).toHaveTextContent("开始新练习将结束旧练习，已提交的答案会保留");
-    expect(within(dialog).getByRole("button", { name: "取消" })).toBeInTheDocument();
-    expect(within(dialog).getByRole("button", { name: "继续旧练习" })).toBeInTheDocument();
-
-    // 开始新练习 → atomic replace, no second confirmation dialog
-    await user.click(within(dialog).getByRole("button", { name: "开始新练习" }));
-    expect(created).toHaveLength(1);
-    expect(created[0]).toMatchObject({ replace_active: true,
-      units: [{ release_id: "r-uuid-1", unit_id: "u-v1" }] });
-    const nav = await waitFor(() =>
-      rendered.router.state.location.pathname === "/study/practice/new-session",
-      { timeout: 3000 });
-    expect(nav).toBe(true);
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    // a unit without history shows 未练习, and an unpracticed layer is 0/Y
+    await user.click(await screen.findByRole("tab", { name: "文法" }));
+    const gToggle = screen.getByRole("button", { name: /問題9/ });
+    expect(gToggle).toHaveTextContent("已练习 0 / 1 组");
+    await user.click(gToggle);
+    expect(document.querySelector("button.unit-row")!)
+      .toHaveTextContent("未练习");
+    // the old pink checkmark state is gone
+    expect(screen.queryByText("✓")).not.toBeInTheDocument();
   });
 
-  it("surfaces non-conflict creation errors without a dialog", async () => {
+  it("surfaces creation errors without a dialog", async () => {
     const user = userEvent.setup();
     useOutlineHandler();
-    server.use(http.post(`*/api/practice/sessions`, () =>
+    server.use(http.post(`*/api/quick-practice/sessions`, () =>
       HttpResponse.json({ detail: {
         code: "unit_not_available", message: "unit not available",
       } }, { status: 422 })));

@@ -40,9 +40,15 @@ export interface DraftManagerApi {
  * refetch server drafts and freeze the question in `conflict` until the
  * user chooses (adopt server / overwrite with the fresh version). Never
  * silently overwrites; "saved" is only ever shown after a server ack.
+ *
+ * `persist: false` (Quick Practice) keeps selections in pure React state:
+ * no PUT /drafts calls, no hydrate, no conflicts — unsubmitted choices
+ * reset on refresh/leave by design (quick-practice.md v2.0 §2).
  */
 export function useDraftManager(sessionId: string,
-                                sessionUnitId: string): DraftManagerApi {
+                                sessionUnitId: string,
+                                opts?: { persist?: boolean }): DraftManagerApi {
+  const persist = opts?.persist ?? true;
   const [state, dispatch] = useReducer(draftReducer, { questions: {} });
   const timers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const stateRef = useRef(state);
@@ -91,10 +97,11 @@ export function useDraftManager(sessionId: string,
   }, [sessionId, sessionUnitId]);
 
   const schedule = useCallback((questionId: string) => {
+    if (!persist) return; // Quick Practice: local-only selections
     clearTimeout(timers.current[questionId]);
     timers.current[questionId] = setTimeout(
       () => flushQuestion(questionId), AUTOSAVE_DEBOUNCE_MS);
-  }, [flushQuestion]);
+  }, [flushQuestion, persist]);
 
   const select = useCallback((questionId: string, optionId: string) => {
     dispatch({ type: "select", questionId, optionId });
@@ -120,10 +127,11 @@ export function useDraftManager(sessionId: string,
   }, [schedule]);
 
   const flushPending = useCallback(() => {
+    if (!persist) return;
     for (const [questionId, q] of Object.entries(stateRef.current.questions)) {
       if (q.status === "dirty") flushQuestion(questionId);
     }
-  }, [flushQuestion]);
+  }, [flushQuestion, persist]);
 
   const conflicts = useMemo(
     () => Object.entries(state.questions)

@@ -29,7 +29,10 @@ export type SessionUnit = z.infer<typeof SessionUnitSchema>;
 
 export const PracticeSessionSchema = z.strictObject({
   id: z.string(),
-  mode: z.literal("practice"),
+  /** `practice` = 专项/历年试卷多 Unit 练习；`quick_practice` = 试卷目录
+   * 单 Unit 快速练习（quick-practice.md v2.0）：固定 immediate、提交即
+   * 完成会话，不占专项练习的单活跃名额。 */
+  mode: z.enum(["practice", "quick_practice"]),
   feedback_mode: FeedbackModeSchema,
   state: SessionStateSchema,
   config: z.strictObject({
@@ -118,6 +121,8 @@ export const SubmitResultSchema = z.strictObject({
   answered_count: z.number().int(),
   skipped_count: z.number().int(),
   idempotent: z.boolean(),
+  /** Post-submit session state — quick sessions complete on submit. */
+  session_state: z.enum(["in_progress", "completed", "ended_early"]).optional(),
   feedback: FeedbackPayloadSchema.optional(),
 });
 export type SubmitResult = z.infer<typeof SubmitResultSchema>;

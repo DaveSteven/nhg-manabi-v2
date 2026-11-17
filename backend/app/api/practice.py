@@ -211,6 +211,98 @@ def _create_session_tx(engine, body: PracticeSessionCreate,
     return payload
 
 
+# ----------------------------------------------------- quick practice ----
+
+class QuickPracticeCreate(BaseModel):
+    release_id: uuid.UUID
+    unit_id: str
+
+
+@router.post("/api/quick-practice/sessions", status_code=201)
+def create_quick_practice_session(
+    body: QuickPracticeCreate,
+    user_id: uuid.UUID = Depends(get_current_user_id),
+) -> dict:
+    """Quick Practice (quick-practice.md v2.0): click a unit, practice now.
+
+    - Own mode `quick_practice`, so the 专项练习 single-active constraint
+      (ux_one_active_practice) never applies and 409 conflicts with an
+      in-progress 专项 session are structurally impossible.
+    - A stale in-progress QUICK session (user left without submitting) is
+      ended silently (ended_early, same transaction) — unsubmitted quick
+      selections reset by design, so there is nothing to resume and no
+      "continue old practice?" dialog. Only in-progress QUICK sessions are
+      touched; 专项/模考 sessions are never altered here.
+    - feedback_mode is fixed to immediate.
+    """
+    engine = get_engine()
+    try:
+        with engine.begin() as conn:
+            # Silent replace WITHIN the quick mode only. A concurrent
+            # double-click still loses at ux_one_active_quick → 409; the
+            # client may simply retry (the winner is a fresh session too).
+            conn.execute(text(
+                "UPDATE study_sessions SET state = 'ended_early',"
+                " ended_at = now(), version = version + 1"
+                " WHERE user_id = :u AND mode = 'quick_practice'"
+                "   AND state = 'in_progress'"), {"u": user_id})
+
+            # Same availability gate as practice sessions: the unit must be
+            # in the CURRENT published release and conversion-complete.
+            meta = conn.execute(text(
+                "SELECT u.unit_id, u.layer_id, u.question_type_id,"
+                " r.exam_id, r.id AS release_id,"
+                " (SELECT count(*) FROM release_questions q"
+                "  WHERE q.release_id = u.release_id"
+                "    AND q.unit_id = u.unit_id) AS question_count"
+                " FROM release_units u"
+                " JOIN exam_releases r ON r.id = u.release_id"
+                " JOIN exam_current_releases c ON c.release_id = r.id"
+                " WHERE u.release_id = :r AND u.unit_id = :uid"
+                "   AND r.state = 'published'"
+                "   AND u.conversion_status = 'complete'"),
+                {"r": body.release_id, "uid": body.unit_id}).mappings().first()
+            if meta is None:
+                raise HTTPException(
+                    status_code=422,
+                    detail={"code": "unit_not_available",
+                            "message": "unit is not available for practice",
+                            "release_id": str(body.release_id),
+                            "unit_id": body.unit_id})
+
+            session_id = conn.execute(text(
+                "INSERT INTO study_sessions (id, user_id, mode,"
+                " feedback_mode, state, mock_release_id, config)"
+                " VALUES (gen_random_uuid(), :u, 'quick_practice',"
+                " 'immediate', 'in_progress', NULL, CAST(:cfg AS jsonb))"
+                " RETURNING id"),
+                {"u": user_id,
+                 "cfg": json.dumps({"requested_units": [
+                     {"release_id": str(body.release_id),
+                      "unit_id": body.unit_id}]})}).scalar()
+            conn.execute(text(
+                "INSERT INTO study_session_units (id, session_id,"
+                " release_id, unit_id, position, state)"
+                " VALUES (gen_random_uuid(), :s, :r, :uid, 1, 'pending')"),
+                {"s": session_id, "r": meta["release_id"],
+                 "uid": meta["unit_id"]})
+            payload = _session_payload(conn, session_id)
+            payload["units_meta"] = [{
+                "release_id": str(meta["release_id"]),
+                "unit_id": meta["unit_id"], "layer_id": meta["layer_id"],
+                "question_type_id": meta["question_type_id"],
+                "exam_id": meta["exam_id"],
+                "question_count": meta["question_count"],
+            }]
+    except IntegrityError:
+        raise HTTPException(
+            status_code=409,
+            detail={"code": "active_session_exists",
+                    "message": "an active quick practice session already"
+                               " exists"})
+    return payload
+
+
 @router.get("/api/practice/sessions/current")
 def get_current_practice_session(
     user_id: uuid.UUID = Depends(get_current_user_id),
@@ -233,7 +325,11 @@ def get_exam_practice_status(
 ) -> dict:
     """Per-unit practice history of the CALLER for one exam (Quick Practice
     unit rows): units with any formally submitted session unit in ANY
-    release of this exam. Own data only; never exposes answers."""
+    release of this exam, counting BOTH practice modes (专项 sessions and
+    quick sessions are equally real formal practice). One submitted
+    session unit = one practice of that unit regardless of how many
+    questions it holds; idempotent duplicate submits reuse the same row,
+    so they never inflate the count. Own data only; never exposes answers."""
     with get_engine().connect() as conn:
         rows = conn.execute(text(
             "SELECT su.unit_id, count(*) AS submitted_count,"
@@ -241,7 +337,8 @@ def get_exam_practice_status(
             " FROM study_session_units su"
             " JOIN study_sessions s ON s.id = su.session_id"
             " JOIN exam_releases er ON er.id = su.release_id"
-            " WHERE s.user_id = :u AND s.mode = 'practice'"
+            " WHERE s.user_id = :u"
+            "   AND s.mode IN ('practice', 'quick_practice')"
             "   AND su.state = 'submitted' AND er.exam_id = :e"
             " GROUP BY su.unit_id"),
             {"u": user_id, "e": exam_id}).mappings().all()
@@ -287,7 +384,11 @@ def _load_session_unit(conn, session_id: uuid.UUID,
 
 
 def _require_active_practice(unit: dict) -> None:
-    if unit["mode"] != "practice":
+    """Accept both practice modes (专项 and Quick Practice); mock stays
+    unsupported. Quick sessions share the submit/draft/feedback machinery
+    but live in their own mode, so they never conflict with 专项 practice
+    (quick-practice.md v2.0 §3)."""
+    if unit["mode"] not in ("practice", "quick_practice"):
         raise HTTPException(
             status_code=409,
             detail={"code": "not_a_practice_session",
@@ -526,7 +627,7 @@ def submit_session_unit(
             "SELECT state, mode FROM study_sessions"
             " WHERE id = :s AND user_id = :user FOR UPDATE"),
             {"s": session_id, "user": user_id}).mappings().first()
-        if session_locked["mode"] != "practice":
+        if session_locked["mode"] not in ("practice", "quick_practice"):
             raise HTTPException(
                 status_code=409,
                 detail={"code": "not_a_practice_session",
@@ -610,6 +711,17 @@ def submit_session_unit(
                 " submitted_at = now() WHERE id = :u AND state = 'pending'"),
                 {"u": session_unit_id})
 
+        # Quick Practice never lingers as an open session: submitting its
+        # single unit IS finishing the session — the aggregate result row
+        # and the completed state land in the SAME transaction, so a crash
+        # between them is impossible (quick-practice.md v2.0 §3.4). A
+        # duplicate submit (already=True) is fully idempotent and does not
+        # re-complete or re-judge anything.
+        quick_completed = False
+        if not already and session_locked["mode"] == "quick_practice":
+            _complete_session(conn, session_id)
+            quick_completed = True
+
         answered = conn.execute(text(
             "SELECT count(*) FILTER (WHERE chosen_option_id IS NOT NULL),"
             " count(*) FROM study_submitted_answers"
@@ -621,6 +733,9 @@ def submit_session_unit(
             "state": "submitted",
             "answered_count": answered[0], "skipped_count": answered[1] - answered[0],
             "idempotent": already,
+            # Post-submit session state (quick sessions complete on submit).
+            "session_state": "completed" if quick_completed
+            else session_locked["state"],
         }
         # Task 07 boundary: immediate mode may reveal THIS unit now; end
         # mode reveals nothing until the session formally ends.
@@ -791,6 +906,33 @@ def _build_results(conn, session_id: uuid.UUID) -> dict:
     }
 
 
+def _complete_session(conn, session_id: uuid.UUID) -> None:
+    """Mark the session completed + write its aggregate result row in the
+    CALLER's transaction (correct + wrong + skipped = total, DB CHECKed).
+    Shared by the finish endpoint and Quick Practice submit auto-complete.
+    """
+    correct, wrong, skipped, total = conn.execute(text(
+        "SELECT count(*) FILTER (WHERE is_correct IS TRUE),"
+        " count(*) FILTER (WHERE is_correct IS FALSE),"
+        " count(*) FILTER (WHERE is_correct IS NULL),"
+        " count(*)"
+        " FROM study_submitted_answers sa"
+        " JOIN study_session_units su ON su.id = sa.session_unit_id"
+        " WHERE su.session_id = :s"), {"s": session_id}).first()
+    conn.execute(text(
+        "INSERT INTO study_results (id, session_id, correct_count,"
+        " wrong_count, skipped_count, total_count, scoring_method,"
+        " scoring_version)"
+        " VALUES (gen_random_uuid(), :s, :c, :w, :sk, :t,"
+        " 'all_questions', '1')"),
+        {"s": session_id, "c": correct, "w": wrong, "sk": skipped,
+         "t": total})
+    conn.execute(text(
+        "UPDATE study_sessions SET state = 'completed',"
+        " ended_at = now(), version = version + 1"
+        " WHERE id = :s AND state = 'in_progress'"), {"s": session_id})
+
+
 @router.post("/api/practice/sessions/{session_id}/finish")
 def finish_practice_session(
     session_id: uuid.UUID,
@@ -835,26 +977,7 @@ def finish_practice_session(
         all_submitted = units_total > 0 and units_total == units_submitted
 
         if all_submitted:
-            correct, wrong, skipped, total = conn.execute(text(
-                "SELECT count(*) FILTER (WHERE is_correct IS TRUE),"
-                " count(*) FILTER (WHERE is_correct IS FALSE),"
-                " count(*) FILTER (WHERE is_correct IS NULL),"
-                " count(*)"
-                " FROM study_submitted_answers sa"
-                " JOIN study_session_units su ON su.id = sa.session_unit_id"
-                " WHERE su.session_id = :s"), {"s": session_id}).first()
-            conn.execute(text(
-                "INSERT INTO study_results (id, session_id, correct_count,"
-                " wrong_count, skipped_count, total_count, scoring_method,"
-                " scoring_version)"
-                " VALUES (gen_random_uuid(), :s, :c, :w, :sk, :t,"
-                " 'all_questions', '1')"),
-                {"s": session_id, "c": correct, "w": wrong, "sk": skipped,
-                 "t": total})
-            conn.execute(text(
-                "UPDATE study_sessions SET state = 'completed',"
-                " ended_at = now(), version = version + 1"
-                " WHERE id = :s AND state = 'in_progress'"), {"s": session_id})
+            _complete_session(conn, session_id)
             payload = _session_payload(conn, session_id)
             payload["results"] = _build_results(conn, session_id)
             payload["idempotent"] = False

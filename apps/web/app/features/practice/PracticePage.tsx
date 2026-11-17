@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
+import { useQuery } from "@tanstack/react-query";
 import type { FeedbackPayload } from "../../api/dto/practice";
 import { getDrafts } from "../../api/endpoints/sessions";
+import { getExamOutline } from "../../api/endpoints/exams";
 import { toViewModel } from "../content/toViewModel";
 import { MaterialDisplay } from "../content/MaterialDisplay";
 import { RichText } from "../content/richtext/RichText";
@@ -10,7 +12,7 @@ import { useSessionRestore, type RestoredUnit } from "./useSessionRestore";
 import { useDraftManager } from "./useDraftManager";
 import { useSubmitUnit } from "./useSubmitUnit";
 import { useFeedback } from "./useFeedback";
-import { useFinishSession } from "./useStartPractice";
+import { useFinishSession, useQuickPracticeStart } from "./useStartPractice";
 import { PracticeBreadcrumb } from "./PracticeBreadcrumb";
 import { DraftConflictDialog, UnansweredConfirmDialog } from "./SubmitDialogs";
 import { clearSessionPendingRetries, loadPendingRetries } from "./pendingRetries";
@@ -23,6 +25,12 @@ const STATUS_TEXT: Record<string, string> = {
  * Practice page: material + questions + drafts + submit + feedback.
  * Refresh-restore order: server session → fixed-release units → server
  * drafts → merge local pending retries (only when newer by version).
+ *
+ * Quick Practice sessions (`mode === "quick_practice"`, quick-practice.md
+ * v2.0) deliberately bypass the draft/resume machinery: selections live in
+ * pure React state (refresh/leave resets them), the session auto-completes
+ * on submit, and post-submit navigation goes 下一组（同卷下一个 Unit，新
+ * 会话）/ 返回试卷 instead of a per-session unit list.
  */
 export function PracticePage({ sessionId }: { sessionId: string }) {
   const navigate = useNavigate();
@@ -38,6 +46,7 @@ export function PracticePage({ sessionId }: { sessionId: string }) {
   const sessionUnit = session?.units.find((u) => u.id === current?.sessionUnitId);
   const unitSubmitted = sessionUnit?.state === "submitted";
   const sessionEnded = session !== undefined && session.state !== "in_progress";
+  const isQuick = session?.mode === "quick_practice";
 
   const content = useMemo(
     () => (current ? toViewModel(current.unit) : null),
@@ -48,7 +57,8 @@ export function PracticePage({ sessionId }: { sessionId: string }) {
     [content],
   );
 
-  const manager = useDraftManager(sessionId, current?.sessionUnitId ?? "");
+  const manager = useDraftManager(sessionId, current?.sessionUnitId ?? "",
+    { persist: !isQuick });
   const submit = useSubmitUnit(sessionId, (outcome) => {
     setConfirming(false);
     if (outcome.kind === "submitted") {
@@ -70,8 +80,14 @@ export function PracticePage({ sessionId }: { sessionId: string }) {
   }, [questionIds.join("|")]);
 
   // Hydrate server drafts once per unit + merge local pending retries.
+  // Quick Practice skips both: no server drafts exist (selections are
+  // local-only), and a revisit starts a fresh practice by design.
   useEffect(() => {
     if (!bundle.data || !current) return;
+    if (isQuick) {
+      if (unitSubmitted) manager.markSubmitted(questionIds);
+      return;
+    }
     const server = bundle.data.drafts
       .filter((d) => d.session_unit_id === current.sessionUnitId)
       .map((d) => ({ questionId: d.question_id, optionId: d.chosen_option_id,
@@ -93,6 +109,38 @@ export function PracticePage({ sessionId }: { sessionId: string }) {
   const feedback = useFeedback(sessionId, current?.sessionUnitId ?? "",
     session?.feedback_mode ?? "immediate",
     { unitSubmitted, sessionEnded });
+
+  // Quick review: submitted choices come from the feedback payload (quick
+  // sessions have no drafts) so the locked radios show what was actually
+  // submitted after a refresh or revisit.
+  useEffect(() => {
+    if (!isQuick || !unitSubmitted || !feedback.data) return;
+    manager.hydrate(feedback.data.questions.map((q) => ({
+      questionId: q.question_id, optionId: q.chosen_option_id, rowVersion: 0,
+    })));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isQuick, unitSubmitted, feedback.data]);
+
+  // Quick "下一组": the next unit of the SAME exam in outline order — a new
+  // quick session, never a unit appended to this one. Null when the unit
+  // is the exam's last (only 返回试卷 remains).
+  const examId = session?.units[0]?.exam_id ?? null;
+  const outline = useQuery({
+    queryKey: ["exam-outline", examId],
+    queryFn: ({ signal }) => getExamOutline(examId!, signal),
+    enabled: isQuick && examId !== null,
+    staleTime: 60_000,
+  });
+  const nextQuickUnit = useMemo(() => {
+    if (!isQuick || !current || !outline.data) return null;
+    const flat = outline.data.sections.flatMap(
+      (s) => s.layers.flatMap((l) => l.units));
+    const idx = flat.findIndex((u) => u.unit_id === current.unit.id);
+    return idx >= 0 && idx + 1 < flat.length ? flat[idx + 1]! : null;
+  }, [isQuick, current, outline.data]);
+  const startQuick = useQuickPracticeStart((s) => {
+    navigate(`/study/practice/${encodeURIComponent(s.id)}`);
+  });
 
   const unanswered = useMemo(() => {
     if (!content) return 0;
@@ -254,18 +302,43 @@ export function PracticePage({ sessionId }: { sessionId: string }) {
               提交本组
             </button>
           ) : null}
-          {allSubmitted && !sessionEnded ? (
+          {!isQuick && allSubmitted && !sessionEnded ? (
             <button type="button" className="primary" disabled={finish.isPending}
                     onClick={onFinish}>
               {session.feedback_mode === "end" ? "交卷并查看结果" : "完成练习"}
             </button>
           ) : null}
-          {sessionEnded && !allSubmitted ? (
+          {isQuick && sessionEnded && !allSubmitted ? (
+            // this stale quick session was silently replaced by a newer one
+            <div className="practice-post-submit-nav">
+              <p className="text-aux">本次练习已被新的练习取代。</p>
+              <button type="button" disabled={startQuick.isPending}
+                      onClick={() => startQuick.mutate({
+                        release_id: sessionUnit?.release_id
+                          ?? session.units[0]!.release_id,
+                        unit_id: current!.unit.id,
+                      })}>
+                重新练习本组
+              </button>
+            </div>
+          ) : null}
+          {!isQuick && sessionEnded && !allSubmitted ? (
             <p className="text-aux">练习已提前结束（部分题目未提交）。</p>
           ) : null}
-          {unitSubmitted && !sessionEnded ? (
+          {unitSubmitted && (!sessionEnded || isQuick) ? (
             <div className="practice-post-submit-nav">
-              {currentIdx + 1 < units.length ? (
+              {isQuick ? (
+                nextQuickUnit ? (
+                  <button type="button" className="primary"
+                          disabled={startQuick.isPending}
+                          onClick={() => startQuick.mutate({
+                            release_id: outline.data!.release_id,
+                            unit_id: nextQuickUnit.unit_id,
+                          })}>
+                    下一组
+                  </button>
+                ) : null
+              ) : currentIdx + 1 < units.length ? (
                 <button type="button" className="primary"
                         onClick={() => setCurrentIdx(currentIdx + 1)}>
                   下一组

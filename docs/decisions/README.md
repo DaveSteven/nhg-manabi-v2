@@ -25,6 +25,7 @@
 | P-019 | 管理员使用独立的 `admin_users`/`admin_sessions` 表，角色 viewer ⊂ reviewer ⊂ publisher；无 dev 旁路，命令行创建；审核人由服务端注入 | 已确认（ADR-0009） | 学生与管理员身份隔离；QA Agent 无管理账号；MFA/SSO/口令找回不在范围 |
 | P-020 | 入库默认发布（`PUBLISH_POLICY=auto`，可回退 `gated`）；暂不做审核流程；管理员仅 `super_admin` | 已确认（ADR-0010） | 未校验答案会直接展示并判题；版权门槛暂停；auto 不把任何内容标成已验证，只在决策备注里如实记录未验证项；部署仍需另行授权 |
 | P-021 | 学生账户：邮箱登录（无用户名）、完整邮件验证/找回流程（Resend）、30 天不透明 Bearer 会话存 localStorage、scrypt 口令（与管理端同实现）、等级偏好 `users.current_level` + 本地双轨；不迁移 v1 旧用户 | 已确认（ADR-0011） | 未激活/停用不可登录；登录锁 5 次/15 分钟；IP 级限流随部署硬化另行处理；`dev_test` 仍生产硬禁用 |
+| P-022 | Quick Practice（历年试卷单 Unit 快速练习）使用独立 `quick_practice` 会话模式：无服务端草稿/恢复/冲突弹窗，点 Unit 直入、提交即完成并计正式历史；目录显示真实练习次数（未练习/已练习 N 次）、Layer 显示「已练习 X / Y 组」；不占专项练习单活跃名额 | 已确认（ADR-0014） | `study_answer_drafts` 表保留给专项练习；静默替换仅限 quick 会话之间；练习次数由服务端 practice-status 计算，前端不累加 |
 
 ## 尚未定稿的重点
 
@@ -48,3 +49,4 @@
 - `ADR-0010-auto-publish-and-super-admin.md`
 - `ADR-0012-local-docker-deployment.md`
 - `ADR-0013-user-center-and-avatar.md`
+- `ADR-0014-quick-practice-lightweight-mode.md`

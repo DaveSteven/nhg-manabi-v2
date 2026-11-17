@@ -43,6 +43,22 @@ export function createSession(input: CreateSessionInput,
  * translate it via ApiError (status 404) into "no active session", never
  * an error banner.
  */
+/**
+ * Quick Practice (quick-practice.md v2.0): one unit, fixed immediate
+ * feedback, own `quick_practice` mode — never conflicts with an active
+ * 专项练习 session. A stale quick session is silently replaced by the
+ * server; a 409 here only means a concurrent double-click race.
+ */
+export function createQuickSession(
+  input: { release_id: string; unit_id: string },
+  signal?: AbortSignal,
+): Promise<PracticeSession> {
+  return apiFetch("/api/quick-practice/sessions",
+    { method: "POST", body: input, signal })
+    .then((p) => parseDto(CreateSessionResponseSchema,
+                          "POST /api/quick-practice/sessions", p));
+}
+
 export function getCurrentSession(signal?: AbortSignal): Promise<PracticeSession> {
   return apiFetch("/api/practice/sessions/current", { signal })
     .then((p) => parseDto(PracticeSessionSchema, "GET /api/practice/sessions/current", p));
