@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Breadcrumb } from "../../components/Breadcrumb";
 import { getSession } from "../../api/endpoints/sessions";
+import { useNavSection } from "../../components/TopNav";
 import { examRoute } from "../catalog/viewModels";
 
 /**
@@ -16,6 +17,7 @@ export function PracticeBreadcrumb({ current, examId, topic = false }: {
    * 练习|结果 and never points at one exam. */
   topic?: boolean;
 }) {
+  useNavSection(topic ? "topic" : "exams");
   if (topic) {
     return (
       <Breadcrumb items={[{ label: "专项练习", to: "/study/practice" },

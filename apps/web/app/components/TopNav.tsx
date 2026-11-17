@@ -1,5 +1,35 @@
-import type { ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { NavLink } from "react-router";
+
+/**
+ * Practice/result pages live under /study/practice/:id whether they were
+ * opened from 专项 or from an exam (试卷), so the URL can't say which top
+ * nav item owns them. The page declares it (via its breadcrumb) and the nav
+ * highlights that item. Outside a provider this is a no-op.
+ */
+export type NavSection = "topic" | "exams";
+const NavSectionContext = createContext<{
+  section: NavSection | null;
+  setSection: (s: NavSection | null) => void;
+} | null>(null);
+
+export function NavSectionProvider({ children }: { children: ReactNode }) {
+  const [section, setSection] = useState<NavSection | null>(null);
+  return (
+    <NavSectionContext.Provider value={{ section, setSection }}>
+      {children}
+    </NavSectionContext.Provider>
+  );
+}
+
+export function useNavSection(section: NavSection): void {
+  const ctx = useContext(NavSectionContext);
+  const setSection = ctx?.setSection;
+  useEffect(() => {
+    setSection?.(section);
+    return () => setSection?.(null);
+  }, [section, setSection]);
+}
 
 /**
  * Global top navigation (design-system.md v1.1 §3): a centered floating
@@ -62,17 +92,22 @@ function StudyIcon() {
 }
 
 export function TopNav() {
+  const section = useContext(NavSectionContext)?.section ?? null;
+  const cls = (isActive: boolean, own: NavSection) =>
+    `topnav-link${(section ? section === own : isActive) ? " active" : ""}`;
   return (
     <nav aria-label="主导航" className="topnav">
       <NavLink to="/study" end className="topnav-link">
         <HomeIcon />
         <span>首页</span>
       </NavLink>
-      <NavLink to="/study/practice" end className="topnav-link">
+      <NavLink to="/study/practice" end
+               className={({ isActive }) => cls(isActive, "topic")}>
         <TopicIcon />
         <span>专项</span>
       </NavLink>
-      <NavLink to="/study/exams" className="topnav-link">
+      <NavLink to="/study/exams"
+               className={({ isActive }) => cls(isActive, "exams")}>
         <ExamIcon />
         <span>试卷</span>
       </NavLink>

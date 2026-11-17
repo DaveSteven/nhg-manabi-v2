@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { screen } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
 import { renderRoutes, renderWithQuery } from "../test/render";
 import { TopNav } from "./TopNav";
+import { PracticeBreadcrumb } from "../features/practice/PracticeBreadcrumb";
 import StudyLayout from "../routes/study";
 import StudyHome from "../routes/study._index";
 import ExamListPage from "../routes/study.exams._index";
@@ -69,5 +70,22 @@ describe("route tree smoke", () => {
     renderRoutes([{ path: "/", element: <main><h1>JLPT GO</h1></main> }], "/");
     expect(screen.queryByRole("navigation", { name: "主导航" })).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("JLPT GO");
+  });
+});
+
+describe("TopNav section highlight on practice pages", () => {
+  it.each([
+    ["topic", "专项"],
+    ["exams", "试卷"],
+  ] as const)("practice breadcrumb %s highlights %s", (kind, name) => {
+    function Page() {
+      return <PracticeBreadcrumb current="练习" examId={null} topic={kind === "topic"} />;
+    }
+    renderRoutes([{ path: "study", Component: StudyLayout,
+      children: [{ path: "practice/:id", Component: Page }] }], "/study/practice/s-1");
+    const nav = within(screen.getByRole("navigation", { name: "主导航" }));
+    expect(nav.getByRole("link", { name })).toHaveClass("active");
+    const other = kind === "topic" ? "试卷" : "专项";
+    expect(nav.getByRole("link", { name: other })).not.toHaveClass("active");
   });
 });

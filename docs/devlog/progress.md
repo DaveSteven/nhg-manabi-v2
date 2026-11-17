@@ -4,6 +4,8 @@
 
 ## 最新文档更新（2026-11-17）
 
+- 练习/结果页按来源高亮顶栏「专项」或「试卷」（`2026-11-17-topnav-section-highlight.md`）。
+
 - 未登录顶栏不再显示等级选择（详见 `2026-11-17-guest-no-level-selector.md`）。
 
 - 长篇读解/文章填空桌面双栏 Sticky 答题面板（ADR-0018）：`SharedMaterialLayout`，slot↔题联动；前端 253 passed、build 通过，真实浏览器验收见 `2026-11-17-sticky-panel.md`。

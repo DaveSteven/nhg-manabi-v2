@@ -1,6 +1,6 @@
 import type { MetaFunction } from "react-router";
 import { Link, Outlet } from "react-router";
-import { TopNav } from "../components/TopNav";
+import { NavSectionProvider, TopNav } from "../components/TopNav";
 import { HeaderControls } from "../features/auth/HeaderControls";
 import { useScrolled } from "../components/useScrolled";
 
@@ -19,6 +19,7 @@ export default function StudyLayout() {
   // once the sticky header sits over scrolled content its row becomes a capsule
   const stuck = useScrolled();
   return (
+    <NavSectionProvider>
     <div className="study-shell">
       <header className={stuck ? "site-header is-stuck" : "site-header"}>
         <div className="container">
@@ -38,5 +39,6 @@ export default function StudyLayout() {
         <Outlet />
       </main>
     </div>
+    </NavSectionProvider>
   );
 }
