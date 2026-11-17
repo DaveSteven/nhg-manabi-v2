@@ -91,3 +91,5 @@
 - **答对选项变绿 / 已练习次数高亮 / 中文字体栈（2026-11-17）**：见 `docs/devlog/2026-11-17-correct-option-green-unit-count-fonts.md`；日文内容 `lang="ja"`，页面中文优先字体栈。浏览器视觉待用户确认。
 
 - **首页继续练习卡片去掉 continue-meta（2026-11-17）**：见 `docs/devlog/2026-11-17-remove-continue-meta.md`；web 231 passed、typecheck/build 通过，web 容器已重建。浏览器视觉待用户确认。
+
+- **首页移除历年试卷模块（2026-11-17）**：见 `docs/devlog/2026-11-17-remove-home-exam-entry.md`；web 225 passed、typecheck/build 通过，web 容器已重建。浏览器视觉待用户确认。

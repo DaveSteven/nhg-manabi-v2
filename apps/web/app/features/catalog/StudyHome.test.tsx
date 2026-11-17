@@ -1,5 +1,5 @@
 import { beforeAll, afterAll, afterEach, describe, expect, it } from "vitest";
-import { screen, within } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 import { server } from "../../test/mocks/server";
 import { createQueryClient } from "../../api/queryClient";
@@ -100,86 +100,5 @@ describe("StudyHome", () => {
     expect(screen.queryByRole("region", { name: "继续上次练习" }))
       .not.toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
-  });
-
-  it("catalog network errors render an explicit alert", async () => {
-    // retry:false so the 500 settles immediately for the alert assertion.
-    const qc = createQueryClient();
-    qc.setQueryDefaults(["exams"], { retry: false });
-    server.use(http.get(`*/api/exams`, () =>
-      HttpResponse.json({ detail: "boom" }, { status: 500 })));
-    renderHome(qc);
-    const alert = await screen.findByRole("alert");
-    expect(alert).toHaveTextContent("无法连接学习服务");
-  });
-
-  it("shows an explicit empty state for an empty catalog", async () => {
-    renderHome();
-    expect(await screen.findByText("暂无已发布试卷。")).toBeInTheDocument();
-  });
-
-  it("renders compact quick entries for the first three exams", async () => {
-    const exams = [2024, 2023, 2022, 2021].map((year, i) => ({
-      exam_id: `N2-${year}-12`,
-      release_id: `rel-${year}`,
-      revision: 1,
-      level: "N2",
-      year,
-      month: 12,
-      title: `${year}年12月 N2`,
-      question_count: 96,
-    })).slice(0, 4);
-    server.use(http.get(`*/api/exams`, () => HttpResponse.json(exams)));
-    renderHome();
-    await screen.findByText("2022年");
-    const links = screen.getAllByRole("link", { name: /202\d年/ });
-    expect(links).toHaveLength(3);
-    expect(links[0]).toHaveAttribute("href", "/study/exams/N2-2024-12");
-    expect(screen.getByText("2022年")).toBeInTheDocument();
-    expect(screen.queryByText("2021年")).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /查看全部/ }))
-      .toHaveAttribute("href", "/study/exams");
-  });
-
-  describe("target level filter on the home exam entry", () => {
-    const exam = (id: string, level: string, year: number) => ({
-      exam_id: id, level, month: 7, release_id: `r-${id}`, revision: 1,
-      title: `${level} ${year}`, year, question_count: 96,
-    });
-    const USER = { id: "u1", email: "a@example.com", display_name: "小明",
-                   current_level: "N2" as const, avatar: null };
-
-    it("shows only the signed-in student's level", async () => {
-      server.use(http.get(`*/api/exams`, () => HttpResponse.json([
-        exam("a", "N1", 2025), exam("b", "N2", 2024), exam("c", "N2", 2023),
-        exam("d", "N5", 2022),
-      ])));
-      authStore.setSession("tok", USER);
-      renderHome();
-      const entry = await screen.findByRole("region", { name: "历年试卷入口" });
-      expect(await within(entry).findByText("2024年")).toBeInTheDocument();
-      expect(within(entry).getByText("2023年")).toBeInTheDocument();
-      expect(within(entry).queryByText("2025年")).not.toBeInTheDocument();
-      expect(within(entry).queryByText("2022年")).not.toBeInTheDocument();
-    });
-
-    it("explains an empty level instead of showing other levels", async () => {
-      server.use(http.get(`*/api/exams`, () => HttpResponse.json([
-        exam("a", "N1", 2025),
-      ])));
-      authStore.setSession("tok", USER);
-      renderHome();
-      expect(await screen.findByText(/暂无 N2 已发布试卷/)).toBeInTheDocument();
-      expect(screen.queryByText("2025年")).not.toBeInTheDocument();
-    });
-
-    it("without a level, shows the latest exams of all levels", async () => {
-      server.use(http.get(`*/api/exams`, () => HttpResponse.json([
-        exam("a", "N1", 2025), exam("b", "N2", 2024),
-      ])));
-      renderHome();
-      expect(await screen.findByText("2025年")).toBeInTheDocument();
-      expect(screen.getByText("2024年")).toBeInTheDocument();
-    });
   });
 });

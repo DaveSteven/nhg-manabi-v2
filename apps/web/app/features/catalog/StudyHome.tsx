@@ -1,11 +1,8 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router";
-import { describeLoadError } from "../../api/errors";
 import type { ExamSummary } from "../../api/dto/exam";
 import type { PracticeSession } from "../../api/dto/practice";
-import { useLevel } from "../auth/useLevel";
 import { useCurrentSession, useExamList } from "./useExamCatalog";
-import { examRoute } from "./viewModels";
 
 /** Page header copy per design-system.md v1.1 §5.2 + the confirmed home
  * UI reference (docs/design/JLPT GO 2.0 首页.png). */
@@ -93,17 +90,6 @@ function continueExamTitle(session: PracticeSession,
   return exam ? `${exam.level} · ${exam.year}年${exam.month}月试卷` : null;
 }
 
-function CalendarIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
-         strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"
-         aria-hidden="true">
-      <rect x="4" y="5.5" width="16" height="15" rx="2.5" />
-      <path d="M4 10h16M8.5 3.5v4M15.5 3.5v4" />
-    </svg>
-  );
-}
-
 function PlayIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -136,12 +122,7 @@ function ContinueSessionCard({ state, exams }: {
 
 export function StudyHome() {
   const sessionState = useCurrentSession();
-  const exams = useExamList();
-  const examList = exams.data ?? [];
-  // Target level (signed-in profile, or the guest's stored choice) filters
-  // the home exam entry; the continue card still sees the full catalog.
-  const { level } = useLevel();
-  const levelExams = level ? examList.filter((e) => e.level === level) : examList;
+  const examList = useExamList().data ?? [];
 
   return (
     <div className="study-home">
@@ -170,49 +151,6 @@ export function StudyHome() {
             </div>
           ))}
         </div>
-      </section>
-
-      <section aria-label="历年试卷入口" className="exam-entry">
-        <div className="section-head">
-          <h2>历年试卷</h2>
-          <p className="section-hint">按年份进行完整练习，熟悉考试形式</p>
-          <Link className="section-more" to="/study/exams">
-            查看全部<span aria-hidden="true"> →</span>
-          </Link>
-        </div>
-        {exams.isPending ? (
-          <p role="status">试卷目录加载中…</p>
-        ) : exams.error ? (
-          <p role={exams.error.status === 401 ? "status" : "alert"}>
-            {describeLoadError(exams.error, "试卷目录")}
-          </p>
-        ) : levelExams.length === 0 ? (
-          <p>{level && examList.length > 0
-            ? `暂无 ${level} 已发布试卷，可在「查看全部」中选择其他等级。`
-            : "暂无已发布试卷。"}</p>
-        ) : (
-          <ul className="exam-quick-list">
-            {[...levelExams]
-              .sort((a, b) => b.year - a.year || b.month - a.month)
-              .slice(0, 3)
-              .map((e) => (
-              <li key={e.exam_id}>
-                <Link className="card exam-quick"
-                      to={examRoute(e.exam_id)}>
-                  <span className="exam-quick-icon" aria-hidden="true">
-                    <CalendarIcon />
-                  </span>
-                  <span className="exam-quick-info">
-                    <span className="exam-quick-year">{e.year}年</span>
-                    <span className="exam-quick-meta">{e.month}月</span>
-                  </span>
-                  <span className="exam-level">{e.level}</span>
-                  <span className="chevron" aria-hidden="true">›</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
       </section>
     </div>
   );
