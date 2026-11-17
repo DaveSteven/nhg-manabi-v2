@@ -67,8 +67,8 @@ function StepPracticePage({ sessionId }: { sessionId: string }) {
   const isTopic = session?.config.topic !== undefined;
 
   // Quick Practice copy derives from the Canonical unit kind + question
-  // count (quick-practice.md v2.1 §6): 独立单题 提交答案/下一题,
-  // 文法多题组 提交/下一组, 阅读文章 提交本篇/下一篇. Multi-question
+  // count (quick-practice.md v2.1 §6): 独立单题 提交/下一题,
+  // 文法多题组 提交/下一组, 阅读文章 提交/下一篇. Multi-question
   // units list ALL their questions on one page under the shared material
   // (ADR-0017); the whole-unit submit transaction is untouched.
 

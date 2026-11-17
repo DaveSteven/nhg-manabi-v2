@@ -103,7 +103,7 @@ describe("统一反馈 practice", () => {
     mount();
     expect(await screen.findByText(/第 1 \/ 2 组/)).toBeInTheDocument();
     expect(screen.getByText(/第 1–2 \/ 3 题/)).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /^提交$|提交本篇|提交答案/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^提交$/ })).not.toBeInTheDocument();
     expect(screen.getByText("共享材料正文")).toBeInTheDocument();
     // both questions of the unit are visible together, no per-question paging
     expect(screen.getByRole("radio", { name: "q1 选项 a" })).toBeInTheDocument();

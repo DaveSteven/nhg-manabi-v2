@@ -340,7 +340,7 @@ describe("PracticePage · quick_practice", () => {
     ] }], "/study/practice/s-1");
   }
 
-  it("single question: real paper title, 提交答案, no 第1/1组, zero drafts", async () => {
+  it("single question: real paper title, 提交, no 第1/1组, zero drafts", async () => {
     const user = userEvent.setup();
     const { draftCalls } = useQuickHandlers();
     renderQuick();
@@ -356,13 +356,13 @@ describe("PracticePage · quick_practice", () => {
     expect(draftCalls).toHaveLength(0);
   });
 
-  it("single question submit: 提交答案, feedback, 下一题 opens the NEXT unit", async () => {
+  it("single question submit: 提交, feedback, 下一题 opens the NEXT unit", async () => {
     const user = userEvent.setup();
     const { submitCalls, quickCreates } = useQuickHandlers();
     const rendered = renderQuick();
     await screen.findByRole("heading", { name: "問題1-3" });
     await user.click(screen.getByRole("radio", { name: "选项 o1" }));
-    await user.click(screen.getByRole("button", { name: "提交答案" }));
+    await user.click(screen.getByRole("button", { name: "提交" }));
     await waitFor(() => expect(submitCalls).toHaveLength(1));
     expect(await screen.findByText(/因为选 o1 正确/)).toBeInTheDocument();
     // no lock badge next to the title, no finish button
@@ -405,7 +405,7 @@ describe("PracticePage · quick_practice", () => {
     const { submitCalls } = useQuickHandlers();
     renderQuick();
     await screen.findByRole("heading", { name: "問題1-3" });
-    await user.click(screen.getByRole("button", { name: "提交答案" }));
+    await user.click(screen.getByRole("button", { name: "提交" }));
     const dialog = await screen.findByRole("dialog", { name: "还有题目未作答" });
     expect(dialog).toHaveTextContent("本组还有 1 题未作答");
     expect(submitCalls).toHaveLength(0);
@@ -435,7 +435,7 @@ describe("PracticePage · quick_practice", () => {
     renderQuick();
     await screen.findByRole("heading", { name: "問題1-3" });
     await user.click(screen.getByRole("radio", { name: "选项 o1" }));
-    await user.click(screen.getByRole("button", { name: "提交答案" }));
+    await user.click(screen.getByRole("button", { name: "提交" }));
     await screen.findByText(/因为选 o1 正确/);
     expect(screen.queryByRole("button", { name: "下一题" }))
       .not.toBeInTheDocument();

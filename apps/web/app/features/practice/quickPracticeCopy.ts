@@ -8,7 +8,7 @@ import type { ExamOutline } from "../../api/dto/exam";
  * cloze+comparison 文法多题组 / passage 阅读文章 / audio 听力（以单题为主）.
  */
 export interface QuickPracticeCopy {
-  /** 提交答案 · 提交 · 提交本篇 */
+  /** 统一为「提交」 */
   submitLabel: string;
   /** 下一题 · 下一组 · 下一篇 — always the next unit in EXAM order */
   nextLabel: string;
@@ -16,10 +16,10 @@ export interface QuickPracticeCopy {
 
 export function quickPracticeCopy(unitKind: string,
                                   questionCount: number): QuickPracticeCopy {
-  // Reading article: 提交本篇 / 下一篇 regardless of question count
+  // Reading article: 提交 / 下一篇 regardless of question count
   // (a one-question passage unit is still 一篇).
   if (unitKind === "passage") {
-    return { submitLabel: "提交本篇", nextLabel: "下一篇" };
+    return { submitLabel: "提交", nextLabel: "下一篇" };
   }
   // Grammar multi-question groups (cloze slots, comparison sets):
   // 提交 / 下一组.
@@ -27,8 +27,8 @@ export function quickPracticeCopy(unitKind: string,
     return { submitLabel: "提交", nextLabel: "下一组" };
   }
   // Independent single question (incl. single-question listening units):
-  // 提交答案 / 下一题.
-  return { submitLabel: "提交答案", nextLabel: "下一题" };
+  // 提交 / 下一题.
+  return { submitLabel: "提交", nextLabel: "下一题" };
 }
 
 /**
