@@ -6,7 +6,7 @@ import { useCurrentSession, useExamList } from "./useExamCatalog";
 import { ButtonLink } from "../../components/Button";
 
 /** Page header copy per design-system.md v1.1 §5.2 + the confirmed home
- * UI reference (docs/design/MINAO 2.0 首页.png). */
+ * UI reference (docs/design/JLPT GO 2.0 首页.png). */
 const PAGE_TITLE = "开始今天的日语练习";
 const PAGE_SUBTITLE = "选一个科目，继续提升你的日语能力。";
 
@@ -127,7 +127,7 @@ export function StudyHome() {
   return (
     <div className="study-home">
       <header className="home-header">
-        <p className="home-eyebrow">MINAO 2.0</p>
+        <p className="home-eyebrow">MINAO</p>
         <h1>{PAGE_TITLE}</h1>
         <p className="home-subtitle">{PAGE_SUBTITLE}</p>
       </header>

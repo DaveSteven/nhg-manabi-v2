@@ -27,7 +27,7 @@ export default function StudyLayout() {
             <Link to="/" className="brand">
               <img className="brand-mark" src="/favicon.svg" alt="" width={30} height={30} />
               <span className="brand-name">
-                MINAO <span className="brand-version">2.0</span>
+                MINAO
               </span>
             </Link>
             <TopNav />

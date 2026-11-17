@@ -22,3 +22,6 @@
 - `docker compose build --pull` 重建 api/web 镜像并 `up -d`：web 已重新创建，api 因后端代码无变化沿用原容器。
 - 实测：`localhost:8080` title 为「MINAO · …」、`/favicon.svg` 200；`localhost:8081` title「MINAO 管理端」。web vitest 272、admin 31 通过，web build 通过。
 - 未做：浏览器视觉核对；`AGENTS.md`/docs 中的项目名「JLPT GO 2.0」未改。
+
+## 追加：去掉 2.0 角标
+顶栏/认证页的 `2.0` 角标与首页 eyebrow 的「2.0」移除，删除 `.brand-version` 样式；web 镜像重建并重启。web vitest/typecheck/build 结果见提交时的实际运行。

@@ -30,7 +30,7 @@ export function AuthShell({ title, children }: {
       <Link to="/" className="brand auth-brand">
         <img className="brand-mark" src="/favicon.svg" alt="" width={30} height={30} />
         <span className="brand-name">
-          MINAO <span className="brand-version">2.0</span>
+          MINAO
         </span>
       </Link>
       <section className="card auth-card" aria-label={title}>
