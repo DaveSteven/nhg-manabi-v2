@@ -28,7 +28,7 @@ export function AuthShell({ title, children }: {
   return (
     <main className="auth-shell">
       <Link to="/" className="brand auth-brand">
-        <span className="brand-mark" aria-hidden="true">日</span>
+        <img className="brand-mark" src="/favicon.svg" alt="" width={30} height={30} />
         <span className="brand-name">
           JLPT GO <span className="brand-version">2.0</span>
         </span>

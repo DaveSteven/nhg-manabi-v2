@@ -4,6 +4,8 @@
 
 ## 最新文档更新（2026-11-17）
 
+- 学生端/管理端换用 MINAO 标志与 favicon（`2026-11-17-minao-logo-favicon.md`）；类型检查与单测、web build 通过，未做浏览器视觉核对。
+
 - 练习/结果页按来源高亮顶栏「专项」或「试卷」（`2026-11-17-topnav-section-highlight.md`）。
 
 - 未登录顶栏不再显示等级选择（详见 `2026-11-17-guest-no-level-selector.md`）。

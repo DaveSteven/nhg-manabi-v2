@@ -218,14 +218,10 @@ button {
 }
 
 .brand-mark {
-  display: grid;
-  place-items: center;
+  display: block;
   width: 30px;
   height: 30px;
   border-radius: 8px;
-  background: var(--color-primary);
-  color: var(--color-surface);
-  font-size: 15px;
 }
 
 .brand-version {
