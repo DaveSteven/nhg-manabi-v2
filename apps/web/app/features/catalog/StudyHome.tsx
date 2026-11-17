@@ -164,15 +164,14 @@ export function StudyHome() {
         </div>
         <div className="subject-grid">
           {SUBJECTS.map((s) => (
-            <button key={s.key} type="button"
-                    className={`card subject-card subject-${s.key}`}
-                    aria-disabled="true">
+            <div key={s.key}
+                 className={`card subject-card subject-${s.key}`}>
               <span className="subject-icon" aria-hidden="true">{s.icon}</span>
               <span className="subject-label">{s.label}</span>
               <span className="subject-hint">{s.hint}</span>
               <span className="subject-status">专项练习暂未开放 · 可先用历年试卷</span>
               <span className="subject-arrow" aria-hidden="true">→</span>
-            </button>
+            </div>
           ))}
         </div>
       </section>
