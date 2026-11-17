@@ -1,6 +1,7 @@
-/** 「原文」dock entry (audio-player.md §2.2/§8): text + icon, never a bare
- * arrow. Locked (before the reveal gate opens) stays visible with a lock
- * hint instead of vanishing; expanded exposes aria-expanded/aria-controls. */
+/** 「原文」dock entry (audio-player.md §2.2/§8): text + a single chevron on
+ * the RIGHT (user decision 2026-11-17 — the earlier lines+chevron combo
+ * overlapped). Locked (before the reveal gate opens) stays visible with a
+ * lock hint instead of vanishing; expanded exposes aria-expanded/controls. */
 export function TranscriptToggle({ expanded, locked, panelId, disabled, onToggle }: {
   expanded: boolean;
   locked: boolean;
@@ -15,22 +16,14 @@ export function TranscriptToggle({ expanded, locked, panelId, disabled, onToggle
             aria-label={label} title={label}
             disabled={disabled}
             onClick={onToggle}>
-      <svg viewBox="0 0 24 24" width="16" height="16" fill="none"
-           stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"
-           strokeLinejoin="round" aria-hidden="true">
-        <path d="M4 6h16" />
-        <path d="M4 11h16" />
-        <path d="M4 16h9" />
-        {expanded
-          ? <path d="m7 19 3-3 3 3" />
-          : locked
-            ? <>
-                <rect x="15" y="14" width="6" height="6" rx="1.2" />
-                <path d="M16.5 14v-1.5a1.5 1.5 0 0 1 3 0V14" />
-              </>
-            : <path d="m7 13 3 3 3-3" />}
-      </svg>
       <span>原文</span>
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none"
+           stroke="currentColor" strokeWidth="2" strokeLinecap="round"
+           strokeLinejoin="round" aria-hidden="true"
+           style={{ transform: expanded ? "rotate(180deg)" : undefined,
+                    transition: "transform 160ms" }}>
+        <path d="m6 9 6 6 6-6" />
+      </svg>
     </button>
   );
 }
