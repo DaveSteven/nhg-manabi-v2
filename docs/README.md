@@ -8,7 +8,7 @@
 |---|---|
 | 启动任何任务 | 根目录 `AGENTS.md`、本页、`decisions/README.md` |
 | 讨论或修改产品需求 | `product/prd.md`、`product/business-rules.md`、`product/feature-scope.md` |
-| 用户端 UI | `design/design-system.md`、`design/frontend-spec.md`、`design/page-structure.md`、`design/practice-interactions.md`、`design/responsive-design.md`、`design/select-spec.md`、`design/audio-player.md` |
+| 用户端 UI | `design/design-system.md`、`design/frontend-spec.md`、`design/page-structure.md`、`design/practice-interactions.md`、`design/responsive-design.md`、`design/select-spec.md`、`design/audio-player.md`、`design/quick-practice.md` |
 | 管理端 UI | `decisions/ADR-0008-shadcn-admin-foundation.md`、`development/admin-frontend-implementation.md`、`data/content-review-policy.md` |
 | 题库转换 | `architecture/canonical-schema-v2.0.md`、`data/import-spec.md`、`data/agent-validation-contract.md` |
 | 数据库/后端 | `architecture/postgresql-schema-v0.2.md`、`architecture/system-architecture.md`、`development/api-conventions.md` |

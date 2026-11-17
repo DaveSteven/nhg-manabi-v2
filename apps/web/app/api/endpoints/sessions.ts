@@ -19,11 +19,16 @@ import {
   type SubmitResult,
   TranscriptPayloadSchema,
   type TranscriptPayload,
+  PracticeStatusSchema,
+  type PracticeStatus,
 } from "../dto/practice";
 
 export interface CreateSessionInput {
   feedback_mode: FeedbackMode;
   units: { release_id: string; unit_id: string }[];
+  /** Quick Practice: atomically end the active session (ended_early,
+   * submitted answers kept) and create the new one in one transaction. */
+  replace_active?: boolean;
 }
 
 export function createSession(input: CreateSessionInput,
@@ -123,4 +128,12 @@ export function getSessionResults(sessionId: string,
   return apiFetch(`/api/practice/sessions/${encodeURIComponent(sessionId)}/results`,
     { signal })
     .then((p) => parseDto(ResultsResponseSchema, "GET results", p));
+}
+
+/** Caller's own per-unit submission history for one exam (unit rows). */
+export function getExamPracticeStatus(examId: string,
+                                      signal?: AbortSignal): Promise<PracticeStatus> {
+  return apiFetch(`/api/exams/${encodeURIComponent(examId)}/practice-status`,
+    { signal })
+    .then((p) => parseDto(PracticeStatusSchema, "GET practice-status", p));
 }

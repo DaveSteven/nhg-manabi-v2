@@ -135,8 +135,8 @@ describe("PracticePage", () => {
 
     // submit: unanswered confirm appears (q2 unanswered), then confirm
     await user.click(screen.getByRole("button", { name: "提交本组" }));
-    const dialog = await screen.findByRole("dialog", { name: "未答题确认" });
-    expect(dialog).toHaveTextContent("1 道题未作答");
+    const dialog = await screen.findByRole("dialog", { name: "还有题目未作答" });
+    expect(dialog).toHaveTextContent("本组还有 1 题未作答");
     expect(submitCalls).toHaveLength(0); // not yet submitted
     await user.click(screen.getByRole("button", { name: "确认提交" }));
 

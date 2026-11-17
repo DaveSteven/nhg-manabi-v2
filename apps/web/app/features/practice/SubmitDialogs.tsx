@@ -1,7 +1,7 @@
 /**
- * Pre-submit confirmation for unanswered questions (P-008): states the
- * count, offers 返回答题 (no submit) vs 确认提交, and becomes a bottom
- * drawer on mobile via CSS. Skip ≠ wrong is preserved downstream.
+ * Pre-submit confirmation, ONLY for unanswered questions (quick-practice
+ * spec §4.2/§8): fully-answered groups submit directly with no dialog.
+ * Skip ≠ wrong is preserved downstream.
  */
 export function UnansweredConfirmDialog({ count, submitting, onConfirm, onCancel }: {
   count: number;
@@ -10,19 +10,14 @@ export function UnansweredConfirmDialog({ count, submitting, onConfirm, onCancel
   onCancel(): void;
 }) {
   return (
-    <div role="dialog" aria-modal="true" aria-label="未答题确认"
+    <div role="dialog" aria-modal="true" aria-label="还有题目未作答"
          className="dialog card">
-      <h2>确认提交</h2>
-      {count > 0 ? (
-        <p>
-          本次有 <strong>{count}</strong> 道题未作答。
-          你可以继续答题，或确认提交。未作答的题将记为「未答」，与错误答案区分。
-        </p>
-      ) : (
-        <p>本组题目已全部作答。提交后本组将锁定，不能再修改。</p>
-      )}
+      <h2>还有题目未作答</h2>
+      <p>
+        本组还有 <strong>{count}</strong> 题未作答。提交后将无法修改，确定继续吗？
+      </p>
       <div className="dialog-actions">
-        <button type="button" onClick={onCancel}>返回答题</button>
+        <button type="button" onClick={onCancel}>继续答题</button>
         <button type="button" className="primary" disabled={submitting}
                 onClick={onConfirm}>
           {submitting ? "提交中…" : "确认提交"}

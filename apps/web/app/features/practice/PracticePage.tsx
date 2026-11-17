@@ -245,7 +245,12 @@ export function PracticePage({ sessionId }: { sessionId: string }) {
         <div className="practice-actions">
           {!unitSubmitted ? (
             <button type="button" className="primary" disabled={submit.isPending}
-                    onClick={() => setConfirming(true)}>
+                    onClick={() => {
+                      // Quick Practice §4.2: fully answered → direct submit;
+                      // the one confirmation dialog is only for unanswered.
+                      if (unanswered > 0) setConfirming(true);
+                      else onConfirmSubmit();
+                    }}>
               提交本组
             </button>
           ) : null}
@@ -257,6 +262,23 @@ export function PracticePage({ sessionId }: { sessionId: string }) {
           ) : null}
           {sessionEnded && !allSubmitted ? (
             <p className="text-aux">练习已提前结束（部分题目未提交）。</p>
+          ) : null}
+          {unitSubmitted && !sessionEnded ? (
+            <div className="practice-post-submit-nav">
+              {currentIdx + 1 < units.length ? (
+                <button type="button" className="primary"
+                        onClick={() => setCurrentIdx(currentIdx + 1)}>
+                  下一组
+                </button>
+              ) : null}
+              {session.units[0]?.exam_id ? (
+                <button type="button"
+                        onClick={() => navigate(
+                          `/study/exams/${encodeURIComponent(session.units[0]!.exam_id)}`)}>
+                  返回试卷
+                </button>
+              ) : null}
+            </div>
           ) : null}
         </div>
 

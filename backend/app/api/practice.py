@@ -57,6 +57,10 @@ class SessionUnitRequest(BaseModel):
 class PracticeSessionCreate(BaseModel):
     feedback_mode: Literal["immediate", "end"]
     units: list[SessionUnitRequest]
+    # Quick Practice: atomically end the active practice session (ended_early,
+    # submitted answers kept) and create the new one in ONE transaction —
+    # no finish→create failure window, no second confirmation (§5.4).
+    replace_active: bool = False
 
     @field_validator("units")
     @classmethod
@@ -139,11 +143,21 @@ def _create_session_tx(engine, body: PracticeSessionCreate,
             " AND state = 'in_progress'"),
             {"u": user_id}).scalar()
         if active is not None:
-            raise HTTPException(
-                status_code=409,
-                detail={"code": "active_session_exists",
-                        "message": "an active practice session already exists",
-                        "active_session_id": str(active)})
+            if not body.replace_active:
+                raise HTTPException(
+                    status_code=409,
+                    detail={"code": "active_session_exists",
+                            "message": "an active practice session already"
+                                       " exists",
+                            "active_session_id": str(active)})
+            # Atomic replace (same transaction as the new INSERT): the old
+            # session ends exactly like finish-with-pending — ended_early,
+            # submitted answers kept, no fabricated result. A concurrent
+            # duplicate create still loses at the partial unique index.
+            conn.execute(text(
+                "UPDATE study_sessions SET state = 'ended_early',"
+                " ended_at = now(), version = version + 1"
+                " WHERE id = :a AND state = 'in_progress'"), {"a": active})
 
         # Pin every requested unit to its CURRENT published release content.
         # Draft / non-current releases must not enter a practice session.
@@ -210,6 +224,33 @@ def get_current_practice_session(
             raise HTTPException(status_code=404, detail="no active practice")
         payload = _session_payload(conn, session_id)
     return payload
+
+
+@router.get("/api/exams/{exam_id}/practice-status")
+def get_exam_practice_status(
+    exam_id: str,
+    user_id: uuid.UUID = Depends(get_current_user_id),
+) -> dict:
+    """Per-unit practice history of the CALLER for one exam (Quick Practice
+    unit rows): units with any formally submitted session unit in ANY
+    release of this exam. Own data only; never exposes answers."""
+    with get_engine().connect() as conn:
+        rows = conn.execute(text(
+            "SELECT su.unit_id, count(*) AS submitted_count,"
+            " max(su.submitted_at) AS last_submitted_at"
+            " FROM study_session_units su"
+            " JOIN study_sessions s ON s.id = su.session_id"
+            " JOIN exam_releases er ON er.id = su.release_id"
+            " WHERE s.user_id = :u AND s.mode = 'practice'"
+            "   AND su.state = 'submitted' AND er.exam_id = :e"
+            " GROUP BY su.unit_id"),
+            {"u": user_id, "e": exam_id}).mappings().all()
+    return {"exam_id": exam_id, "units": [{
+        "unit_id": r["unit_id"],
+        "submitted_count": r["submitted_count"],
+        "last_submitted_at": (r["last_submitted_at"].isoformat()
+                              if r["last_submitted_at"] else None),
+    } for r in rows]}
 
 
 @router.get("/api/practice/sessions/{session_id}")

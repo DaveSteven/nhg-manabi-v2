@@ -11,6 +11,8 @@ export interface ActiveSessionConflict {
 export interface StartPracticeInput {
   units: { release_id: string; unit_id: string }[];
   feedbackMode: FeedbackMode;
+  /** Quick Practice: atomic end-old + create-new in one transaction. */
+  replaceActive?: boolean;
 }
 
 /**
@@ -23,6 +25,7 @@ export function useStartPractice(onSuccess: (session: PracticeSession) => void) 
     mutationFn: (input) => createSession({
       feedback_mode: input.feedbackMode,
       units: input.units,
+      replace_active: input.replaceActive ?? false,
     }),
     onSuccess,
   });

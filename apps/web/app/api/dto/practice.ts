@@ -161,6 +161,18 @@ export const FinishResponseSchema = PracticeSessionSchema.extend({
 });
 export type FinishResponse = z.infer<typeof FinishResponseSchema>;
 
+/** Per-unit practice history of the caller for one exam (Quick Practice
+ * unit rows). Own data only. */
+export const PracticeStatusSchema = z.strictObject({
+  exam_id: z.string(),
+  units: z.array(z.strictObject({
+    unit_id: z.string(),
+    submitted_count: z.number().int(),
+    last_submitted_at: z.string().nullable(),
+  })),
+});
+export type PracticeStatus = z.infer<typeof PracticeStatusSchema>;
+
 /**
  * Listening transcript (audio-player.md §4/§8). Served ONLY by the
  * session transcript endpoint, which shares the feedback reveal gate —
