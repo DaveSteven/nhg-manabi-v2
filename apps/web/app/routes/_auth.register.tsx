@@ -2,7 +2,7 @@ import type { MetaFunction } from "react-router";
 import { RegisterPage } from "../features/auth/AuthPages";
 
 export const meta: MetaFunction = () => [
-  { title: "注册 · JLPT GO" },
+  { title: "注册 · MINAO" },
   { name: "robots", content: "noindex" },
 ];
 

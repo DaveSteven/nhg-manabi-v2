@@ -16,3 +16,9 @@
 
 ## 风险
 - 品牌文字仍为「JLPT GO」，如需改为 MINAO 文案需另行确认。
+
+## 追加：品牌文字换为 MINAO + 重建镜像
+- 学生端/管理端所有「JLPT GO」文案（顶栏、认证页、页面 title、首页/SEO 描述、管理端）改为「MINAO」，保留 2.0 角标；`check-build.mjs` 的 h1 断言同步。TopNav 测试内自带的 h1 夹具未动。
+- `docker compose build --pull` 重建 api/web 镜像并 `up -d`：web 已重新创建，api 因后端代码无变化沿用原容器。
+- 实测：`localhost:8080` title 为「MINAO · …」、`/favicon.svg` 200；`localhost:8081` title「MINAO 管理端」。web vitest 272、admin 31 通过，web build 通过。
+- 未做：浏览器视觉核对；`AGENTS.md`/docs 中的项目名「JLPT GO 2.0」未改。

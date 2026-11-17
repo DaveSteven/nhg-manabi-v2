@@ -36,7 +36,7 @@ try {
   fail("build/client/__spa-fallback.html missing — SPA fallback not emitted");
 }
 
-if (!/<h1[^>]*>JLPT GO<\/h1>/.test(indexHtml)) {
+if (!/<h1[^>]*>MINAO<\/h1>/.test(indexHtml)) {
   fail("brand index.html lacks the H1 copy — initial HTML is incomplete");
 }
 if (/noindex/i.test(indexHtml)) {

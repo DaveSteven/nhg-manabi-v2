@@ -2,7 +2,7 @@ import type { MetaFunction } from "react-router";
 import { VerifyEmailPage } from "../features/auth/AuthPages";
 
 export const meta: MetaFunction = () => [
-  { title: "邮箱验证 · JLPT GO" },
+  { title: "邮箱验证 · MINAO" },
   { name: "robots", content: "noindex" },
 ];
 

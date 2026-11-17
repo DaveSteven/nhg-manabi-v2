@@ -11,7 +11,7 @@ import { useScrolled } from "../components/useScrolled";
  * layout's meta applies).
  */
 export const meta: MetaFunction = () => [
-  { title: "我的学习 · JLPT GO" },
+  { title: "我的学习 · MINAO" },
   { name: "robots", content: "noindex" },
 ];
 
@@ -27,7 +27,7 @@ export default function StudyLayout() {
             <Link to="/" className="brand">
               <img className="brand-mark" src="/favicon.svg" alt="" width={30} height={30} />
               <span className="brand-name">
-                JLPT GO <span className="brand-version">2.0</span>
+                MINAO <span className="brand-version">2.0</span>
               </span>
             </Link>
             <TopNav />

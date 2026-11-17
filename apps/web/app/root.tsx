@@ -20,7 +20,7 @@ export const links: LinksFunction = () => [
  * root default (noindex), which is what we want for /study/*.
  */
 export const meta: MetaFunction = () => [
-  { title: "JLPT GO" },
+  { title: "MINAO" },
   { name: "robots", content: "noindex" },
 ];
 

@@ -19,7 +19,7 @@ export function Home() {
           你好，{user?.displayName ?? '管理员'}
         </h1>
         <p className='text-muted-foreground'>
-          已登录 JLPT GO 管理端（{user?.role}）。管理功能将在后续逐步加入。
+          已登录 MINAO 管理端（{user?.role}）。管理功能将在后续逐步加入。
         </p>
       </Main>
     </>
