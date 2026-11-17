@@ -26,7 +26,7 @@ export default function StudyLayout() {
           <div className="header-row">
             <Link to="/" className="brand">
               <img className="brand-mark" src="/favicon.svg" alt="" width={30} height={30} />
-              <img className="brand-wordmark" src="/minao-wordmark.svg" alt="MINAO" width={78} height={20} />
+              <img className="brand-wordmark" src="/minao-wordmark.svg" alt="MINAO" width={102} height={26} />
             </Link>
             <TopNav />
             <HeaderControls />

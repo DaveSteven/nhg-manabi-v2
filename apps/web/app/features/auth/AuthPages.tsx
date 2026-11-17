@@ -29,7 +29,7 @@ export function AuthShell({ title, children }: {
     <main className="auth-shell">
       <Link to="/" className="brand auth-brand">
         <img className="brand-mark" src="/favicon.svg" alt="" width={30} height={30} />
-        <img className="brand-wordmark" src="/minao-wordmark.svg" alt="MINAO" width={78} height={20} />
+        <img className="brand-wordmark" src="/minao-wordmark.svg" alt="MINAO" width={102} height={26} />
       </Link>
       <section className="card auth-card" aria-label={title}>
         <h1>{title}</h1>
