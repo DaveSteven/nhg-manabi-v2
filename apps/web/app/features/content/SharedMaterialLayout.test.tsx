@@ -39,11 +39,15 @@ describe("SharedMaterialLayout", () => {
       </ol></SharedMaterialLayout>);
     const panel = screen.getByRole("complementary", { name: "答题面板" });
     expect(panel).toContainElement(screen.getByRole("button", { name: "提交" }));
+    expect(screen.getByText("Q1")).toHaveClass("is-active-question"); // starts at first
     await user.click(screen.getByText("(49)"));
     expect(screen.getByText("Q2")).toHaveClass("is-active-question");
     expect(screen.getByText("Q1")).not.toHaveClass("is-active-question");
     await user.click(screen.getByRole("button", { name: "48" }));
     expect(screen.getByText("Q1")).toHaveClass("is-active-question");
-    expect(screen.getByText("(49)")).not.toHaveClass("is-active-slot");
+    expect(screen.getByRole("button", { name: "上一小题" })).toBeDisabled();
+    await user.click(screen.getByRole("button", { name: "下一小题" }));
+    expect(screen.getByText("Q2")).toHaveClass("is-active-question");
+    expect(screen.getByText("(49)")).toHaveClass("is-active-slot");
   });
 });

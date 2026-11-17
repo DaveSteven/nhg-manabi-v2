@@ -7,7 +7,8 @@ import type { VmContentUnit } from "./viewModel";
  * `position: sticky` on the right (confined to this unit's wrapper, so it
  * never reaches the next article). Narrow screens stack as before.
  *
- * Linking is display-only DOM wiring: clicking a slot in the article
+ * The panel shows one question at a time (小题切换, ADR-0018 rev.). Linking
+ * is display-only DOM wiring: clicking a slot in the article
  * activates its question in the panel; the panel's number chips scroll the
  * article to the slot. Nothing here touches drafts or submission, and the
  * article is never re-rendered by activation.
@@ -25,7 +26,10 @@ export function SharedMaterialLayout({ content, material, footer, children }: {
 }) {
   const split = usesSplitLayout(content);
   const root = useRef<HTMLDivElement>(null);
-  const [active, setActive] = useState<string | null>(null);
+  const firstId = content.questions[0]?.id ?? null;
+  const [active, setActive] = useState<string | null>(firstId);
+  // A new unit starts at its first question.
+  useEffect(() => { setActive(firstId); }, [content.unit.id, firstId]);
 
   // Highlight active question card + slot without re-rendering the article.
   useEffect(() => {
@@ -41,10 +45,12 @@ export function SharedMaterialLayout({ content, material, footer, children }: {
     }
   }, [active, split, content.questions]);
 
+  // The panel shows ONE question at a time (CSS hides the others); every
+  // question stays mounted so drafts/answers are never lost on switching.
   const focusQuestion = useCallback((qid: string) => {
     setActive(qid);
-    root.current?.querySelector(`[data-question-id="${CSS.escape(qid)}"]`)
-      ?.scrollIntoView?.({ block: "nearest", behavior: "smooth" });
+    const sc = root.current?.querySelector(".panel-scroll");
+    if (sc) sc.scrollTop = 0;
   }, []);
 
   if (!split) {
@@ -58,6 +64,7 @@ export function SharedMaterialLayout({ content, material, footer, children }: {
     if (q) focusQuestion(q.id);
   };
 
+  const activeIdx = content.questions.findIndex((q) => q.id === active);
   const gotoQuestion = (qid: string) => {
     focusQuestion(qid);
     const q = content.questions.find((x) => x.id === qid);
@@ -76,12 +83,22 @@ export function SharedMaterialLayout({ content, material, footer, children }: {
       <aside className="reading-question-panel" aria-label="答题面板">
         {content.questions.length > 1 ? (
           <nav aria-label="本篇题号" className="panel-question-nav">
+            <button type="button" aria-label="上一小题" disabled={activeIdx <= 0}
+                    onClick={() => gotoQuestion(content.questions[activeIdx - 1]!.id)}>
+              ‹
+            </button>
             {content.questions.map((q) => (
               <button key={q.id} type="button"
+                      aria-current={q.id === active ? "true" : undefined}
                       onClick={() => gotoQuestion(q.id)}>
                 {q.printedNumber ?? q.position}
               </button>
             ))}
+            <button type="button" aria-label="下一小题"
+                    disabled={activeIdx >= content.questions.length - 1}
+                    onClick={() => gotoQuestion(content.questions[activeIdx + 1]!.id)}>
+              ›
+            </button>
           </nav>
         ) : null}
         <div className="panel-scroll">{children}</div>

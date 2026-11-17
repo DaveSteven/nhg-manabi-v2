@@ -275,10 +275,19 @@
 
   .question-list { margin-top: 0; }
 
-  .is-active-question {
-    border-color: var(--color-primary);
-    box-shadow: 0 0 0 1px var(--color-primary);
+  /* one question at a time; all stay mounted (answers are kept) */
+  .panel-scroll li[data-question-id]:not(.is-active-question) { display: none; }
+
+  .panel-question-nav button {
+    &[aria-current="true"] {
+      border-color: var(--color-primary);
+      color: var(--color-primary-hover);
+      font-weight: 600;
+      box-shadow: 0 0 0 1px var(--color-primary);
+    }
+    &:disabled { opacity: 0.4; cursor: default; }
   }
+
 }
 
 /* Slot targets must not hide under the sticky site header when scrolled to */
