@@ -98,15 +98,14 @@ export function LoginPage() {
                  onChange={(e) => setPassword(e.target.value)}
                  autoComplete="current-password" />
         </label>
+        <Link to="/forgot-password" className="auth-forgot">忘记密码？</Link>
         <FormMessage message={error} kind="error" />
         <Button variant="primary" type="submit" loading={busy}>
           登录
         </Button>
       </form>
-      <p className="auth-links">
+      <p className="auth-switch">
         还没有账户？<Link to="/register">注册</Link>
-        <span aria-hidden="true"> · </span>
-        <Link to="/forgot-password">忘记密码</Link>
       </p>
     </AuthShell>
   );
@@ -182,7 +181,7 @@ export function RegisterPage() {
           注册
         </Button>
       </form>
-      <p className="auth-links">
+      <p className="auth-switch">
         已有账户？<Link to="/login">登录</Link>
       </p>
     </AuthShell>
