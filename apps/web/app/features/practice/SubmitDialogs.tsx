@@ -3,8 +3,11 @@
  * spec §4.2/§8): fully-answered groups submit directly with no dialog.
  * Skip ≠ wrong is preserved downstream.
  */
-export function UnansweredConfirmDialog({ count, submitting, onConfirm, onCancel }: {
+export function UnansweredConfirmDialog({ count, submitting, onConfirm, onCancel,
+                                         scope = "本组" }: {
   count: number;
+  /** 本组 (per-unit submit) | 本次练习 (统一反馈 final submit). */
+  scope?: string;
   submitting: boolean;
   onConfirm(): void;
   onCancel(): void;
@@ -14,7 +17,7 @@ export function UnansweredConfirmDialog({ count, submitting, onConfirm, onCancel
          className="dialog card">
       <h2>还有题目未作答</h2>
       <p>
-        本组还有 <strong>{count}</strong> 题未作答。提交后将无法修改，确定继续吗？
+        {scope}还有 <strong>{count}</strong> 题未作答。提交后将无法修改，确定继续吗？
       </p>
       <div className="dialog-actions">
         <button type="button" onClick={onCancel}>继续答题</button>

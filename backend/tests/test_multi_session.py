@@ -58,6 +58,14 @@ def submit(client, user, sid, suid, answers):
                           for q, c in answers]}, headers=auth(user))
 
 
+def final_submit(client, user, sid, answers):
+    """answers: [(session_unit_id, question_id, chosen_option_id|None)]"""
+    return client.post(f"/api/practice/sessions/{sid}/submit", json={
+        "answers": [{"session_unit_id": su, "question_id": q,
+                     "chosen_option_id": c} for su, q, c in answers]},
+        headers=auth(user))
+
+
 def draft(client, user, sid, suid, qid, opt, version=0):
     return client.put(
         f"/api/practice/sessions/{sid}/units/{suid}/drafts",
@@ -105,8 +113,8 @@ def test_drafts_and_state_are_isolated_per_session_and_restore_by_id(
             "SELECT count(*) FROM study_submitted_answers")).scalar() == 0
 
     # submitting s1 never submits s2 or touches its draft
-    assert submit(client, USER_A, s1["id"], su1,
-                  [(Q1, Q1 + "-o1"), (Q2, Q2 + "-o1")]).status_code == 200
+    assert final_submit(client, USER_A, s1["id"],
+                        [(su1, Q1, Q1 + "-o1"), (su1, Q2, Q2 + "-o1")]).status_code == 200
     s2_after = client.get(f"/api/practice/sessions/{s2['id']}",
                           headers=auth(USER_A)).json()
     assert s2_after["units"][0]["state"] == "pending"
@@ -117,34 +125,34 @@ def test_drafts_and_state_are_isolated_per_session_and_restore_by_id(
 
 
 @requires_db
-def test_end_feedback_stays_locked_until_that_session_finishes(
+def test_end_feedback_stays_locked_until_that_sessions_final_submit(
         pg_engine, published_release, monkeypatch):
     client = make_client(monkeypatch, pg_engine)
     a = topic(client, USER_A, "grammar_cloze", feedback="end")
+    a2 = topic(client, USER_A, "grammar_cloze", feedback="end")
     b = topic(client, USER_A, "vocabulary_kanji_reading", feedback="immediate")
-    sa_, sb_ = a["units"][0]["id"], b["units"][0]["id"]
-    submit(client, USER_A, a["id"], sa_, [(Q1, Q1 + "-o2"), (Q2, Q2 + "-o1")])
+    sa_, sa2, sb_ = a["units"][0]["id"], a2["units"][0]["id"], b["units"][0]["id"]
     submit(client, USER_A, b["id"], sb_, [(QS, QS + "-o3")])
-    # b is immediate → its feedback is open; a is "end" and unfinished → locked
-    assert client.get(f"/api/practice/sessions/{b['id']}/units/{sb_}/feedback",
-                      headers=auth(USER_A)).status_code == 200
-    assert client.get(f"/api/practice/sessions/{a['id']}/units/{sa_}/feedback",
-                      headers=auth(USER_A)).status_code == 409
-    # finishing b (switching away/back never auto-submits a) leaves a locked
-    client.post(f"/api/practice/sessions/{b['id']}/finish", headers=auth(USER_A))
-    assert client.get(f"/api/practice/sessions/{a['id']}/units/{sa_}/feedback",
-                      headers=auth(USER_A)).status_code == 409
-    fin = client.post(f"/api/practice/sessions/{a['id']}/finish", headers=auth(USER_A))
-    assert fin.json()["state"] == "completed"
-    assert client.get(f"/api/practice/sessions/{a['id']}/units/{sa_}/feedback",
-                      headers=auth(USER_A)).status_code == 200
+    path = lambda s, su: f"/api/practice/sessions/{s['id']}/units/{su}/feedback"
+    # immediate session b: its own feedback is open; end sessions stay sealed
+    assert client.get(path(b, sb_), headers=auth(USER_A)).status_code == 200
+    assert client.get(path(a, sa_), headers=auth(USER_A)).status_code == 409
+    # finishing/submitting ANOTHER session never opens or submits this one
+    final_submit(client, USER_A, a2["id"],
+                 [(sa2, Q1, Q1 + "-o2"), (sa2, Q2, Q2 + "-o1")])
+    assert client.get(path(a, sa_), headers=auth(USER_A)).status_code == 409
+    assert client.get(f"/api/practice/sessions/{a['id']}",
+                      headers=auth(USER_A)).json()["state"] == "in_progress"
+    assert client.get(path(a2, sa2), headers=auth(USER_A)).status_code == 200
+    assert final_submit(client, USER_A, a["id"], []).json()["state"] == "completed"
+    assert client.get(path(a, sa_), headers=auth(USER_A)).status_code == 200
 
 
 @requires_db
 def test_submitted_answers_immutable_and_duplicate_submit_counts_once(
         pg_engine, published_release, monkeypatch):
     client = make_client(monkeypatch, pg_engine)
-    s = topic(client, USER_A, "grammar_cloze")
+    s = topic(client, USER_A, "grammar_cloze")  # immediate: per-unit submit
     other = topic(client, USER_A, "grammar_cloze")
     suid = s["units"][0]["id"]
     first = submit(client, USER_A, s["id"], suid,

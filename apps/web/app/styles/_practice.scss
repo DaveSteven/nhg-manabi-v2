@@ -26,6 +26,27 @@
   }
 }
 
+/* 统一反馈 question number strip: many numbers wrap; filled = has a draft */
+.question-strip {
+  flex-wrap: wrap;
+
+  button {
+    font-variant-numeric: tabular-nums;
+    transition: border-color var(--motion-fast), background var(--motion-fast);
+
+    &.is-answered {
+      background: var(--color-primary-soft);
+      border-color: var(--color-primary-soft);
+    }
+    &[aria-current="step"] {
+      border-color: var(--color-primary);
+      color: var(--color-primary-hover);
+      font-weight: 600;
+      box-shadow: 0 0 0 1px var(--color-primary);
+    }
+  }
+}
+
 /* Quick Practice multi-question pager (上一题/下一题) — display-only
    navigation; the whole-unit submit stays atomic. */
 .question-pager {

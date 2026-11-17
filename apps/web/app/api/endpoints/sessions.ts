@@ -124,6 +124,23 @@ export function finishSession(sessionId: string,
     .then((p) => parseDto(FinishResponseSchema, "POST finish", p));
 }
 
+/**
+ * 统一反馈: submit the WHOLE session once. The body is the authoritative
+ * final answer set; the server judges every unit and writes results in one
+ * transaction (idempotent: an already-completed session returns its stored
+ * results). Unanswered questions are simply absent or null.
+ */
+export function submitSession(
+  sessionId: string,
+  answers: { session_unit_id: string; question_id: string;
+             chosen_option_id: string | null }[],
+  signal?: AbortSignal,
+): Promise<FinishResponse> {
+  return apiFetch(`/api/practice/sessions/${encodeURIComponent(sessionId)}/submit`,
+    { method: "POST", body: { answers }, signal })
+    .then((p) => parseDto(FinishResponseSchema, "POST session submit", p));
+}
+
 export function getSessionResults(sessionId: string,
                                   signal?: AbortSignal): Promise<ResultsResponse> {
   return apiFetch(`/api/practice/sessions/${encodeURIComponent(sessionId)}/results`,

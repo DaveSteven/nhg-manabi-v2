@@ -371,26 +371,24 @@ def test_feedback_end_mode_sealed_until_session_ends(pg_engine,
     suids = unit_id_map(session)
     fb_path = f"/api/practice/sessions/{session['id']}/units"
 
+    # Unified feedback never formally submits unit by unit.
     r = submit(client, USER_A, session["id"], suids[CLOZE_UNIT],
                [(Q1, f"{Q1}-o2"), (Q2, f"{Q2}-o1")])
-    assert r.status_code == 200
-    body = r.json()
-    assert "feedback" not in body
-    flat = str(body)
-    assert "correct_option_id" not in flat and "is_correct" not in flat, \
-        "end mode must not leak correctness before the session ends"
+    assert r.status_code == 409
+    assert r.json()["detail"]["code"] == "end_mode_requires_final_submit"
 
     r = client.get(f"{fb_path}/{suids[CLOZE_UNIT]}/feedback",
                    headers=auth(USER_A))
-    assert r.status_code == 409
-    assert r.json()["detail"]["code"] == "feedback_locked_until_end"
+    assert r.status_code == 409  # nothing submitted → sealed
 
-    # Ending the session early (unit 2 pending) unlocks submitted-unit
-    # feedback but still produces no aggregate result.
-    fin = client.post(f"/api/practice/sessions/{session['id']}/finish",
-                      headers=auth(USER_A))
-    assert fin.json()["state"] == "ended_early"
-    assert "results" not in fin.json()
+    # One whole-session submit judges everything and unlocks feedback.
+    fin = client.post(f"/api/practice/sessions/{session['id']}/submit", json={
+        "answers": [
+            {"session_unit_id": suids[CLOZE_UNIT], "question_id": Q1,
+             "chosen_option_id": f"{Q1}-o2"},
+            {"session_unit_id": suids[CLOZE_UNIT], "question_id": Q2,
+             "chosen_option_id": f"{Q2}-o1"}]}, headers=auth(USER_A))
+    assert fin.status_code == 200 and fin.json()["state"] == "completed"
 
     r = client.get(f"{fb_path}/{suids[CLOZE_UNIT]}/feedback",
                    headers=auth(USER_A))
@@ -399,7 +397,8 @@ def test_feedback_end_mode_sealed_until_session_ends(pg_engine,
             for q in r.json()["questions"]} == {Q1: True, Q2: True}
     r = client.get(f"{fb_path}/{suids[SINGLE_UNIT]}/feedback",
                    headers=auth(USER_A))
-    assert r.status_code == 409  # never submitted -> stays sealed
+    assert r.status_code == 200  # skipped unit is judged too (all skips)
+    assert [q["skipped"] for q in r.json()["questions"]] == [True]
 
 
 # ------------------------------------------------------ Task 08: results ----

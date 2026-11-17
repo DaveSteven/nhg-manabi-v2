@@ -566,6 +566,73 @@ def _build_unit_feedback(conn, release_id, unit_id: str,
     }
 
 
+def _judge_and_store_unit(conn, release_id, unit_id: str, session_unit_id,
+                          answer_map: dict) -> None:
+    """Judge every question of one unit and write the formal answers, then
+    flip the session unit to 'submitted' — all in the CALLER's transaction.
+    Raises HTTPException (422) before writing anything for this unit when
+    an answer is invalid, so the caller's transaction rolls back whole.
+    Questions absent from answer_map are skips (chosen NULL, is_correct NULL).
+    """
+    questions = conn.execute(text(
+        "SELECT question_id FROM release_questions"
+        " WHERE release_id = :r AND unit_id = :uid ORDER BY position"),
+        {"r": release_id, "uid": unit_id}).scalars().all()
+    if not questions:
+        raise HTTPException(
+            status_code=422,
+            detail={"code": "unit_has_no_questions",
+                    "message": "unit has no judgeable questions"})
+    for qid in answer_map:
+        if qid not in set(questions):
+            raise HTTPException(
+                status_code=422,
+                detail={"code": "question_not_in_unit",
+                        "message": "question does not belong to unit",
+                        "question_id": qid})
+
+    judged = []
+    for qid in questions:
+        chosen = answer_map.get(qid)
+        if chosen is not None:
+            valid = conn.execute(text(
+                "SELECT 1 FROM release_options WHERE release_id = :r"
+                " AND question_id = :q AND option_id = :o"),
+                {"r": release_id, "q": qid, "o": chosen}).scalar()
+            if valid is None:
+                raise HTTPException(
+                    status_code=422,
+                    detail={"code": "invalid_option",
+                            "message": "option does not belong to question",
+                            "question_id": qid, "option_id": chosen})
+        key = conn.execute(text(
+            "SELECT correct_option_id, revision FROM release_answer_keys"
+            " WHERE release_id = :r AND question_id = :q"),
+            {"r": release_id, "q": qid}).mappings().first()
+        if key is None:
+            raise HTTPException(
+                status_code=422,
+                detail={"code": "answer_key_missing",
+                        "message": "no answer key for question; cannot judge",
+                        "question_id": qid})
+        judged.append((qid, chosen, key["correct_option_id"], key["revision"]))
+
+    for qid, chosen, correct_id, rev in judged:
+        is_correct = None if chosen is None else chosen == correct_id
+        conn.execute(text(
+            "INSERT INTO study_submitted_answers (session_unit_id,"
+            " release_id, unit_id, question_id, chosen_option_id,"
+            " correct_option_id, answer_key_revision, is_correct)"
+            " VALUES (:u, :r, :uid, :q, :c, :cc, :rev, :ok)"),
+            {"u": session_unit_id, "r": release_id, "uid": unit_id,
+             "q": qid, "c": chosen, "cc": correct_id, "rev": rev,
+             "ok": is_correct})
+    conn.execute(text(
+        "UPDATE study_session_units SET state = 'submitted',"
+        " submitted_at = now() WHERE id = :u AND state = 'pending'"),
+        {"u": session_unit_id})
+
+
 @router.post("/api/practice/sessions/{session_id}/units/{session_unit_id}/submit")
 def submit_session_unit(
     session_id: uuid.UUID,
@@ -592,6 +659,14 @@ def submit_session_unit(
         if unit is None:
             raise HTTPException(status_code=404, detail="session unit not found")
         _require_active_practice(unit)
+        if unit["mode"] == "practice" and unit["feedback_mode"] == "end":
+            # 统一反馈: nothing may be formally written unit by unit — the
+            # whole session is judged by POST /sessions/{id}/submit.
+            raise HTTPException(
+                status_code=409,
+                detail={"code": "end_mode_requires_final_submit",
+                        "message": "unified-feedback sessions are submitted"
+                                   " once, as a whole"})
 
         # Lock the session row FIRST (same order as finish), so a submit
         # racing a finish serializes instead of interleaving: finish sees
@@ -618,71 +693,9 @@ def submit_session_unit(
         already = locked_state == "submitted"
 
         if not already:
-            answer_map = {a.question_id: a.chosen_option_id
-                          for a in body.answers}
-            questions = conn.execute(text(
-                "SELECT question_id FROM release_questions"
-                " WHERE release_id = :r AND unit_id = :uid ORDER BY position"),
-                {"r": unit["release_id"], "uid": unit["unit_id"]}).scalars().all()
-            if not questions:
-                raise HTTPException(
-                    status_code=422,
-                    detail={"code": "unit_has_no_questions",
-                            "message": "unit has no judgeable questions"})
-            for qid in answer_map:
-                if qid not in set(questions):
-                    raise HTTPException(
-                        status_code=422,
-                        detail={"code": "question_not_in_unit",
-                                "message": "question does not belong to unit",
-                                "question_id": qid})
-
-            judged = []
-            for qid in questions:
-                chosen = answer_map.get(qid)
-                if chosen is not None:
-                    valid = conn.execute(text(
-                        "SELECT 1 FROM release_options WHERE release_id = :r"
-                        " AND question_id = :q AND option_id = :o"),
-                        {"r": unit["release_id"], "q": qid,
-                         "o": chosen}).scalar()
-                    if valid is None:
-                        raise HTTPException(
-                            status_code=422,
-                            detail={"code": "invalid_option",
-                                    "message": "option does not belong to"
-                                               " question",
-                                    "question_id": qid,
-                                    "option_id": chosen})
-                key = conn.execute(text(
-                    "SELECT correct_option_id, revision FROM"
-                    " release_answer_keys WHERE release_id = :r"
-                    " AND question_id = :q"),
-                    {"r": unit["release_id"], "q": qid}).mappings().first()
-                if key is None:
-                    raise HTTPException(
-                        status_code=422,
-                        detail={"code": "answer_key_missing",
-                                "message": "no answer key for question; "
-                                           "cannot judge",
-                                "question_id": qid})
-                judged.append((qid, chosen, key["correct_option_id"],
-                               key["revision"]))
-
-            for qid, chosen, correct_id, rev in judged:
-                is_correct = None if chosen is None else chosen == correct_id
-                conn.execute(text(
-                    "INSERT INTO study_submitted_answers (session_unit_id,"
-                    " release_id, unit_id, question_id, chosen_option_id,"
-                    " correct_option_id, answer_key_revision, is_correct)"
-                    " VALUES (:u, :r, :uid, :q, :c, :cc, :rev, :ok)"),
-                    {"u": session_unit_id, "r": unit["release_id"],
-                     "uid": unit["unit_id"], "q": qid, "c": chosen,
-                     "cc": correct_id, "rev": rev, "ok": is_correct})
-            conn.execute(text(
-                "UPDATE study_session_units SET state = 'submitted',"
-                " submitted_at = now() WHERE id = :u AND state = 'pending'"),
-                {"u": session_unit_id})
+            _judge_and_store_unit(
+                conn, unit["release_id"], unit["unit_id"], session_unit_id,
+                {a.question_id: a.chosen_option_id for a in body.answers})
 
         # Quick Practice never lingers as an open session: submitting its
         # single unit IS finishing the session — the aggregate result row
@@ -962,6 +975,95 @@ def finish_practice_session(
             {"s": session_id})
         payload = _session_payload(conn, session_id)
     payload["idempotent"] = False
+    return payload
+
+
+class FinalAnswer(BaseModel):
+    session_unit_id: uuid.UUID
+    question_id: str
+    chosen_option_id: str | None = None  # null = left unanswered (skip)
+
+
+class SessionSubmit(BaseModel):
+    answers: list[FinalAnswer]  # questions absent from the list = skip
+
+    @field_validator("answers")
+    @classmethod
+    def no_duplicates(cls, v: list[FinalAnswer]) -> list[FinalAnswer]:
+        keys = [(a.session_unit_id, a.question_id) for a in v]
+        if len(keys) != len(set(keys)):
+            raise ValueError("duplicate answer in submit request")
+        return v
+
+
+@router.post("/api/practice/sessions/{session_id}/submit")
+def submit_practice_session(
+    session_id: uuid.UUID,
+    body: SessionSubmit,
+    user_id: uuid.UUID = Depends(get_current_user_id),
+) -> dict:
+    """统一反馈: formally submit the WHOLE session at once.
+
+    Until this call, a unified-feedback session holds drafts only —
+    navigating questions or units never writes a formal answer or judges.
+    Here, in ONE transaction under the session row lock: every pending
+    unit is judged and its answers written, all units flip to 'submitted',
+    and the session completes with its aggregate study_results row. Any
+    invalid answer rolls the whole submission back (nothing half-written).
+    The request body is the authoritative final answer set (drafts only
+    exist for refresh-restore); questions missing from it are skips.
+
+    Idempotent: a session that is already completed returns its stored
+    results unchanged and never re-judges or rewrites anything.
+    """
+    engine = get_engine()
+    with engine.begin() as conn:
+        owned = conn.execute(text(
+            "SELECT id, state, mode, feedback_mode FROM study_sessions"
+            " WHERE id = :s AND user_id = :u FOR UPDATE"),
+            {"s": session_id, "u": user_id}).mappings().first()
+        if owned is None:
+            raise HTTPException(status_code=404, detail="session not found")
+        if owned["mode"] != "practice" or owned["feedback_mode"] != "end":
+            raise HTTPException(
+                status_code=409,
+                detail={"code": "final_submit_end_mode_only",
+                        "message": "only unified-feedback practice sessions"
+                                   " are submitted as a whole"})
+        if owned["state"] == "completed":
+            payload = _session_payload(conn, session_id)
+            payload["results"] = _build_results(conn, session_id)
+            payload["idempotent"] = True
+            return payload
+        if owned["state"] != "in_progress":
+            raise HTTPException(
+                status_code=409,
+                detail={"code": "session_not_active",
+                        "message": f"session is {owned['state']} and cannot"
+                                   " be submitted"})
+
+        units = conn.execute(text(
+            "SELECT id, release_id, unit_id, state FROM study_session_units"
+            " WHERE session_id = :s ORDER BY position FOR UPDATE"),
+            {"s": session_id}).mappings().all()
+        by_unit: dict[uuid.UUID, dict] = {u["id"]: {} for u in units}
+        for a in body.answers:
+            if a.session_unit_id not in by_unit:
+                raise HTTPException(
+                    status_code=422,
+                    detail={"code": "session_unit_not_in_session",
+                            "message": "answer references a unit outside"
+                                       " this session",
+                            "session_unit_id": str(a.session_unit_id)})
+            by_unit[a.session_unit_id][a.question_id] = a.chosen_option_id
+        for u in units:
+            if u["state"] == "pending":
+                _judge_and_store_unit(conn, u["release_id"], u["unit_id"],
+                                      u["id"], by_unit[u["id"]])
+        _complete_session(conn, session_id)
+        payload = _session_payload(conn, session_id)
+        payload["results"] = _build_results(conn, session_id)
+        payload["idempotent"] = False
     return payload
 
 

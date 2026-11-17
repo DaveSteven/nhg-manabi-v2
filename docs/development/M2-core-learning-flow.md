@@ -155,6 +155,8 @@ Session Unit 必须绑定具体 `release_id`，为后续跨年份随机练习预
 
 练习完成后，再统一返回结果。
 
+**提交方式（2026-11-17 修订）：** 统一反馈会话期间只保存草稿；逐 Unit 提交接口对该模式返回 409 `end_mode_requires_final_submit`。整次练习通过 `POST /api/practice/sessions/{id}/submit` 一次性提交：请求体为最终答案全集（草稿仅用于刷新恢复），服务端在同一事务内锁定会话、判定所有未提交 Unit、写入正式答案并生成 `study_results`；任一答案非法则整体回滚。已完成会话重复提交返回已存结果（`idempotent=true`，不重判不重写）。仅 `practice` 模式的统一反馈会话可用，即时反馈会话返回 409 `final_submit_end_mode_only`。
+
 答案权限必须由后端控制，不能依靠 React 隐藏字段。
 
 ### Task 08：练习结果

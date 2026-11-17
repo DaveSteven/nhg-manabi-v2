@@ -129,15 +129,18 @@ def test_transcript_end_mode_sealed_until_session_ends(
                              [CLOZE_UNIT], feedback="end")
     suid = unit_id_map(session)[CLOZE_UNIT]
 
-    submit(client, USER_A, session["id"], suid,
-           [(f"{CLOZE_UNIT}-q01", f"{CLOZE_UNIT}-q01-o2"),
-            (f"{CLOZE_UNIT}-q02", f"{CLOZE_UNIT}-q02-o1")])
+    # drafts only until the whole-session submit: transcript stays sealed
     r = client.get(transcript_path(session, suid), headers=auth(USER_A))
     assert r.status_code == 409
-    assert r.json()["detail"]["code"] == "feedback_locked_until_end"
+    assert r.json()["detail"]["code"] == "unit_not_submitted"
 
-    fin = client.post(f"/api/practice/sessions/{session['id']}/finish",
-                      headers=auth(USER_A))
+    fin = client.post(
+        f"/api/practice/sessions/{session['id']}/submit", json={"answers": [
+            {"session_unit_id": suid, "question_id": f"{CLOZE_UNIT}-q01",
+             "chosen_option_id": f"{CLOZE_UNIT}-q01-o2"},
+            {"session_unit_id": suid, "question_id": f"{CLOZE_UNIT}-q02",
+             "chosen_option_id": f"{CLOZE_UNIT}-q02-o1"}]},
+        headers=auth(USER_A))
     assert fin.status_code == 200
 
     r = client.get(transcript_path(session, suid), headers=auth(USER_A))
@@ -192,9 +195,6 @@ def test_transcript_pairs_zh_translation_by_paragraph_order(
     session2 = create_session(client, USER_A, unit_with_transcript,
                               [CLOZE_UNIT], feedback="end")
     suid2 = unit_id_map(session2)[CLOZE_UNIT]
-    submit(client, USER_A, session2["id"], suid2,
-           [(f"{CLOZE_UNIT}-q01", f"{CLOZE_UNIT}-q01-o2"),
-            (f"{CLOZE_UNIT}-q02", f"{CLOZE_UNIT}-q02-o1")])
     assert client.get(transcript_path(session2, suid2),
                       headers=auth(USER_A)).status_code == 409
 

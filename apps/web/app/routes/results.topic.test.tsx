@@ -48,6 +48,8 @@ describe("results page for 专项练习 sessions", () => {
       .toHaveAttribute("href", "/study/practice");
     expect(within(nav).queryByRole("link", { name: "详情" })).not.toBeInTheDocument();
 
+    expect(await screen.findByRole("link", { name: "查看答案与解析" }))
+      .toHaveAttribute("href", "/study/practice/s-1");
     await userEvent.setup().click(
       await screen.findByRole("button", { name: "再练一组" }));
     expect(await screen.findByText("practice page")).toBeInTheDocument();

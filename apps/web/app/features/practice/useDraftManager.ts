@@ -47,8 +47,16 @@ export interface DraftManagerApi {
  */
 export function useDraftManager(sessionId: string,
                                 sessionUnitId: string,
-                                opts?: { persist?: boolean }): DraftManagerApi {
+                                opts?: {
+                                  persist?: boolean;
+                                  /** Which session unit owns a question — lets one
+                                   * manager save drafts across ALL units (统一反馈
+                                   * navigates questions of every unit). */
+                                  unitOf?: (questionId: string) => string | undefined;
+                                }): DraftManagerApi {
   const persist = opts?.persist ?? true;
+  const unitOfRef = useRef(opts?.unitOf);
+  unitOfRef.current = opts?.unitOf;
   const [state, dispatch] = useReducer(draftReducer, { questions: {} });
   const timers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const stateRef = useRef(state);
@@ -66,7 +74,7 @@ export function useDraftManager(sessionId: string,
     if (!q || q.status !== "dirty") return;
     dispatch({ type: "saveStarted", questionId });
     saveDraft(sessionId, {
-      session_unit_id: sessionUnitId,
+      session_unit_id: unitOfRef.current?.(questionId) ?? sessionUnitId,
       question_id: questionId,
       chosen_option_id: q.pendingOptionId,
       expected_row_version: q.rowVersion,

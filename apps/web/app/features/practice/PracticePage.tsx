@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { useQuery } from "@tanstack/react-query";
-import type { FeedbackPayload } from "../../api/dto/practice";
 import { getDrafts } from "../../api/endpoints/sessions";
 import { getExamOutline } from "../../api/endpoints/exams";
 import { toViewModel } from "../content/toViewModel";
@@ -16,6 +15,8 @@ import { useFeedback } from "./useFeedback";
 import { useFinishSession, useQuickPracticeStart } from "./useStartPractice";
 import { outlineUnitLabel, quickPracticeCopy } from "./quickPracticeCopy";
 import { PracticeBreadcrumb } from "./PracticeBreadcrumb";
+import { FeedbackView } from "./FeedbackView";
+import { UnifiedPracticeView } from "./UnifiedPractice";
 import { DraftConflictDialog, UnansweredConfirmDialog } from "./SubmitDialogs";
 import { clearSessionPendingRetries, loadPendingRetries } from "./pendingRetries";
 
@@ -35,6 +36,19 @@ const STATUS_TEXT: Record<string, string> = {
  * 会话）/ 返回试卷 instead of a per-session unit list.
  */
 export function PracticePage({ sessionId }: { sessionId: string }) {
+  const bundle = useSessionRestore(sessionId);
+  const data = bundle.data;
+  // 统一反馈 practice sessions are a different interaction: drafts only while
+  // navigating, one whole-session submit (UnifiedPractice.tsx). Everything
+  // else — immediate practice and Quick Practice — keeps the per-unit flow.
+  if (data && data.session.mode === "practice"
+      && data.session.feedback_mode === "end") {
+    return <UnifiedPracticeView sessionId={sessionId} bundle={data} />;
+  }
+  return <StepPracticePage sessionId={sessionId} />;
+}
+
+function StepPracticePage({ sessionId }: { sessionId: string }) {
   const navigate = useNavigate();
   const bundle = useSessionRestore(sessionId);
   const [currentIdx, setCurrentIdx] = useState(0);
@@ -439,39 +453,6 @@ export function PracticePage({ sessionId }: { sessionId: string }) {
                          allowed: transcriptAllowed }
                      : null} />
       ) : null}
-    </div>
-  );
-}
-
-function FeedbackView({ feedback, questionId }: {
-  feedback: FeedbackPayload;
-  questionId: string;
-}) {
-  const fq = feedback.questions.find((x) => x.question_id === questionId);
-  if (!fq) return null;
-  const verdict = fq.skipped || fq.is_correct === null
-    ? { label: "未答", cls: "verdict-skipped" }
-    : fq.is_correct
-      ? { label: "正确", cls: "verdict-correct" }
-      : { label: "错误", cls: "verdict-wrong" };
-  return (
-    <div className={`feedback ${verdict.cls}`} aria-live="polite">
-      <p className="feedback-verdict">
-        <span aria-hidden="true">
-          {verdict.label === "正确" ? "✓" : verdict.label === "错误" ? "✗" : "—"}
-        </span>{" "}
-        {verdict.label}
-      </p>
-      {feedback.unit_explanations.map((e, i) => (
-        <div key={i} className="feedback-explanation">
-          <RichText value={e.content} />
-        </div>
-      ))}
-      {fq.explanations.map((e, i) => (
-        <div key={i} className="feedback-explanation">
-          <RichText value={e.content} />
-        </div>
-      ))}
     </div>
   );
 }

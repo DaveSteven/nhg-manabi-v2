@@ -114,6 +114,9 @@ export default function ResultsRoute() {
                   })}>
             {again.isPending ? "正在抽题…" : "再练一组"}
           </button>
+          <Link to={`/study/practice/${encodeURIComponent(sessionId ?? "")}`}>
+            查看答案与解析
+          </Link>
           <Link to="/study/practice">返回专项练习</Link>
         </div>
       ) : (
