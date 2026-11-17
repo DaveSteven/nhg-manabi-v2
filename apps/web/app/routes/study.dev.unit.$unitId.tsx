@@ -5,7 +5,7 @@ import { getExamUnit } from "../api/endpoints/exams";
 import { toViewModel } from "../features/content/toViewModel";
 import { MaterialDisplay } from "../features/content/MaterialDisplay";
 import { RichText } from "../features/content/richtext/RichText";
-import { AudioPlayer } from "../features/content/AudioPlayer";
+import { AudioDock } from "../features/content/AudioDock/AudioDock";
 
 /**
  * DEV-ONLY automated audio smoke probe: loads the real media endpoint in
@@ -127,7 +127,7 @@ export default function DevUnitHarness() {
           </pre>
         ) : null}
       </main>
-      {audioUrl ? <AudioPlayer src={audioUrl} /> : null}
+      {audioUrl ? <AudioDock src={audioUrl} /> : null}
     </div>
   );
 }

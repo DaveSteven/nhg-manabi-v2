@@ -160,3 +160,35 @@ export const FinishResponseSchema = PracticeSessionSchema.extend({
   idempotent: z.boolean().optional(),
 });
 export type FinishResponse = z.infer<typeof FinishResponseSchema>;
+
+/**
+ * Listening transcript (audio-player.md §4/§8). Served ONLY by the
+ * session transcript endpoint, which shares the feedback reveal gate —
+ * public unit payloads never carry cues. Cue children are a Canonical
+ * richtext payload rendered through the whitelist RichText component;
+ * missing/invalid timestamps are legal states (seek disabled for them).
+ */
+export const TranscriptCueSchema = z.strictObject({
+  index: z.number().int(),
+  start_ms: z.number().int().nullable().optional(),
+  end_ms: z.number().int().nullable().optional(),
+  children: z.unknown(),
+});
+export type TranscriptCue = z.infer<typeof TranscriptCueSchema>;
+
+export const TranscriptMaterialSchema = z.strictObject({
+  material_id: z.string(),
+  kind: z.string(),
+  language: z.string().nullable(),
+  cues: z.array(TranscriptCueSchema),
+});
+export type TranscriptMaterial = z.infer<typeof TranscriptMaterialSchema>;
+
+export const TranscriptPayloadSchema = z.strictObject({
+  session_unit_id: z.string(),
+  unit_id: z.string(),
+  release_id: z.string(),
+  feedback_mode: FeedbackModeSchema,
+  materials: z.array(TranscriptMaterialSchema),
+});
+export type TranscriptPayload = z.infer<typeof TranscriptPayloadSchema>;

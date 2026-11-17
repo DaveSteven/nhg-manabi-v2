@@ -5,7 +5,7 @@ import { getDrafts } from "../../api/endpoints/sessions";
 import { toViewModel } from "../content/toViewModel";
 import { MaterialDisplay } from "../content/MaterialDisplay";
 import { RichText } from "../content/richtext/RichText";
-import { AudioPlayer } from "../content/AudioPlayer";
+import { AudioDock } from "../content/AudioDock/AudioDock";
 import { useSessionRestore, type RestoredUnit } from "./useSessionRestore";
 import { useDraftManager } from "./useDraftManager";
 import { useSubmitUnit } from "./useSubmitUnit";
@@ -110,6 +110,11 @@ export function PracticePage({ sessionId }: { sessionId: string }) {
 
   const audioMaterial = content?.materials.find((m) => m.audio?.kind === "url");
   const audioUrl = audioMaterial?.audio?.kind === "url" ? audioMaterial.audio.url : null;
+  // Transcript reveal gate (audio-player.md §8) — mirrors the backend's
+  // _feedback_gate: immediate → THIS unit submitted; end → session ended.
+  // The backend remains the authority; this only drives the UI lock state.
+  const transcriptAllowed = unitSubmitted
+    && (session?.feedback_mode === "immediate" || sessionEnded);
 
   const onConfirmSubmit = useCallback(() => {
     if (!current) return;
@@ -277,7 +282,14 @@ export function PracticePage({ sessionId }: { sessionId: string }) {
             onOverwrite={() => resolveConflict(c.questionId, "overwrite")} />
         ))}
       </main>
-      {audioUrl ? <AudioPlayer src={audioUrl} /> : null}
+      {audioUrl ? (
+        <AudioDock src={audioUrl}
+                   subtitle={`练习 · ${vm.label ?? `组 ${vm.position}`}`}
+                   transcript={current
+                     ? { sessionId, sessionUnitId: current.sessionUnitId,
+                         allowed: transcriptAllowed }
+                     : null} />
+      ) : null}
     </div>
   );
 }

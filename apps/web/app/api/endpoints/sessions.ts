@@ -17,6 +17,8 @@ import {
   type PracticeSession,
   type ResultsResponse,
   type SubmitResult,
+  TranscriptPayloadSchema,
+  type TranscriptPayload,
 } from "../dto/practice";
 
 export interface CreateSessionInput {
@@ -93,6 +95,20 @@ export function getUnitFeedback(sessionId: string, sessionUnitId: string,
     `/api/practice/sessions/${encodeURIComponent(sessionId)}/units/${encodeURIComponent(sessionUnitId)}/feedback`,
     { signal })
     .then((p) => parseDto(FeedbackPayloadSchema, "GET feedback", p));
+}
+
+/**
+ * Listening transcript — backend reveals it under the same gate as
+ * feedback (immediate: unit submitted; end: session formally ended).
+ * Locked units answer 409; this endpoint is only called when the UI
+ * already knows the gate is open, so a 409 surfaces as an error state.
+ */
+export function getUnitTranscript(sessionId: string, sessionUnitId: string,
+                                  signal?: AbortSignal): Promise<TranscriptPayload> {
+  return apiFetch(
+    `/api/practice/sessions/${encodeURIComponent(sessionId)}/units/${encodeURIComponent(sessionUnitId)}/transcript`,
+    { signal })
+    .then((p) => parseDto(TranscriptPayloadSchema, "GET transcript", p));
 }
 
 export function finishSession(sessionId: string,

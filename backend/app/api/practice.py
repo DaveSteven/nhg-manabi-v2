@@ -593,40 +593,86 @@ def submit_session_unit(
 
 # -------------------------------------------------------------- feedback ----
 
+def _feedback_gate(unit: dict) -> None:
+    """Shared reveal gate for unit feedback AND listening transcripts.
+
+    immediate mode: allowed once THAT unit is submitted. end mode: allowed
+    only after the session formally ends (completed / ended_early). Units
+    never submitted get nothing — answers, explanations and cues stay
+    sealed. This gate is the mechanism; the frontend merely renders what
+    it receives (audio-player.md §8).
+    """
+    if unit["state"] != "submitted":
+        raise HTTPException(
+            status_code=409,
+            detail={"code": "unit_not_submitted",
+                    "message": "content is only revealed for formally"
+                               " submitted units"})
+    if (unit["feedback_mode"] == "end"
+            and unit["session_state"] == "in_progress"):
+        raise HTTPException(
+            status_code=409,
+            detail={"code": "feedback_locked_until_end",
+                    "message": "unified feedback is revealed only after"
+                               " the session ends"})
+
+
 @router.get("/api/practice/sessions/{session_id}/units/{session_unit_id}/feedback")
 def get_unit_feedback(
     session_id: uuid.UUID,
     session_unit_id: uuid.UUID,
     user_id: uuid.UUID = Depends(get_current_user_id),
 ) -> dict:
-    """Correct answers + explanations for ONE unit, permission-gated.
+    """Correct answers + explanations for ONE unit, permission-gated."""
+    with get_engine().connect() as conn:
+        unit = _load_session_unit(conn, session_id, session_unit_id, user_id)
+        if unit is None:
+            raise HTTPException(status_code=404, detail="session unit not found")
+        _feedback_gate(unit)
+        payload = _build_unit_feedback(conn, unit["release_id"],
+                                       unit["unit_id"], session_unit_id)
+    payload["feedback_mode"] = unit["feedback_mode"]
+    return payload
 
-    immediate mode: allowed once THAT unit is submitted. end mode: allowed
-    only after the session formally ends (completed / ended_early). Units
-    never submitted get no feedback — their answers stay sealed. This gate
-    is the mechanism; the frontend merely renders what it receives.
+
+# ------------------------------------------------------------- transcript ----
+
+@router.get("/api/practice/sessions/{session_id}/units/{session_unit_id}/transcript")
+def get_unit_transcript(
+    session_id: uuid.UUID,
+    session_unit_id: uuid.UUID,
+    user_id: uuid.UUID = Depends(get_current_user_id),
+) -> dict:
+    """Listening transcript cues for ONE unit, permission-gated.
+
+    Transcript text can directly contain answer clues, so it uses the SAME
+    reveal gate as feedback (audio-player.md §8): immediate mode after that
+    unit is submitted, end mode only after the session formally ends. cues
+    never appear in any other student payload (content.py strips them from
+    every public unit response); the only path to them runs through this
+    gate. Units with no cue-bearing materials return an empty list.
     """
     with get_engine().connect() as conn:
         unit = _load_session_unit(conn, session_id, session_unit_id, user_id)
         if unit is None:
             raise HTTPException(status_code=404, detail="session unit not found")
-        if unit["state"] != "submitted":
-            raise HTTPException(
-                status_code=409,
-                detail={"code": "unit_not_submitted",
-                        "message": "answers are only revealed for formally"
-                                   " submitted units"})
-        if (unit["feedback_mode"] == "end"
-                and unit["session_state"] == "in_progress"):
-            raise HTTPException(
-                status_code=409,
-                detail={"code": "feedback_locked_until_end",
-                        "message": "unified feedback is revealed only after"
-                                   " the session ends"})
-        payload = _build_unit_feedback(conn, unit["release_id"],
-                                       unit["unit_id"], session_unit_id)
-    payload["feedback_mode"] = unit["feedback_mode"]
-    return payload
+        _feedback_gate(unit)
+        materials = conn.execute(text(
+            "SELECT material_id, kind, language, cues"
+            " FROM release_unit_materials"
+            " WHERE release_id = :r AND unit_id = :u"
+            "   AND cues IS NOT NULL ORDER BY position"),
+            {"r": unit["release_id"], "u": unit["unit_id"]}).mappings().all()
+    return {
+        "session_unit_id": str(session_unit_id),
+        "unit_id": unit["unit_id"],
+        "release_id": str(unit["release_id"]),
+        "feedback_mode": unit["feedback_mode"],
+        "materials": [{
+            "material_id": m["material_id"], "kind": m["kind"],
+            "language": m["language"], "cues": m["cues"],
+        } for m in materials],
+    }
 
 
 # --------------------------------------------------------------- results ----

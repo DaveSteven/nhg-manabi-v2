@@ -78,8 +78,13 @@
   --motion-fast: 160ms;
   --motion-normal: 220ms;
 
-  /* audio dock (fixed bottom player) + safe area reserve */
-  --audio-dock-height: 64px;
+  /* floating audio dock (audio-player.md §2) + safe area reserve */
+  --audio-dock-height: 80px;
+  --audio-dock-bottom: 20px;
+  --audio-dock-radius: 24px;
+  --audio-dock-shadow: 0 8px 32px rgba(43, 43, 51, 0.10);
+  --transcript-panel-height: 320px;
+  --transcript-panel-radius: 20px;
 }
 
 @media (max-width: 720px) {
