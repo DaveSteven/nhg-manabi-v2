@@ -27,8 +27,9 @@ export function cueIsActive(cue: TranscriptCue, currentTimeMs: number): boolean 
 }
 
 /** One transcript paragraph (audio-player.md §4.2): time range + text.
- * A reading/locating tool, not a chat UI. Active highlight never relies on
- * color alone (bold time label + left indicator line + aria-current). */
+ * A reading/locating tool, not a chat UI. Active state is a font-color
+ * change (user decision 2026-11-17); aria-current keeps it from being
+ * color-only. */
 export function TranscriptCueItem({ cue, active, currentTimeMs, onSeek }: {
   cue: TranscriptCue;
   active: boolean;

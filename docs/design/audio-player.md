@@ -101,7 +101,7 @@
 
 匹配规则：`start_ms <= currentTime < end_ms`。
 
-- Active 状态：浅樱背景 `--color-primary-soft`（#F6E8EC）、文字墨色、时间标签深樱色、轻微左侧指示线；不使用闪烁/脉冲动画。
+- Active 状态：直接改变字体颜色为深樱色 `--color-primary`（2026-11-17 用户确认：不用背景/指示线样式）；不使用闪烁/脉冲动画。
 - 非当前段落保持正常对比度，不过度淡化。
 - 无法匹配时不强行高亮最近段落、不猜测缺失时间区间。
 
@@ -158,7 +158,7 @@ AudioDock/
 
 - 「原文」按钮暴露正确 `aria-expanded`、关联面板（`aria-controls`）、键盘可开合、Esc 可收起。
 - 展开时不强制移动焦点；面板为非模态区域，不做 Modal 焦点锁定。
-- 可点击 Cue 支持键盘操作；高亮不能只依赖颜色（Active 另有时间标签变色 + 左侧指示线 + `aria-current`）。
+- 可点击 Cue 支持键盘操作；Active 除颜色变化外带 `aria-current`，不单靠颜色。
 - 滚动区域可键盘访问；尊重 `prefers-reduced-motion`。
 
 ## 12. 开发与交付要求

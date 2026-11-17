@@ -58,6 +58,12 @@
   冒烟：`GET /api/exams` 返回 105 套目录、未认证 `GET /api/practice/sessions/current` 正确 401
   （"authentication required"）、首页预渲染 HTML 正常。
 
+## 后续调整（同日）
+
+- 用户确认当前播放段落高亮**不用浅樱背景/指示线样式，直接改字体颜色**为深樱色
+  `--color-primary`；`_audio-dock.scss` `.is-active` 简化，`aria-current` 保留（仍非仅颜色）；
+  `audio-player.md` §5/§11 同步修订。AudioDock 19 测试通过、build 产物检查通过、web 容器已重建。
+
 ## 未执行 / 剩余风险
 
 - 真实浏览器视觉走查未由 Agent 执行（等宽对齐、向上展开动效、跟随滚动、Range 样式跨浏览器）；

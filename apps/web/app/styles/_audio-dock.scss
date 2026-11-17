@@ -491,13 +491,11 @@
 }
 
 .transcript-cue.is-active {
-  background: var(--color-primary-soft);
-  border-left-color: var(--color-primary);
+  /* active cue = color change only (user decision 2026-11-17): no
+     background, no indicator line */
+  color: var(--color-primary);
 
-  .cue-time {
-    color: var(--color-primary);
-    font-weight: 600;
-  }
+  .cue-time { color: var(--color-primary); }
 }
 
 .cue-time {
