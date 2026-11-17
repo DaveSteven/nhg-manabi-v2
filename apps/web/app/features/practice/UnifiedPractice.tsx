@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueries, useQueryClient } from "@tanstack/react-query";
 import type { FinishResponse } from "../../api/dto/practice";
 import { ApiError } from "../../api/errors";
-import { getDrafts, getSession, submitSession } from "../../api/endpoints/sessions";
+import { getDrafts, getSession, getUnitFeedback, submitSession } from "../../api/endpoints/sessions";
 import { toViewModel } from "../content/toViewModel";
 import { MaterialDisplay } from "../content/MaterialDisplay";
 import { RichText } from "../content/richtext/RichText";
@@ -100,6 +100,31 @@ export function UnifiedPracticeView({ sessionId, bundle }: {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ended, feedback.data]);
 
+  // Review verdicts for the whole strip: after the session ended the gate
+  // is open for every submitted unit (same query keys as useFeedback, so
+  // the current unit's request is shared). Never enabled before then.
+  const verdictQueries = useQueries({
+    queries: contents.map((c) => {
+      const su = session.units.find((u) => u.id === c.sessionUnitId);
+      return {
+        queryKey: ["feedback", sessionId, c.sessionUnitId],
+        queryFn: ({ signal }: { signal: AbortSignal }) =>
+          getUnitFeedback(sessionId, c.sessionUnitId, signal),
+        enabled: ended && su?.state === "submitted",
+        retry: 0,
+        staleTime: Infinity,
+      };
+    }),
+  });
+  const verdictOf = new Map<string, "correct" | "wrong" | "skipped">();
+  for (const q of verdictQueries) {
+    for (const fq of q.data?.questions ?? []) {
+      verdictOf.set(fq.question_id,
+        fq.skipped || fq.is_correct === null ? "skipped"
+          : fq.is_correct ? "correct" : "wrong");
+    }
+  }
+
   const total = flat.length;
   const unanswered = flat.filter((f) => {
     const v = manager.displayValue(f.qid);
@@ -186,13 +211,21 @@ export function UnifiedPracticeView({ sessionId, bundle }: {
           {flat.map((f, i) => {
             const v = manager.displayValue(f.qid);
             const answered = v !== null && v !== "";
+            const verdict = ended ? verdictOf.get(f.qid) : undefined;
+            const status = verdict
+              ? { correct: "正确", wrong: "错误", skipped: "未答" }[verdict]
+              : answered ? "已选" : "未答";
             return (
               <button key={f.qid} type="button"
                       aria-current={i === idx ? "step" : undefined}
-                      aria-label={`第 ${i + 1} 题${answered ? "（已选）" : "（未答）"}`}
-                      className={answered ? "is-answered" : undefined}
+                      aria-label={`第 ${i + 1} 题（${status}）`}
+                      className={verdict ? `is-${verdict}`
+                        : answered ? "is-answered" : undefined}
                       onClick={() => setIdx(i)}>
                 {i + 1}
+                {verdict === "correct" ? <span aria-hidden="true" className="strip-mark">✓</span>
+                  : verdict === "wrong" ? <span aria-hidden="true" className="strip-mark">✗</span>
+                  : null}
               </button>
             );
           })}

@@ -234,4 +234,12 @@ describe("统一反馈 practice", () => {
     expect(screen.getByRole("link", { name: "查看结果" })).toBeInTheDocument();
     expect(spy.feedbackCalls).toContain("su-1");
   });
+
+  it("review: the number strip marks each question's verdict across all units", async () => {
+    setup({ state: "completed" });
+    mount();
+    // mock marks every question wrong (is_correct: false), q3 lives in su-2
+    expect(await screen.findByRole("button", { name: "第 1 题（错误）" })).toHaveClass("is-wrong");
+    expect(await screen.findByRole("button", { name: "第 3 题（错误）" })).toHaveClass("is-wrong");
+  });
 });

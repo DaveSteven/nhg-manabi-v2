@@ -38,6 +38,19 @@
       background: var(--color-primary-soft);
       border-color: var(--color-primary-soft);
     }
+    /* Review (session ended): verdict colour + mark, never colour alone */
+    &.is-correct {
+      background: #e8f3ec;
+      border-color: var(--color-success);
+      color: var(--color-success);
+    }
+    &.is-wrong {
+      background: #f9e9e8;
+      border-color: var(--color-danger);
+      color: var(--color-danger);
+    }
+    &.is-skipped { color: var(--color-text-muted); }
+    .strip-mark { margin-left: 2px; font-size: 12px; }
     &[aria-current="step"] {
       border-color: var(--color-primary);
       color: var(--color-primary-hover);
