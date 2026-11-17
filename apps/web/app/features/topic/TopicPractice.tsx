@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import type { TopicType } from "../../api/dto/topic";
 import { describeLoadError } from "../../api/errors";
 import type { FeedbackMode } from "../../api/dto/practice";
@@ -174,13 +174,9 @@ export function TopicPracticeView() {
               </Button>
               {startError ? <p role="alert">{startError}</p> : null}
             </div>
-          ) : (
-            <p className="text-aux">先选择一个题型。</p>
-          )}
+          ) : null}
         </>
       )}
-
-      <p className="text-aux"><Link to="/study/exams">想按年份做完整试卷？去历年试卷</Link></p>
     </section>
   );
 }

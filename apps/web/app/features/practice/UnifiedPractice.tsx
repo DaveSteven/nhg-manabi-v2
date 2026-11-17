@@ -274,11 +274,6 @@ export function UnifiedPracticeView({ sessionId, bundle }: {
             返回专项练习
           </Button>
         </div>
-        {!ended ? (
-          <p className="text-aux">
-            选择只保存为草稿，可随时返回修改；最后提交前不会判题，也不会显示答案。
-          </p>
-        ) : null}
 
         {confirming ? (
           <UnansweredConfirmDialog count={unanswered} scope="本次练习"
