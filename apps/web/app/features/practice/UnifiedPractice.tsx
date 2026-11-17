@@ -5,6 +5,7 @@ import type { FinishResponse } from "../../api/dto/practice";
 import { ApiError } from "../../api/errors";
 import { getDrafts, getSession, getUnitFeedback, submitSession } from "../../api/endpoints/sessions";
 import { toViewModel } from "../content/toViewModel";
+import { SharedMaterialLayout } from "../content/SharedMaterialLayout";
 import { MaterialDisplay } from "../content/MaterialDisplay";
 import { RichText } from "../content/richtext/RichText";
 import { AudioDock } from "../content/AudioDock/AudioDock";
@@ -237,51 +238,9 @@ export function UnifiedPracticeView({ sessionId, bundle }: {
           })}
         </nav>
 
-        <MaterialDisplay unit={vm} materials={content.vm.materials} />
-
-        <ol className="question-list">
-          {unitQuestions.map((question) => {
-            const qState = manager.state.questions[question.id];
-            const selected = qState ? (qState.pendingOptionId ?? qState.optionId) : null;
-            const fq = feedback.data?.questions.find((x) => x.question_id === question.id);
-            const answeredCorrect = fq?.is_correct === true;
-            return (
-              <li key={question.id} className="question-card card">
-                <fieldset className="question-fieldset" disabled={ended}>
-                  <legend>
-                    {question.printedNumber ?? `第 ${question.position} 题`}
-                    {qState?.status === "save_error" ? (
-                      <span className="save-state save-save_error" aria-live="polite">
-                        保存失败，可重试
-                      </span>
-                    ) : null}
-                  </legend>
-                  {question.prompt !== null ? (
-                    <div lang="ja">
-                      <RichText value={question.prompt} slotIds={vm.slotIds} />
-                    </div>
-                  ) : null}
-                  <div role="radiogroup"
-                       aria-label={`第 ${question.printedNumber ?? question.position} 题选项`}>
-                    {question.options.map((o) => (
-                      <label key={o.id} lang="ja"
-                             className={`option-row${selected === o.id ? " option-selected" : ""}${selected === o.id && answeredCorrect ? " option-correct" : ""}`}>
-                        <input type="radio" name={`q-${question.id}`} value={o.id}
-                               checked={selected === o.id}
-                               onChange={() => manager.select(question.id, o.id)} />
-                        <RichText value={o.content} slotIds={vm.slotIds} />
-                      </label>
-                    ))}
-                  </div>
-                </fieldset>
-                {ended && feedback.data
-                  ? <FeedbackView feedback={feedback.data} questionId={question.id} />
-                  : null}
-              </li>
-            );
-          })}
-        </ol>
-
+        <SharedMaterialLayout content={content.vm}
+          material={<MaterialDisplay unit={vm} materials={content.vm.materials} />}
+          footer={<>
         {ended && feedback.error ? (
           <p role="alert">解析获取失败：{feedback.error.message}</p>
         ) : null}
@@ -320,7 +279,53 @@ export function UnifiedPracticeView({ sessionId, bundle }: {
           <Button variant="secondary" onClick={() => navigate("/study/practice")}>
             返回专项练习
           </Button>
+        
         </div>
+          </>}>
+        <ol className="question-list">
+          {unitQuestions.map((question) => {
+            const qState = manager.state.questions[question.id];
+            const selected = qState ? (qState.pendingOptionId ?? qState.optionId) : null;
+            const fq = feedback.data?.questions.find((x) => x.question_id === question.id);
+            const answeredCorrect = fq?.is_correct === true;
+            return (
+              <li key={question.id} data-question-id={question.id} className="question-card card">
+                <fieldset className="question-fieldset" disabled={ended}>
+                  <legend>
+                    {question.printedNumber ?? `第 ${question.position} 题`}
+                    {qState?.status === "save_error" ? (
+                      <span className="save-state save-save_error" aria-live="polite">
+                        保存失败，可重试
+                      </span>
+                    ) : null}
+                  </legend>
+                  {question.prompt !== null ? (
+                    <div lang="ja">
+                      <RichText value={question.prompt} slotIds={vm.slotIds} />
+                    </div>
+                  ) : null}
+                  <div role="radiogroup"
+                       aria-label={`第 ${question.printedNumber ?? question.position} 题选项`}>
+                    {question.options.map((o) => (
+                      <label key={o.id} lang="ja"
+                             className={`option-row${selected === o.id ? " option-selected" : ""}${selected === o.id && answeredCorrect ? " option-correct" : ""}`}>
+                        <input type="radio" name={`q-${question.id}`} value={o.id}
+                               checked={selected === o.id}
+                               onChange={() => manager.select(question.id, o.id)} />
+                        <RichText value={o.content} slotIds={vm.slotIds} />
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
+                {ended && feedback.data
+                  ? <FeedbackView feedback={feedback.data} questionId={question.id} />
+                  : null}
+              </li>
+            );
+          })}
+        </ol>
+
+        </SharedMaterialLayout>
 
         {confirming ? (
           <UnansweredConfirmDialog count={unanswered} scope="本次练习"

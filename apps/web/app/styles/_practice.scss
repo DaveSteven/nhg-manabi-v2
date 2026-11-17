@@ -212,3 +212,78 @@
   &.verdict-wrong span:first-child { color: var(--color-danger); }
   &.verdict-skipped span:first-child { color: var(--color-text-secondary); }
 }
+
+/* 长篇读解 / 文章填空 (ADR-0018): desktop two-column. The article scrolls
+   with the page; the question panel is sticky below the site header and is
+   confined to this unit's wrapper. No ancestor sets overflow, so sticky
+   works. Desktop only — below 1024px the layout stacks as before. */
+.shared-material-layout {
+  --sticky-offset: 104px;
+  display: block;
+
+  @media (min-width: 1024px) {
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(340px, 1fr);
+    gap: 24px;
+    align-items: start;
+  }
+}
+
+.shared-material-article .reading-passage { max-width: none; }
+
+.reading-question-panel {
+  @media (min-width: 1024px) {
+    position: sticky;
+    top: var(--sticky-offset);
+    max-height: calc(100dvh - var(--sticky-offset) - 24px);
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .panel-question-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin-bottom: var(--space-3);
+    flex: none;
+
+    button {
+      min-width: 36px;
+      min-height: 36px;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-sm);
+      background: var(--color-surface);
+      cursor: pointer;
+      font-variant-numeric: tabular-nums;
+    }
+  }
+
+  .panel-scroll {
+    @media (min-width: 1024px) {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+    }
+  }
+
+  .panel-footer {
+    flex: none;
+    padding-top: var(--space-3);
+  }
+
+  .question-list { margin-top: 0; }
+
+  .is-active-question {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 1px var(--color-primary);
+  }
+}
+
+/* Slot targets must not hide under the sticky site header when scrolled to */
+.shared-material-article [data-slot-id] { scroll-margin-top: calc(104px + 24px); }
+.is-active-slot {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}

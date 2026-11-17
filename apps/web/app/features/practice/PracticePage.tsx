@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { getDrafts } from "../../api/endpoints/sessions";
 import { getExamOutline } from "../../api/endpoints/exams";
 import { toViewModel } from "../content/toViewModel";
+import { SharedMaterialLayout } from "../content/SharedMaterialLayout";
 import { MaterialDisplay } from "../content/MaterialDisplay";
 import { RichText } from "../content/richtext/RichText";
 import { AudioDock } from "../content/AudioDock/AudioDock";
@@ -287,52 +288,9 @@ function StepPracticePage({ sessionId }: { sessionId: string }) {
           </nav>
         ) : null}
 
-        <MaterialDisplay unit={vm} materials={materials} />
-
-        <ol className="question-list">
-          {questions.map((q) => {
-            const qState = manager.state.questions[q.id];
-            const selected = qState
-              ? (qState.pendingOptionId ?? qState.optionId) : null;
-            const answeredCorrect = feedback.data?.questions
-              .find((x) => x.question_id === q.id)?.is_correct === true;
-            return (
-              <li key={q.id} className="question-card card">
-                <fieldset className="question-fieldset" disabled={unitSubmitted}>
-                  <legend>
-                    {q.printedNumber ?? `第 ${q.position} 题`}
-                    {qState?.status === "save_error" ? (
-                      <span className="save-state save-save_error"
-                            aria-live="polite">
-                        {STATUS_TEXT.save_error}
-                      </span>
-                    ) : null}
-                  </legend>
-                  {q.prompt !== null ? (
-                    <div lang="ja">
-                      <RichText value={q.prompt} slotIds={vm.slotIds} />
-                    </div>
-                  ) : null}
-                  <div role="radiogroup" aria-label={`第 ${q.printedNumber ?? q.position} 题选项`}>
-                    {q.options.map((o) => (
-                      <label key={o.id} lang="ja"
-                             className={`option-row${selected === o.id ? " option-selected" : ""}${selected === o.id && answeredCorrect ? " option-correct" : ""}`}>
-                        <input type="radio" name={`q-${q.id}`} value={o.id}
-                               checked={selected === o.id}
-                               onChange={() => manager.select(q.id, o.id)} />
-                        <RichText value={o.content} slotIds={vm.slotIds} />
-                      </label>
-                    ))}
-                  </div>
-                </fieldset>
-                {feedback.data
-                  ? <FeedbackView feedback={feedback.data} questionId={q.id} />
-                  : null}
-              </li>
-            );
-          })}
-        </ol>
-
+        <SharedMaterialLayout content={content}
+          material={<MaterialDisplay unit={vm} materials={materials} />}
+          footer={<>
         {submitMsg ? <p role="status">{submitMsg}</p> : null}
         {finishError ? <p role="alert">{finishError}</p> : null}
         {feedback.error ? (
@@ -411,7 +369,53 @@ function StepPracticePage({ sessionId }: { sessionId: string }) {
               ) : null}
             </div>
           ) : null}
+        
         </div>
+          </>}>
+        <ol className="question-list">
+          {questions.map((q) => {
+            const qState = manager.state.questions[q.id];
+            const selected = qState
+              ? (qState.pendingOptionId ?? qState.optionId) : null;
+            const answeredCorrect = feedback.data?.questions
+              .find((x) => x.question_id === q.id)?.is_correct === true;
+            return (
+              <li key={q.id} data-question-id={q.id} className="question-card card">
+                <fieldset className="question-fieldset" disabled={unitSubmitted}>
+                  <legend>
+                    {q.printedNumber ?? `第 ${q.position} 题`}
+                    {qState?.status === "save_error" ? (
+                      <span className="save-state save-save_error"
+                            aria-live="polite">
+                        {STATUS_TEXT.save_error}
+                      </span>
+                    ) : null}
+                  </legend>
+                  {q.prompt !== null ? (
+                    <div lang="ja">
+                      <RichText value={q.prompt} slotIds={vm.slotIds} />
+                    </div>
+                  ) : null}
+                  <div role="radiogroup" aria-label={`第 ${q.printedNumber ?? q.position} 题选项`}>
+                    {q.options.map((o) => (
+                      <label key={o.id} lang="ja"
+                             className={`option-row${selected === o.id ? " option-selected" : ""}${selected === o.id && answeredCorrect ? " option-correct" : ""}`}>
+                        <input type="radio" name={`q-${q.id}`} value={o.id}
+                               checked={selected === o.id}
+                               onChange={() => manager.select(q.id, o.id)} />
+                        <RichText value={o.content} slotIds={vm.slotIds} />
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
+                {feedback.data
+                  ? <FeedbackView feedback={feedback.data} questionId={q.id} />
+                  : null}
+              </li>
+            );
+          })}
+        </ol>
+        </SharedMaterialLayout>
 
         {confirming ? (
           <UnansweredConfirmDialog count={unanswered}

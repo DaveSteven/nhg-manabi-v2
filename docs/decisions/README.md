@@ -53,3 +53,4 @@
 - `ADR-0015-multiple-active-practice-sessions.md`（已被 ADR-0016 取代）
 - `ADR-0016-single-recent-practice-session.md`
 - `ADR-0017-unit-per-page-all-questions.md`
+- `ADR-0018-sticky-answer-panel.md`

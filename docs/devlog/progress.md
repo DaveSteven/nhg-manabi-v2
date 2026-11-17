@@ -4,6 +4,8 @@
 
 ## 最新文档更新（2026-11-17）
 
+- 长篇读解/文章填空桌面双栏 Sticky 答题面板（ADR-0018）：`SharedMaterialLayout`，slot↔题联动；前端 253 passed、build 通过，真实浏览器验收见 `2026-11-17-sticky-panel.md`。
+
 - 成组题一页展示全部小题（ADR-0017）：统一反馈专项与 Quick 多题 Unit 不再逐小题切换，按 Unit 翻页；前端 250 passed、typecheck 通过，未做浏览器视觉验收，详见 `2026-11-17-unit-per-page.md`。
 
 - 按钮标准化实现：学生端 `Button`/`ButtonLink` 组件与 `_button.scss` 已落地，练习、结果、专项配置、认证、账户与顶栏已迁移（typecheck/246+3 测试/build 通过）；未做浏览器视觉与 375px/缩放验收，详见 `2026-11-17-button-standardization-impl.md`。
