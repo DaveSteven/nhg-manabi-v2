@@ -8,7 +8,7 @@ import { ButtonLink } from "../../components/Button";
 /**
  * Right slot of the study header (design v1.1 §3.1): signed-in students get
  * the target-level selector and their avatar, which links straight to the
- * user center (no menu — sign-out lives there); guests see only 登录/注册
+ * user center (no menu — sign-out lives there); guests see only a single 登录/注册 button (the login page links to register)
  * (no level selector, ADR-0019).
  */
 export function HeaderControls() {
@@ -23,8 +23,7 @@ export function HeaderControls() {
         </Link>
       ) : (
         <div className="account-links">
-          <ButtonLink variant="secondary" size="sm" to="/login">登录</ButtonLink>
-          <ButtonLink variant="primary" size="sm" to="/register">注册</ButtonLink>
+          <ButtonLink variant="primary" size="sm" to="/login">登录/注册</ButtonLink>
         </div>
       )}
     </div>

@@ -114,12 +114,11 @@ describe("useLevel", () => {
 // -------------------------------------------------------- HeaderControls ----
 
 describe("HeaderControls", () => {
-  it("shows sign-in/sign-up links when logged out, and no avatar", () => {
+  it("shows one 登录/注册 link when logged out, and no avatar", () => {
     renderRoutes([{ path: "study", Component: HeaderControls }], "/study");
-    expect(screen.getByRole("link", { name: "登录" }))
+    expect(screen.getByRole("link", { name: "登录/注册" }))
       .toHaveAttribute("href", "/login");
-    expect(screen.getByRole("link", { name: "注册" }))
-      .toHaveAttribute("href", "/register");
+    expect(screen.queryByRole("link", { name: "注册" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "用户中心" })).not.toBeInTheDocument();
   });
 
@@ -149,7 +148,7 @@ describe("HeaderControls", () => {
     expect(screen.queryByRole("menu")).not.toBeInTheDocument();
     expect(screen.queryByText("退出登录")).not.toBeInTheDocument();
     expect(screen.queryByText("小明")).not.toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "登录" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "登录/注册" })).not.toBeInTheDocument();
   });
 
   it("changing the header level syncs to the profile", async () => {
