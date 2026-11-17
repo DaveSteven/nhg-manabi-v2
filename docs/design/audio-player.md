@@ -33,7 +33,7 @@
 | 默认高度 | 80px |
 | 距离视口底部 | 20px |
 | 背景 | `--color-surface`（#FFFFFF） |
-| 圆角 | 24px |
+| 圆角 | 胶囊全圆角 999px（2026-11-17 用户调整，原 24px） |
 | 边框 | `1px solid var(--color-border)` |
 | 阴影 | `0 8px 32px rgba(43,43,51,0.10)` |
 

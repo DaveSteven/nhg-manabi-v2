@@ -81,7 +81,7 @@
   /* floating audio dock (audio-player.md §2) + safe area reserve */
   --audio-dock-height: 80px;
   --audio-dock-bottom: 20px;
-  --audio-dock-radius: 24px;
+  --audio-dock-radius: 999px; /* capsule (user decision 2026-11-17) */
   --audio-dock-shadow: 0 8px 32px rgba(43, 43, 51, 0.10);
   --transcript-panel-height: 320px;
   --transcript-panel-radius: 20px;

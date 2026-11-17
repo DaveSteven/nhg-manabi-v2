@@ -474,6 +474,9 @@
   line-height: 1.7;
   text-align: left;
   white-space: pre-wrap; /* keep original line breaks */
+
+  /* cue text is one compact paragraph — no global p margin inside */
+  p { margin: 0; }
 }
 
 .transcript-cue.is-seekable {

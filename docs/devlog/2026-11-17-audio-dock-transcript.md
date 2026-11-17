@@ -71,6 +71,10 @@
   `audio-player.md` §4.2 与布局示意同步。
 - AudioDock 19 测试、typecheck、build 产物检查通过；web 容器每步重建，:8080 冒烟 200。
 
+- **胶囊样式 + cue 段落去 margin**（用户再反馈）：dock 圆角改为胶囊全圆角（`--audio-dock-radius`
+  999px，`audio-player.md` §2.1 已更新）；cue 内 `p` 去 `margin-bottom`（覆盖全局 `p` 规则）。
+  AudioDock 19 测试、build 通过；web 容器重建，:8080 冒烟 200。
+
 ## 未执行 / 剩余风险
 
 - 真实浏览器视觉走查未由 Agent 执行（等宽对齐、向上展开动效、跟随滚动、Range 样式跨浏览器）；
