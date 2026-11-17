@@ -83,7 +83,9 @@
   cursor: pointer;
 
   /* 提交后答对：所选答案变绿（盖过选中粉色） */
-  &.option-correct {
+  /* :has() selector below must be outranked, so repeat it here */
+  &.option-correct,
+  &.option-correct:has(input[type="radio"]:checked) {
     border-color: var(--color-success);
     background: #e8f2ec;
   }

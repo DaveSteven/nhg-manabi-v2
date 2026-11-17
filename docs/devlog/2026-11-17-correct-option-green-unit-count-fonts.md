@@ -14,3 +14,6 @@
 
 ## 未执行
 - 浏览器目视（字体在 Windows/Linux 上的实际回退未测）；Docker 镜像是否已重建见对话。
+
+## 追加修复：option-correct 被 :has() 覆盖
+`.option-row:has(input[type=radio]:checked)` 特异性 (0,3,1) 高于 `.option-row.option-correct` (0,2,0)，绿色被选中粉色覆盖（DevTools 中被划线）。新增 `.option-row.option-correct:has(input[type=radio]:checked)` 提升至 (0,4,1)。构建产物已确认含该规则，web 镜像已重建；未跑浏览器目视。
