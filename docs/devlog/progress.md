@@ -1,6 +1,6 @@
 # 项目总体进度
 
-最后更新：2026-11-16
+最后更新：2026-11-17
 
 ## 已完成
 
@@ -73,3 +73,5 @@
 - Layer/Section 关联等 4 处真实数据包与 canonical-schema 草案不一致（见 2026-11-15 importer 日志），文档待修订。
 - 转换器 `SELECTIONS` 硬编码；转换其余约 130 套归档前需改为按 `exams.json` 选择。
 - `content_reviews.sequence` 在极端并发插入下按分配序入库（单进程 CLI 场景无影响）；多人并发审核工具上线前需评估。
+
+- **次级按钮内边距修正（2026-11-17）**：`_practice.scss` 引用了不存在的 `--space-5` 致 padding 失效，改为 `--space-4`；前端 230 passed、build 通过，浏览器视觉复核待用户。
