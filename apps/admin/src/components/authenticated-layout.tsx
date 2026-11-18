@@ -136,7 +136,7 @@ export function AuthenticatedLayout() {
   const toggleSide = () => (isMobile ? setDrawerOpen(true) : setCollapsed(!collapsed))
 
   return (
-    <Layout style={{ minHeight: '100vh' }}>
+    <Layout style={{ height: '100vh', overflow: 'hidden' }}>
       {isMobile ? (
         <Drawer
           open={drawerOpen}
@@ -156,13 +156,13 @@ export function AuthenticatedLayout() {
           collapsedWidth={64}
           collapsed={collapsed}
           trigger={null}
-          style={{ borderInlineEnd: `1px solid ${token.colorBorderSecondary}` }}
+          style={{ borderInlineEnd: `1px solid ${token.colorBorderSecondary}`, height: '100%', overflowY: 'auto' }}
         >
           <Brand collapsed={collapsed} />
           <SideMenu />
         </Sider>
       )}
-      <Layout style={{ minWidth: 0 }}>
+      <Layout style={{ minWidth: 0, height: '100%', overflow: 'hidden' }}>
         <Header
           style={{
             display: 'flex',
@@ -170,6 +170,7 @@ export function AuthenticatedLayout() {
             gap: 12,
             padding: '0 16px',
             height: 56,
+            flex: 'none',
             lineHeight: '56px',
             background: token.colorBgContainer,
             borderBottom: `1px solid ${token.colorBorderSecondary}`,
@@ -191,7 +192,7 @@ export function AuthenticatedLayout() {
           />
           <UserMenu />
         </Header>
-        <Content style={{ padding: 24, minWidth: 0 }}>
+        <Content style={{ padding: 24, minWidth: 0, flex: 1, overflowY: 'auto' }}>
           <Outlet />
         </Content>
       </Layout>

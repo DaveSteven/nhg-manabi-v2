@@ -34,3 +34,6 @@
 - 未重建 Docker 镜像验证 `web.Dockerfile` 的管理端构建（命令与锁文件已更新，本地 `vite build` 通过）。
 - 移除了上游 vitest 浏览器模式套件；e2e 未建立。
 - antd 包体较大，仅管理端加载。
+
+## 补充：滚动区域修正
+外壳改为固定视口高度：侧栏与顶栏固定，仅右侧内容区（`Content`）滚动，整页不再滚动。真实浏览器验证：内容区 `scrollTop` 随滚轮变化、`window.scrollY` 恒为 0；eslint、49 单测通过；`web` 容器已重建。
