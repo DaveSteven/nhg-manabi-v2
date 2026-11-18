@@ -218,7 +218,7 @@ export function ExamsPanel() {
       </Flex>
 
       {query.isError ? (
-        <Alert type='error' showIcon role='alert' message={describeReleaseError(query.error)} />
+        <Alert type='error' showIcon role='alert' title={describeReleaseError(query.error)} />
       ) : (
         <Table<AdminExam>
           rowKey='exam_id'
@@ -245,7 +245,7 @@ export function ExamsPanel() {
         }
         destroyOnHidden
       >
-        <Space direction='vertical' style={{ width: '100%' }}>
+        <Space orientation='vertical' style={{ width: '100%' }}>
           <Typography.Paragraph type='secondary'>
             下架后学生端立刻看不到这套试卷，也无法继续或新建练习；学生已有的作答记录保留。可随时恢复上架。
           </Typography.Paragraph>

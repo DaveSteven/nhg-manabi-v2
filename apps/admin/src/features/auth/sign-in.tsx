@@ -52,7 +52,7 @@ export function SignInForm({ redirectTo }: { redirectTo?: string }) {
       <Form.Item label='密码' name='password' rules={[{ required: true, message: '请输入密码' }]}>
         <Input.Password prefix={<LockOutlined />} autoComplete='current-password' />
       </Form.Item>
-      {error ? <Alert type='error' showIcon message={error} role='alert' style={{ marginBottom: 16 }} /> : null}
+      {error ? <Alert type='error' showIcon title={error} role='alert' style={{ marginBottom: 16 }} /> : null}
       <Button type='primary' htmlType='submit' block loading={loading}>
         登录
       </Button>

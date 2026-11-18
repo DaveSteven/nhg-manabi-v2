@@ -257,7 +257,7 @@ export function UserDetailPage({ userId }: { userId: string }) {
           type='error'
           showIcon
           role='alert'
-          message='无法加载该用户（可能不存在或服务不可用）。'
+          title='无法加载该用户（可能不存在或服务不可用）。'
           action={
             <Button size='small' onClick={() => query.refetch()}>
               重试
@@ -277,7 +277,7 @@ export function UserDetailPage({ userId }: { userId: string }) {
         onOk={() => action.mutate(!disabled)}
         destroyOnHidden
       >
-        <Space direction='vertical' style={{ width: '100%' }}>
+        <Space orientation='vertical' style={{ width: '100%' }}>
           <Typography.Paragraph type='secondary'>
             {disabled
               ? '启用后用户可以重新登录，学习记录不受影响。'

@@ -182,7 +182,7 @@ export function UsersPanel() {
           type='error'
           showIcon
           role='alert'
-          message='无法加载用户列表，请确认服务已启动后重试。'
+          title='无法加载用户列表，请确认服务已启动后重试。'
           action={
             <Button size='small' onClick={() => list.refetch()}>
               重试

@@ -225,7 +225,7 @@ export function Dashboard() {
           type='error'
           showIcon
           role='alert'
-          message='无法加载统计数据，请确认服务已启动后重试。'
+          title='无法加载统计数据，请确认服务已启动后重试。'
           action={
             <Button size='small' onClick={() => q.refetch()}>
               重试

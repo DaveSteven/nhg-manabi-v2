@@ -4,7 +4,7 @@
 
 ## 管理端迁移到 Ant Design（2026-11-18）
 
-- `apps/admin` 界面层由 shadcn-admin 换为 Ant Design 6（ADR-0028），登录、Dashboard、试卷管理、用户管理（列表/详情/禁用启用）全部迁移，API 与后端不变，见 [日志](2026-11-18-admin-antd-migration.md)。tsc、eslint、admin 49 单测、build 通过；浏览器仅目检登录页与带伪造数据的三页布局，未用真实口令走查，深色/移动端/Docker 构建未验证。
+- `apps/admin` 界面层由 shadcn-admin 换为 Ant Design 6（ADR-0028），登录、Dashboard、试卷管理、用户管理（列表/详情/禁用启用）全部迁移，API 与后端不变，见 [日志](2026-11-18-admin-antd-migration.md)。tsc、eslint、admin 49 单测、build 通过；已在真实后端走查登录、下架/恢复、禁用/启用、深色与移动端（均已还原数据）；Docker 构建、Firefox/Safari 未验证。
 
 ## 管理端用户管理 P0–P2（2026-11-18）
 
