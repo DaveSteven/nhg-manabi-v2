@@ -3,6 +3,7 @@ import { parseDto } from "../dto/exam";
 import { DraftSaveResultSchema, DraftsListSchema,
          type DraftSaveResult, type DraftsList } from "../dto/practice";
 import { AudioStatusSchema, MockAvailabilitySchema, MockContentSchema, MockResultsSchema,
+         PhaseAudioSchema, type PhaseAudio,
          MockStateSchema, type MockAvailability, type MockContent,
          type AudioStatus, type MockResults, type MockState } from "../dto/mock";
 import type { SaveDraftInput } from "./sessions";
@@ -76,6 +77,15 @@ export function getMockResults(sessionId: string,
                                signal?: AbortSignal): Promise<MockResults> {
   return apiFetch(`/api/mock-exams/${enc(sessionId)}/results`, { signal })
     .then((p) => parseDto(MockResultsSchema, "GET mock results", p));
+}
+
+/** 「开始听力考试」: claim the phase's one continuous playback (idempotent). */
+export function startMockPhaseAudio(sessionId: string, phaseId: string,
+                                    signal?: AbortSignal): Promise<PhaseAudio> {
+  return apiFetch(
+    `/api/mock-exams/${enc(sessionId)}/phases/${enc(phaseId)}/audio/start`,
+    { method: "POST", signal })
+    .then((p) => parseDto(PhaseAudioSchema, "POST mock phase audio start", p));
 }
 
 /** Claim the single playback of an audio material (idempotent, server clock). */

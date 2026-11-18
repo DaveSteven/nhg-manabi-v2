@@ -64,8 +64,19 @@ export const MockStateSchema = z.object({
 export type MockState = z.infer<typeof MockStateSchema>;
 
 /** Answer-free content of the ACTIVE phase, units tagged with their 大题. */
+/** Continuous listening of the whole phase (ADR-0022): the exam's full
+ * recording on ONE server timeline. null → per-unit strict players apply. */
+export const PhaseAudioSchema = z.object({
+  asset_id: z.string(),
+  state: z.enum(["idle", "playing", "ended"]),
+  position_ms: z.number().int(),
+  duration_ms: z.number().int(),
+});
+export type PhaseAudio = z.infer<typeof PhaseAudioSchema>;
+
 export const MockContentSchema = z.object({
   phase_id: z.string().nullable(),
+  phase_audio: PhaseAudioSchema.nullable().optional(),
   units: z.array(PublicUnitSchema.extend({
     session_unit_id: z.string(),
     session_unit_state: z.string(),

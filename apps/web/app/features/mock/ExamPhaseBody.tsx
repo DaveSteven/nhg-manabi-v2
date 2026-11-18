@@ -3,7 +3,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { DraftsList } from "../../api/dto/practice";
 import type { MockContent, MockPhaseState, MockState } from "../../api/dto/mock";
 import { ApiError } from "../../api/errors";
-import { getMockDrafts, saveMockDraft, submitMockPhase } from "../../api/endpoints/mock";
+import { getMockDrafts, saveMockDraft, startMockPhaseAudio, submitMockPhase } from "../../api/endpoints/mock";
+import { releaseAssetUrl } from "../../api/endpoints/exams";
 import { Button } from "../../components/Button";
 import { MaterialDisplay } from "../content/MaterialDisplay";
 import { RichText } from "../content/richtext/RichText";
@@ -15,7 +16,8 @@ import { clearSessionPendingRetries, loadPendingRetries } from "../practice/pend
 import { AnswerSheetDrawer } from "./AnswerSheetDrawer";
 import { ExamSubmitDialog } from "./ExamSubmitDialog";
 import { ExamTopBar } from "./ExamTopBar";
-import { StrictAudioPlayer, type LiveAudio } from "./StrictAudioPlayer";
+import { StrictAudioPlayer, type LiveAudio, type StrictAudioControl } from "./StrictAudioPlayer";
+import { ListeningConfirm } from "./ListeningConfirm";
 import { buildGroups, loadFlags, loadGroupIndex, optionColumns, saveFlags,
          saveGroupIndex, type ExamUnit } from "./mockModel";
 
@@ -108,6 +110,31 @@ export function ExamPhaseBody({ sessionId, state, phase, content, drafts,
   });
   const onAudio = useCallback((id: string, next: LiveAudio) =>
     setAudioLive((prev) => ({ ...prev, [id]: next })), []);
+
+  // Continuous listening (ADR-0022): ONE player for the whole phase, mounted
+  // above the 大題 pages so switching 大題 / opening the sheet never touches it.
+  const phaseAudio = content.phase_audio ?? null;
+  const [phaseLive, setPhaseLive] = useState<LiveAudio | null>(() => phaseAudio
+    ? { material_id: phaseAudio.asset_id, state: phaseAudio.state,
+        position_ms: phaseAudio.position_ms, duration_ms: phaseAudio.duration_ms,
+        at: Date.now() }
+    : null);
+  // Listening confirm page (ADR-0022): shown while the phase recording has
+  // not started; confirming starts it inside the click and opens the page.
+  const playerCtl = useRef<StrictAudioControl>(null);
+  const [confirmed, setConfirmed] = useState(false);
+  const needsConfirm = !!phaseAudio && phaseAudio.state === "idle" && !confirmed;
+  const confirmStart = () => {
+    setConfirmed(true);
+    void playerCtl.current?.begin();
+    window.scrollTo?.({ top: 0 });
+  };
+  const onPhaseAudio = useCallback((_: string, next: LiveAudio) => setPhaseLive(next), []);
+  const startPhaseAudio = useCallback(async () => {
+    const s = await startMockPhaseAudio(sessionId, phase.phase_id);
+    return { material_id: s.asset_id, state: s.state, position_ms: s.position_ms,
+             duration_ms: s.duration_ms };
+  }, [sessionId, phase.phase_id]);
 
   const toggleFlag = useCallback((qid: string) => {
     setFlags((prev) => {
@@ -220,11 +247,27 @@ export function ExamPhaseBody({ sessionId, state, phase, content, drafts,
   const isLastGroup = groupIdx === groups.length - 1;
 
   return (
-    <div className="exam-shell">
+    <div className={`exam-shell${phaseAudio && phaseLive ? " has-listen-mini" : ""}`}>
       <ExamTopBar examName={`${state.level} 模拟考试`} examTitle={state.exam_title}
                   where={`${phase.title} · ${group.label}`}
                   answered={answeredN} total={flat.length} remaining={remaining}
                   saveProblem={saveProblem} onOpenSheet={() => setSheetOpen(true)} />
+      {phaseAudio && phaseLive ? (
+        // ONE player for the phase, mounted even under the confirm page so
+        // the confirm click can start it; fixed at the bottom of the screen
+        <div className="exam-listen-mini" hidden={needsConfirm}>
+          <StrictAudioPlayer variant="exam-mini" sessionId={sessionId}
+            sessionUnitId="" materialId={phaseAudio.asset_id}
+            src={releaseAssetUrl(state.release_id, phaseAudio.asset_id)}
+            status={phaseLive} onStatus={onPhaseAudio} start={startPhaseAudio}
+            controlRef={playerCtl} />
+        </div>
+      ) : null}
+      {needsConfirm && phaseAudio ? (
+        <ListeningConfirm title={phase.title} remaining={remaining}
+                          audioMs={phaseAudio.duration_ms} questions={flat.length}
+                          onConfirm={confirmStart} />
+      ) : (<>
       <main className="exam-main container">
         <div className="exam-group-head">
           <h1>{group.label}</h1>
@@ -256,6 +299,7 @@ export function ExamPhaseBody({ sessionId, state, phase, content, drafts,
           )}
         </nav>
       </main>
+      </>)}
 
       <AnswerSheetDrawer open={sheetOpen} onClose={() => setSheetOpen(false)}
                          groups={groups}

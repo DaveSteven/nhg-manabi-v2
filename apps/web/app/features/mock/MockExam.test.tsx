@@ -107,7 +107,8 @@ describe("Exam Mode", () => {
     expect(screen.getByText("言語知識 · 問題1")).toBeInTheDocument();
     expect(screen.getByText("已答 1 / 3")).toBeInTheDocument();       // restored draft counts
     const clock = screen.getByRole("timer");
-    expect(clock.textContent).toMatch(/^1:29:\d\d$|^1:30:00$/);          // ≈ 90 min left
+    // the first tick may land a frame later under load: wait, don't race it
+    await waitFor(() => expect(clock.textContent).toMatch(/^1:29:\d\d$|^1:30:00$/)); // ≈ 90 min left
     // one-screen-many-questions for the whole 大題, and no verdict anywhere
     expect(screen.getByText("题干 q1")).toBeInTheDocument();
     expect(screen.getByText("题干 q2")).toBeInTheDocument();

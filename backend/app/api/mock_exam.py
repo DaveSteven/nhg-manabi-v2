@@ -21,6 +21,12 @@ Rules enforced here (the client only displays):
   position is `now - started_at` — no rewind, no replay. A refresh resumes at
   the live position; after the duration has elapsed the audio is consumed.
   Transcripts/cues are never part of any mock payload.
+  Continuous mode (ADR-0022): when the Phase is a listening Phase (every unit
+  carries audio) and the exam has a stored full recording with a known
+  duration, the WHOLE Phase plays that one recording continuously on one
+  server timeline (`study_phase_audio_plays`). Per-unit clips are then
+  withheld from the payload and cannot be started, so no question can be
+  replayed on its own. Otherwise the per-unit players above remain.
 - Leakage: nothing here returns correct options, explanations or transcripts
   before the LAST Phase is closed. Unit content comes only for the ACTIVE
   Phase and only through the public (answer-free) payload. After completion
@@ -318,6 +324,54 @@ def _audio_status(conn, session_unit_id, release_id, unit_id: str,
     return out
 
 
+def _phase_audio(conn, session_id, release_id, phase_id) -> dict | None:
+    """Continuous listening of a Phase (ADR-0022), or None when the Phase is
+    not a listening Phase or the exam has no usable full recording (then the
+    per-unit players apply). Status: idle / playing (live) / ended."""
+    if phase_id is None:
+        return None
+    row = conn.execute(text(
+        "SELECT em.asset_id,"
+        " coalesce(ms.verified_duration_ms, ma.duration_ms) AS duration_ms,"
+        " pa.started_at,"
+        " (extract(epoch FROM (now() - pa.started_at)) * 1000)::bigint AS elapsed_ms"
+        " FROM release_exam_media em"
+        " JOIN media_assets ma ON ma.id = em.asset_id"
+        "  AND ma.availability <> 'corrupt'"
+        " JOIN media_storage ms ON ms.asset_id = em.asset_id AND ms.state = 'stored'"
+        " LEFT JOIN study_phase_audio_plays pa ON pa.session_id = :s"
+        "  AND pa.phase_id = :p"
+        " WHERE em.release_id = :r AND em.role = 'full_audio'"
+        "  AND coalesce(ms.verified_duration_ms, ma.duration_ms) > 0"
+        # a listening Phase: it has units and every one of them carries audio
+        "  AND EXISTS (SELECT 1 FROM release_phase_units pu"
+        "   WHERE pu.release_id = :r AND pu.phase_id = :p)"
+        "  AND NOT EXISTS (SELECT 1 FROM release_phase_units pu"
+        "   WHERE pu.release_id = :r AND pu.phase_id = :p AND NOT EXISTS ("
+        "    SELECT 1 FROM release_unit_materials m WHERE m.release_id = :r"
+        "     AND m.unit_id = pu.unit_id AND m.kind = 'audio'))"
+        " ORDER BY em.asset_id LIMIT 1"),
+        {"s": session_id, "r": release_id, "p": phase_id}).mappings().first()
+    if row is None:
+        return None
+    dur = int(row["duration_ms"])
+    if row["started_at"] is None:
+        state, pos = "idle", 0
+    elif row["elapsed_ms"] >= dur:
+        state, pos = "ended", dur
+    else:
+        state, pos = "playing", int(row["elapsed_ms"])
+    return {"asset_id": row["asset_id"], "state": state,
+            "position_ms": pos, "duration_ms": dur}
+
+
+def _active_phase(conn, session_id) -> str | None:
+    return conn.execute(text(
+        "SELECT phase_id FROM study_phase_runs"
+        " WHERE session_id = :s AND closed_at IS NULL"),
+        {"s": session_id}).scalar()
+
+
 # -------------------------------------------------------------------- API ----
 
 class MockCreate(BaseModel):
@@ -484,10 +538,8 @@ def get_mock_phase_content(
                 status_code=409,
                 detail={"code": "session_not_active",
                         "message": "the mock exam is no longer in progress"})
-        phase_id = conn.execute(text(
-            "SELECT phase_id FROM study_phase_runs"
-            " WHERE session_id = :s AND closed_at IS NULL"),
-            {"s": session_id}).scalar()
+        phase_id = _active_phase(conn, session_id)
+        phase_audio = _phase_audio(conn, session_id, sess["release_id"], phase_id)
         rows = conn.execute(text(
             "SELECT su.id, su.release_id, su.unit_id, su.state,"
             " l.layer_id, l.display_label, l.position AS layer_position,"
@@ -509,14 +561,43 @@ def get_mock_phase_content(
                                          r["unit_id"], include_private=False)
             payload["session_unit_id"] = str(r["id"])
             payload["session_unit_state"] = r["state"]
-            payload["audio"] = _audio_status(conn, r["id"], r["release_id"],
-                                             r["unit_id"])
+            if phase_audio is not None:
+                # continuous mode: the per-question clips are not offered
+                payload["materials"] = [m for m in payload["materials"]
+                                        if m.get("kind") != "audio"]
+                payload["audio"] = []
+            else:
+                payload["audio"] = _audio_status(conn, r["id"], r["release_id"],
+                                                 r["unit_id"])
             payload["layer"] = {
                 "layer_id": r["layer_id"], "label": r["display_label"],
                 "position": r["layer_position"], "subject": r["subject"],
                 "section_title": r["section_title"]}
             units.append(payload)
-    return {"phase_id": phase_id, "units": units}
+    return {"phase_id": phase_id, "phase_audio": phase_audio, "units": units}
+
+
+@router.post("/api/mock-exams/{session_id}/phases/{phase_id}/audio/start")
+def start_mock_phase_audio(session_id: uuid.UUID, phase_id: str,
+                           user_id: uuid.UUID = Depends(get_current_user_id)) -> dict:
+    """「开始听力考试」: claim the one continuous playback of the Phase's full
+    recording. Idempotent — a refresh / retry / second tab only reports the
+    live position, never restarts. Only the ACTIVE Phase can be started."""
+    with get_engine().begin() as conn:
+        sess = _owned_advanced(conn, session_id, user_id)
+        if sess["state"] != "in_progress" or _active_phase(conn, session_id) != phase_id:
+            raise HTTPException(
+                status_code=409,
+                detail={"code": "phase_not_active",
+                        "message": "this phase is not in progress"})
+        audio = _phase_audio(conn, session_id, sess["release_id"], phase_id)
+        if audio is None:
+            raise HTTPException(status_code=404, detail="no continuous audio")
+        conn.execute(text(
+            "INSERT INTO study_phase_audio_plays (session_id, phase_id, asset_id)"
+            " VALUES (:s, :p, :a) ON CONFLICT DO NOTHING"),
+            {"s": session_id, "p": phase_id, "a": audio["asset_id"]})
+        return _phase_audio(conn, session_id, sess["release_id"], phase_id)
 
 
 @router.post("/api/mock-exams/{session_id}/units/{session_unit_id}/audio/{material_id}/start")
@@ -529,6 +610,13 @@ def start_mock_audio(session_id: uuid.UUID, session_unit_id: uuid.UUID,
     with get_engine().begin() as conn:
         sess = _owned_advanced(conn, session_id, user_id)
         unit = _active_unit(conn, sess, session_id, session_unit_id)
+        if _phase_audio(conn, session_id, sess["release_id"],
+                        _active_phase(conn, session_id)) is not None:
+            # continuous mode: a single question's clip can never be played
+            raise HTTPException(
+                status_code=409,
+                detail={"code": "continuous_audio",
+                        "message": "this listening phase plays continuously"})
         if not _audio_status(conn, session_unit_id, unit["release_id"],
                              unit["unit_id"], material_id):
             raise HTTPException(status_code=404, detail="audio not found")

@@ -548,3 +548,110 @@ def test_audio_start_validation_and_isolation(pg_engine, published_release,
     # once the phase is sealed the audio can no longer be started
     shift(pg_engine, sid, 7200)
     assert start_audio(client, sid, su2).status_code == 409
+
+
+# ------------------------------------------- continuous listening (ADR-0022) ----
+
+FULL = "JLPTGO-N5-TEST-EX-full"
+
+
+@pytest.fixture()
+def full_audio(pg_engine, published_release):
+    """p2 becomes a listening Phase (its unit carries a clip) and the exam
+    gets a stored full recording of 40s."""
+    add_audio(pg_engine, published_release)
+    with pg_engine.begin() as conn:
+        conn.execute(sa.text(
+            "INSERT INTO media_assets (id, sha256, storage_key, mime_type,"
+            " duration_ms, availability) VALUES (:a, :h, 'assets/test/full.mp3',"
+            " 'audio/mpeg', NULL, 'verified')"), {"a": FULL, "h": "f" * 64})
+        conn.execute(sa.text(
+            "INSERT INTO release_exam_media (release_id, asset_id, role)"
+            " VALUES (:r, :a, 'full_audio')"), {"r": published_release, "a": FULL})
+        conn.execute(sa.text(
+            "INSERT INTO media_storage (asset_id, state, verified_duration_ms,"
+            " rule_version) VALUES (:a, 'stored', 40000, 'test')"), {"a": FULL})
+    yield FULL
+    with pg_engine.begin() as conn:
+        conn.execute(sa.text("DELETE FROM study_phase_audio_plays"))
+        conn.execute(sa.text("DELETE FROM media_storage WHERE asset_id = :a"), {"a": FULL})
+        conn.execute(sa.text("DELETE FROM release_exam_media WHERE asset_id = :a"), {"a": FULL})
+        conn.execute(sa.text("DELETE FROM media_assets WHERE id = :a"), {"a": FULL})
+
+
+def start_phase_audio(client, sid, phase="p2", user=USER_A):
+    return client.post(f"/api/mock-exams/{sid}/phases/{phase}/audio/start",
+                       headers=auth(user))
+
+
+@requires_db
+def test_listening_phase_plays_the_full_recording_once(pg_engine, published_release,
+                                                       full_audio, monkeypatch):
+    client = make_client(monkeypatch, pg_engine)
+    add_phases(pg_engine, published_release)
+    sid = start(client)["id"]
+    # the reading phase has no continuous audio, and p2 cannot start yet
+    c1 = client.get(f"/api/mock-exams/{sid}/content", headers=auth(USER_A)).json()
+    assert c1["phase_audio"] is None
+    assert start_phase_audio(client, sid).status_code == 409
+    su2 = to_phase2(client, pg_engine, sid)
+
+    c = client.get(f"/api/mock-exams/{sid}/content", headers=auth(USER_A)).json()
+    assert c["phase_audio"] == {"asset_id": FULL, "state": "idle",
+                                "position_ms": 0, "duration_ms": 40000}
+    # per-question clips are withheld and cannot be played on their own
+    unit = c["units"][0]
+    assert unit["audio"] == []
+    assert all(m["kind"] != "audio" for m in unit["materials"])
+    assert start_audio(client, sid, su2).status_code == 409
+    assert_no_leak(c)
+
+    r = start_phase_audio(client, sid)
+    assert r.status_code == 200 and r.json()["state"] == "playing"
+    with pg_engine.connect() as conn:
+        t0 = conn.execute(sa.text(
+            "SELECT started_at FROM study_phase_audio_plays")).scalar()
+    # refresh / second press: same timeline, never restarted
+    assert start_phase_audio(client, sid).json()["state"] == "playing"
+    with pg_engine.begin() as conn:
+        assert conn.execute(sa.text(
+            "SELECT count(*), min(started_at) FROM study_phase_audio_plays")
+        ).one() == (1, t0)
+        conn.execute(sa.text(
+            "UPDATE study_phase_audio_plays SET started_at = started_at -"
+            " interval '15 seconds'"))
+    live = client.get(f"/api/mock-exams/{sid}/content", headers=auth(USER_A)
+                      ).json()["phase_audio"]
+    assert live["state"] == "playing" and 15000 <= live["position_ms"] < 18000
+    # after the duration: consumed for good
+    with pg_engine.begin() as conn:
+        conn.execute(sa.text(
+            "UPDATE study_phase_audio_plays SET started_at = started_at -"
+            " interval '60 seconds'"))
+    done = start_phase_audio(client, sid).json()
+    assert done == {"asset_id": FULL, "state": "ended", "position_ms": 40000,
+                    "duration_ms": 40000}
+
+
+@requires_db
+def test_phase_audio_isolation_and_fallback(pg_engine, published_release,
+                                            full_audio, monkeypatch):
+    client = make_client(monkeypatch, pg_engine)
+    add_phases(pg_engine, published_release)
+    sid = start(client)["id"]
+    su2 = to_phase2(client, pg_engine, sid)
+    assert start_phase_audio(client, sid, user=USER_B).status_code == 404
+    assert client.post(f"/api/mock-exams/{sid}/phases/p2/audio/start").status_code == 401
+    assert start_phase_audio(client, sid, phase="p1").status_code == 409
+    # without a stored recording the per-unit strict player applies again
+    with pg_engine.begin() as conn:
+        conn.execute(sa.text(
+            "UPDATE media_storage SET state = 'unavailable' WHERE asset_id = :a"),
+            {"a": FULL})
+    c = client.get(f"/api/mock-exams/{sid}/content", headers=auth(USER_A)).json()
+    assert c["phase_audio"] is None and c["units"][0]["audio"][0]["state"] == "idle"
+    assert start_phase_audio(client, sid).status_code == 404
+    assert start_audio(client, sid, su2).status_code == 200
+    # a sealed phase can no longer be started
+    shift(pg_engine, sid, 7200)
+    assert start_phase_audio(client, sid).status_code == 409
