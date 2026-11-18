@@ -59,7 +59,7 @@ const RESULTS = {
 };
 
 beforeAll(() => server.listen());
-afterEach(() => { server.resetHandlers(); authStore.clear(); });
+afterEach(() => { server.resetHandlers(); authStore.clear(); window.sessionStorage.clear(); });
 afterAll(() => server.close());
 
 function setup() {
@@ -90,54 +90,78 @@ const mount = () => renderRoutes([{ path: "study", children: [
   "/study/mock/m-1/results");
 
 describe("模考成绩页", () => {
-  it("overview shows raw accuracy, time and counts — no official score or pass/fail", async () => {
+  it("overview separates 已作答正确率 from 已答进度; no official score, no subject table", async () => {
     authStore.setSession("tok", USER);
     setup();
     mount();
     const summary = await screen.findByRole("region", { name: "成绩概览" });
     expect(within(summary).getByText("50%")).toBeInTheDocument();
+    expect(within(summary).getByText("已作答正确率")).toBeInTheDocument();
+    expect(within(summary).getByText(/已答 2 \/ 3 题；未答题不计入正确率/)).toBeInTheDocument();
     expect(within(summary).getByText(/2018年12月 N2 · N2/)).toBeInTheDocument();
     expect(within(summary).getByText(/用时 2 小时 0 分钟/)).toBeInTheDocument();
     expect(within(summary).getByText(/不等同于 JLPT 官方换算成绩/)).toBeInTheDocument();
-    expect(screen.queryByText(/合格(?!判)/)).not.toBeInTheDocument();
-    const subj = screen.getByRole("region", { name: "科目表现" });
-    expect(within(subj).getByRole("row", { name: /文法 0 1 0 0%/ })).toBeInTheDocument();
-    expect(within(subj).getByRole("row", { name: /读解 0 0 1 —/ })).toBeInTheDocument();
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
   });
 
-  it("review: grouped by subject, defaults to the first wrong question, filters narrow the strip", async () => {
+  it("subject cards carry the stats; only the chosen subject's numbers show, default = first wrong", async () => {
     authStore.setSession("tok", USER);
     const fb = setup();
     mount();
-    const nav = await screen.findByRole("navigation", { name: "题号导航" });
-    for (const g of ["文字词汇", "文法", "读解"]) {
-      expect(within(nav).getByRole("group", { name: g })).toBeInTheDocument();
-    }
-    expect(within(nav).queryByRole("group", { name: "听力" })).not.toBeInTheDocument();
-    // first wrong = question 2 → its unit and explanation load via the mock endpoint
+    const tabs = await screen.findByRole("tablist", { name: "科目" });
+    const [vocab, grammar, reading] = within(tabs).getAllByRole("tab");
+    expect(vocab).toHaveTextContent("已答 1/1 · 答错 0 · 正确率 100%");
+    expect(grammar).toHaveTextContent("已答 1/1 · 答错 1 · 正确率 0%");
+    expect(reading).toHaveTextContent("已答 0/1 · 答错 0 · 正确率 —");
+    expect(within(tabs).queryByRole("tab", { name: /听力/ })).not.toBeInTheDocument();
+    expect(grammar).toHaveAttribute("aria-selected", "true");
+    // filter defaults to 错误; only that one number is shown (original numbering kept)
+    const nav = screen.getByRole("navigation", { name: "题号导航" });
+    expect(within(nav).getAllByRole("button").map((b) => b.textContent)).toEqual(["2×"]);
     expect(await screen.findByText("解析 q2")).toBeInTheDocument();
     expect(fb).toEqual(["su-2"]);
-    expect(within(nav).getByRole("button", { name: "第 2 题（错误）" }))
-      .toHaveAttribute("aria-current", "step");
-
-    const filters = screen.getByRole("radiogroup", { name: "回顾筛选" });
-    await userEvent.click(within(filters).getByLabelText(/未答/));
-    expect(within(nav).getAllByRole("button")).toHaveLength(1);
-    expect(await screen.findByText("解析 q3")).toBeInTheDocument();
-    expect(screen.getByText("未作答")).toBeInTheDocument();
-    await userEvent.click(within(filters).getByLabelText(/全部/));
-    expect(within(nav).getAllByRole("button")).toHaveLength(3);
-    // history is read-only: nothing to answer, only review controls
-    expect(screen.queryByRole("button", { name: /提交/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: /错误 1/ })).toBeChecked();
   });
 
-  it("navigates to a clicked question and back to the exam", async () => {
+  it("switching subject without wrong answers falls back to 全部; filters and pager stay in scope", async () => {
     authStore.setSession("tok", USER);
     setup();
     mount();
-    const nav = await screen.findByRole("navigation", { name: "题号导航" });
-    await userEvent.click(within(nav).getByRole("button", { name: "第 1 题（正确）" }));
+    const tabs = await screen.findByRole("tablist", { name: "科目" });
+    await userEvent.click(within(tabs).getByRole("tab", { name: /读解/ }));
+    const filters = screen.getByRole("radiogroup", { name: "回顾筛选" });
+    expect(within(filters).getByLabelText(/全部 1/)).toBeChecked();
+    expect(await screen.findByText("解析 q3")).toBeInTheDocument();
+    expect(screen.getByText("未作答")).toBeInTheDocument();
+    await userEvent.click(within(filters).getByLabelText(/正确 0/));
+    expect(screen.getByText("这个范围内没有题目。")).toBeInTheDocument();
+    await userEvent.click(within(tabs).getByRole("tab", { name: /文字词汇/ }));
+    expect(within(filters).getByLabelText(/全部 1/)).toBeChecked();
+    const nav = screen.getByRole("navigation", { name: "题号导航" });
+    expect(within(nav).getAllByRole("button").map((b) => b.textContent)).toEqual(["1✓"]);
     expect(await screen.findByText("解析 q1")).toBeInTheDocument();
+    // read-only history: no answer submission controls
+    expect(screen.queryByRole("button", { name: /提交/ })).not.toBeInTheDocument();
+  });
+
+  it("remembers subject, filter and question across a reload of the page", async () => {
+    authStore.setSession("tok", USER);
+    setup();
+    const first = mount();
+    const tabs = await screen.findByRole("tablist", { name: "科目" });
+    await userEvent.click(within(tabs).getByRole("tab", { name: /读解/ }));
+    expect(await screen.findByText("解析 q3")).toBeInTheDocument();
+    first.unmount();
+    mount();
+    expect(await screen.findByText("解析 q3")).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /读解/ })).toHaveAttribute("aria-selected", "true");
+  });
+
+  it("links back to the exam and to history", async () => {
+    authStore.setSession("tok", USER);
+    setup();
+    mount();
+    await screen.findByRole("tablist", { name: "科目" });
     expect(screen.getByRole("link", { name: "返回试卷" }))
       .toHaveAttribute("href", "/study/exams/E-1");
     expect(screen.getByRole("link", { name: "练习历史" }))
