@@ -16,8 +16,8 @@ import { AnswerSheetDrawer } from "./AnswerSheetDrawer";
 import { ExamSubmitDialog } from "./ExamSubmitDialog";
 import { ExamTopBar } from "./ExamTopBar";
 import { StrictAudioPlayer, type LiveAudio } from "./StrictAudioPlayer";
-import { buildGroups, loadFlags, loadGroupIndex, saveFlags, saveGroupIndex,
-         type ExamUnit } from "./mockModel";
+import { buildGroups, loadFlags, loadGroupIndex, optionColumns, saveFlags,
+         saveGroupIndex, type ExamUnit } from "./mockModel";
 
 const SUBJECT_LABEL: Record<string, string> = {
   vocabulary: "文字词汇", grammar: "文法", reading: "读解", listening: "听力",
@@ -146,7 +146,11 @@ export function ExamPhaseBody({ sessionId, state, phase, content, drafts,
       const root = document.querySelector(".exam-main");
       const el = root?.querySelector<HTMLElement>(
         `[data-question-id="${CSS.escape(focusReq.id)}"]`);
-      const target = el && el.offsetParent !== null ? el
+      // a question in the sticky side panel: bring its unit (material start
+      // + panel) into view rather than the sticky card itself
+      const inStickyPanel = !!el?.closest(".reading-question-panel")
+        && window.innerWidth >= 1024;
+      const target = el && el.offsetParent !== null && !inStickyPanel ? el
         : el?.closest<HTMLElement>(".exam-unit") ?? null;
       target?.scrollIntoView?.({ block: "start", behavior: "smooth" });
     }); });
@@ -169,6 +173,8 @@ export function ExamPhaseBody({ sessionId, state, phase, content, drafts,
       let pick: string | null = null;
       for (const el of root.querySelectorAll<HTMLElement>(".exam-question")) {
         if (el.offsetParent === null) continue;          // hidden panel questions
+        // sticky side panel: the question being worked on is the active one
+        if (el.closest(".reading-question-panel") && !el.classList.contains("is-active-question")) continue;
         const r = el.getBoundingClientRect();
         if (r.bottom > barH + 24) { pick = el.dataset.questionId ?? null; break; }
       }
@@ -233,6 +239,7 @@ export function ExamPhaseBody({ sessionId, state, phase, content, drafts,
         {group.units.map((u) => (
           <UnitBlock key={u.sessionUnitId} unit={u} noOf={noOf}
                      manager={manager} flags={flags} onFlag={toggleFlag}
+                     isAnswered={isAnswered}
                      onCurrent={setCurrent} current={current}
                      focusRequest={focusReq} sessionId={sessionId}
                      audioLive={audioLive} onAudio={onAudio} />
@@ -275,7 +282,8 @@ export function ExamPhaseBody({ sessionId, state, phase, content, drafts,
 }
 
 function UnitBlock({ unit, noOf, manager, flags, onFlag, onCurrent, current,
-  focusRequest, sessionId, audioLive, onAudio }: {
+  focusRequest, sessionId, audioLive, onAudio, isAnswered }: {
+  isAnswered(qid: string): boolean;
   sessionId: string;
   audioLive: Record<string, LiveAudio>;
   onAudio(id: string, next: LiveAudio): void;
@@ -315,7 +323,8 @@ function UnitBlock({ unit, noOf, manager, flags, onFlag, onCurrent, current,
                   <RichText value={question.prompt} slotIds={vm.unit.slotIds} />
                 </div>
               ) : null}
-              <div role="radiogroup" aria-label={`第 ${no} 题选项`} className="exam-options">
+              <div role="radiogroup" aria-label={`第 ${no} 题选项`}
+                   className={`exam-options${optionColumns(question.options, unit.split) === 2 ? " is-grid" : ""}`}>
                 {question.options.map((o) => (
                   <label key={o.id} lang="ja"
                          className={`option-row${selected === o.id ? " option-selected" : ""}`}>
@@ -355,9 +364,11 @@ function UnitBlock({ unit, noOf, manager, flags, onFlag, onCurrent, current,
     return (
       <div className="exam-unit" data-unit-id={vm.unit.id}>
         {audioNote}
-        <SharedMaterialLayout content={vm} focusRequest={focusRequest} flow={unit.flow}
+        <SharedMaterialLayout content={vm} focusRequest={focusRequest} adaptive
           numberOf={(q) => noOf.get(q.id) ?? q.position}
-          material={<MaterialDisplay unit={vm.unit} materials={vm.materials} />}
+          chipState={(qid) => ({ answered: isAnswered(qid), flagged: flags.has(qid) })}
+          onActiveChange={onCurrent}
+          material={<MaterialDisplay unit={vm.unit} materials={vm.materials} imageZoom />}
           footer={null}>
           {list}
         </SharedMaterialLayout>
@@ -368,7 +379,7 @@ function UnitBlock({ unit, noOf, manager, flags, onFlag, onCurrent, current,
   return (
     <div className="exam-unit" data-unit-id={vm.unit.id}>
       {audioNote}
-      {hasMaterial ? <MaterialDisplay unit={vm.unit} materials={vm.materials} /> : null}
+      {hasMaterial ? <MaterialDisplay unit={vm.unit} materials={vm.materials} imageZoom /> : null}
       {list}
     </div>
   );

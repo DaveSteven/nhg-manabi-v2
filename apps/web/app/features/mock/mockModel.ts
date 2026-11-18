@@ -1,6 +1,6 @@
 import type { AudioStatus, MockContentUnit } from "../../api/dto/mock";
 import { toViewModel } from "../content/toViewModel";
-import { usesSplitLayout } from "../content/SharedMaterialLayout";
+import { layoutModeOf } from "../content/SharedMaterialLayout";
 import type { VmContentUnit } from "../content/viewModel";
 
 /** MM:SS, or H:MM:SS once an hour or more is left. Never negative. */
@@ -34,15 +34,34 @@ export interface ExamQuestion {
   slotId: string | null;
 }
 
-/** Short passages (one or several per big question) flow with the page: a
- * sticky panel would vanish with its own article and feel broken. Long
- * readings and cloze keep the sticky answer panel. */
-const FLOW_TYPES = new Set(["reading_short", "reading_short_set"]);
-export const isFlowType = (questionTypeId: string) => FLOW_TYPES.has(questionTypeId);
+/** Visible characters of a richtext payload (sum of its text leaves). */
+export function richTextLength(value: unknown): number {
+  if (typeof value === "string") return 0;
+  if (Array.isArray(value)) return value.reduce((n: number, v) => n + richTextLength(v), 0);
+  if (value && typeof value === "object") {
+    let n = 0;
+    for (const [k, v] of Object.entries(value)) {
+      n += k === "text" && typeof v === "string" ? [...v.trim()].length : richTextLength(v);
+    }
+    return n;
+  }
+  return 0;
+}
+
+/** Longest option (in characters) that still reads well in a 2×2 grid cell:
+ * the right-hand panel (~460px → ~12 字 per cell) vs a full-width card. */
+export const GRID_MAX_CHARS = { panel: 12, wide: 24 } as const;
+
+/** ADR-0021: 2×2 only when every option is short for the width it gets;
+ * otherwise one option per row so Japanese text is never squeezed. */
+export function optionColumns(options: { content: unknown }[], inPanel: boolean): 1 | 2 {
+  if (options.length < 2) return 1;
+  const longest = Math.max(...options.map((o) => richTextLength(o.content)));
+  return longest <= (inPanel ? GRID_MAX_CHARS.panel : GRID_MAX_CHARS.wide) ? 2 : 1;
+}
 
 export interface ExamUnit {
   sessionUnitId: string;
-  flow: boolean;
   /** Server playback status per audio material at load time. */
   audio: Record<string, AudioStatus>;
   vm: VmContentUnit;
@@ -79,9 +98,9 @@ export function buildGroups(units: MockContentUnit[]): ExamGroup[] {
     }
     const vm = toViewModel(u);
     g.units.push({
-      sessionUnitId: u.session_unit_id, vm, flow: isFlowType(u.question_type_id),
+      sessionUnitId: u.session_unit_id, vm,
       audio: Object.fromEntries(u.audio.map((a) => [a.material_id, a])),
-      split: usesSplitLayout(vm),
+      split: layoutModeOf(vm) !== "standalone",
       hasAudio: vm.materials.some((m) => m.kind === "audio"),
     });
     for (const q of vm.questions) {

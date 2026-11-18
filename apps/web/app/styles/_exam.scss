@@ -89,7 +89,9 @@
   &.is-current { background: color-mix(in srgb, var(--color-primary-soft) 38%, var(--color-surface)); }
   &.is-current .question-fieldset legend { color: var(--color-primary); }
 }
-.exam-options { display: grid; gap: 8px; @media (min-width: 900px) { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+/* ADR-0021: one option per row by default; 2×2 only when every option is
+   short for the width it gets (decided in mockModel.optionColumns) */
+.exam-options { display: grid; gap: 8px; &.is-grid { @media (min-width: 900px) { grid-template-columns: repeat(2, minmax(0, 1fr)); } } }
 .exam-flag {
   appearance: none;
   position: absolute;
@@ -208,11 +210,67 @@
   p { margin: 0; }
 }
 
-/* short passages: the question panel is NOT sticky — article and questions
-   scroll together, and every question of the passage stays visible */
-.exam-shell .shared-material-layout.is-flow {
-  .reading-question-panel { position: static; max-height: none; display: block; }
-  .panel-scroll { overflow: visible; }
-  .panel-scroll li[data-question-id]:not(.is-active-question) { display: block; }
-  .panel-footer { display: none; }
+/* ADR-0021 shared-material layout (mock exam). The panel stays sticky inside
+   its own unit. "fit": every question of the unit fits under the exam bar,
+   so all are shown; "switch": one at a time with number chips. Measuring
+   briefly forces all-visible (before paint) to compare heights. */
+.exam-shell .shared-material-layout {
+  @media (min-width: 1024px) {
+    grid-template-columns: minmax(0, 58fr) minmax(340px, 42fr);
+    &.is-image-material { grid-template-columns: minmax(0, 62fr) minmax(320px, 38fr); }
+  }
+  &.is-fit, &.is-measuring {
+    .panel-scroll li[data-question-id]:not(.is-active-question) { display: block; }
+  }
+  &.is-measuring .panel-scroll { overflow: visible; max-height: none; }
+  .panel-footer:empty { display: none; }
+  /* A/B materials read one after another inside the material column */
+  .shared-material-article .material-comparison { flex-direction: column; }
+  .shared-material-article .material-image { max-width: none; }
+  /* chips mirror the answer sheet: answered = soft sakura, flagged = corner flag */
+  .panel-question-nav button {
+    position: relative;
+    &.is-answered { background: var(--color-primary-soft); }
+    &.is-flagged::after {
+      content: ""; position: absolute; top: 3px; right: 3px;
+      width: 6px; height: 6px; border-radius: 50%; background: var(--color-warning);
+    }
+  }
+}
+
+/* zoomable image material: the whole image is the button */
+.material-image.is-zoomable {
+  .material-image-zoom {
+    position: relative; display: block; width: 100%; padding: 0; border: 0;
+    background: none; cursor: zoom-in;
+  }
+  .material-image-hint {
+    position: absolute; right: 8px; bottom: 8px; padding: 2px 10px;
+    border-radius: var(--radius-pill); font-size: var(--text-aux);
+    background: rgba(43, 43, 51, 0.72); color: #fff;
+  }
+}
+
+/* image viewer sits BELOW the exam bar so the countdown is never covered */
+.image-viewer {
+  position: fixed; left: 0; right: 0; bottom: 0; top: var(--exam-bar-h, 0px);
+  z-index: 45; display: flex; flex-direction: column;
+  background: rgba(43, 43, 51, 0.88);
+  .image-viewer-bar {
+    flex: none; display: flex; gap: var(--space-2); justify-content: center;
+    padding: var(--space-3);
+    button {
+      min-height: 36px; padding: 0 16px; border-radius: var(--radius-pill);
+      border: 1px solid rgba(255, 255, 255, 0.4); background: transparent; color: #fff;
+      cursor: pointer;
+      &[aria-pressed="true"] { background: #fff; color: var(--color-text); }
+    }
+    .image-viewer-close { margin-left: var(--space-4); }
+  }
+  .image-viewer-stage {
+    flex: 1 1 auto; min-height: 0; overflow: auto; padding: 0 var(--space-4) var(--space-6);
+    img { display: block; margin: 0 auto; background: #fff; filter: none; }
+    img.is-fit { width: 100%; max-width: 1200px; height: auto; }
+    img.is-actual { max-width: none; width: auto; }
+  }
 }

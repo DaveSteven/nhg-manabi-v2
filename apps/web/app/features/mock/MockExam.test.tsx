@@ -179,28 +179,79 @@ describe("Exam Mode", () => {
       .toHaveAttribute("aria-current", "true");
   });
 
-  it("short passages flow with the page (no sticky panel, no chip switching); long ones keep it", async () => {
+  const mkPassage = (qtype: string, id: string, nq = 2,
+    materials: unknown[] = [{ id: `${id}-m`, kind: "passage", role: "primary", language: "ja",
+                              content: rt("本文"), asset_id: null }]) => ({
+    ...unit(id, `su-${id}`, L1, Array.from({ length: nq }, (_, i) =>
+      question(`${id}-q${i + 1}`, i + 1, `${i + 1}`))),
+    question_type_id: qtype, kind: "passage", materials,
+  });
+  const renderUnits = async (units: unknown[]) => {
     authStore.setSession("tok", USER);
     setup();
-    const mkPassage = (qtype: string, id: string) => ({
-      ...unit(id, `su-${id}`, L1, [question(`${id}-q1`, 1, "1"), question(`${id}-q2`, 2, "2")]),
-      question_type_id: qtype, kind: "passage",
-      materials: [{ id: `${id}-m`, kind: "passage", role: "primary", language: "ja",
-                    content: rt("本文"), asset_id: null }],
-    });
-    server.use(http.get("*/api/mock-exams/m-1/content", () => HttpResponse.json({
-      phase_id: "p1", units: [mkPassage("reading_short", "ua"), mkPassage("reading_long", "ub")] })));
+    server.use(http.get("*/api/mock-exams/m-1/content", () =>
+      HttpResponse.json({ phase_id: "p1", units })));
     renderExam();
     await screen.findByText("N2 模拟考试");
-    const layouts = await waitFor(() => {
+    return waitFor(() => {
       const l = document.querySelectorAll(".shared-material-layout");
-      expect(l).toHaveLength(2);
+      expect(l).toHaveLength(units.length);
       return l;
     });
-    expect(layouts[0]).toHaveClass("is-flow");
-    expect(layouts[0]!.querySelector(".panel-question-nav")).toBeNull();
-    expect(layouts[1]).not.toHaveClass("is-flow");
-    expect(layouts[1]!.querySelector(".panel-question-nav")).not.toBeNull();
+  };
+
+  it("layout follows the material, not the type name: questions that fit are all shown", async () => {
+    // jsdom measures 0px, i.e. everything fits — short and long alike
+    const layouts = await renderUnits([mkPassage("reading_short_set", "ua"),
+                                       mkPassage("reading_long", "ub", 4)]);
+    for (const l of layouts) {
+      expect(l).toHaveClass("is-fit");
+      expect(l).toHaveAttribute("data-layout-mode", "shared-material");
+      expect(l.querySelector(".panel-question-nav")).toBeNull();
+    }
+  });
+
+  it("switches to one question at a time with answered/flagged chips when the panel is too tall", async () => {
+    const orig = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "scrollHeight");
+    Object.defineProperty(HTMLElement.prototype, "scrollHeight", { configurable: true, get: () => 5000 });
+    try {
+      const user = userEvent.setup();
+      const [layout] = await renderUnits([mkPassage("reading_long", "ub", 3)]);
+      expect(layout).toHaveClass("is-switch");
+      const nav = within(layout as HTMLElement).getByRole("navigation", { name: "本篇题号" });
+      await user.click(within(layout as HTMLElement).getByRole("radio", { name: "ub-q1-a 选项" }));
+      await user.click(within(nav).getByRole("button", { name: /^2/ }));
+      expect(document.querySelector('[data-question-id="ub-q2"]')).toHaveClass("is-active-question");
+      expect(within(nav).getByRole("button", { name: "1 已作答" })).toHaveClass("is-answered");
+      // switching keeps the earlier answer
+      expect(within(layout as HTMLElement).getByRole("radio", { name: "ub-q1-a 选项" })).toBeChecked();
+    } finally {
+      if (orig) Object.defineProperty(HTMLElement.prototype, "scrollHeight", orig);
+      else delete (HTMLElement.prototype as any).scrollHeight;
+    }
+  });
+
+  it("image-only material (information search) splits too, with an in-page zoom viewer", async () => {
+    const user = userEvent.setup();
+    const [layout] = await renderUnits([mkPassage("reading_information_search", "uc", 2,
+      [{ id: "uc-img", kind: "image", role: "primary", language: null, content: null,
+         asset_id: "asset-1" }])]);
+    expect(layout).toHaveClass("is-image-material");
+    expect(layout!.querySelector(".reading-question-panel")).not.toBeNull();
+    await user.click(screen.getByRole("button", { name: "放大查看图片" }));
+    const viewer = screen.getByRole("dialog", { name: "查看大图" });
+    await user.click(within(viewer).getByRole("button", { name: "原始大小" }));
+    expect(within(viewer).getByRole("img")).toHaveClass("is-actual");
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog", { name: "查看大图" })).not.toBeInTheDocument();
+  });
+
+  it("short options use a 2×2 grid; long reading options one per row", async () => {
+    const longOpt = "伝えたい内容に応じて、異なる種類の言葉を使い分けたほうがいい。";
+    const u = mkPassage("reading_short", "ud", 1);
+    u.questions[0]!.options = u.questions[0]!.options.map((o) => ({ ...o, content: rt(longOpt) }));
+    await renderUnits([u]);
+    expect(document.querySelector(".exam-options")).not.toHaveClass("is-grid");
   });
 
   it("Escape closes the sheet", async () => {

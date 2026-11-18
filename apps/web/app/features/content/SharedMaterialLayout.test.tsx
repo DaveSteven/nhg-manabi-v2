@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { SharedMaterialLayout, usesSplitLayout } from "./SharedMaterialLayout";
+import { layoutModeOf, SharedMaterialLayout, usesSplitLayout } from "./SharedMaterialLayout";
 import type { VmContentUnit } from "./viewModel";
 
 const mk = (kind: string, slotIds: string[], withText = true): VmContentUnit => ({
@@ -20,6 +20,19 @@ describe("SharedMaterialLayout", () => {
     expect(usesSplitLayout(mk("cloze", ["s1", "s2"]))).toBe(true);
     expect(usesSplitLayout(mk("single", []))).toBe(false);
     expect(usesSplitLayout(mk("passage", [], false))).toBe(false);
+  });
+
+  it("layoutModeOf: decided by material structure (ADR-0021)", () => {
+    const img = (kind: string) => ({ id: kind, kind, role: "primary", language: null,
+      content: null, imageAssetId: "a", imageUrl: "/a.png", audio: null });
+    expect(layoutModeOf(mk("passage", []))).toBe("shared-material");
+    expect(layoutModeOf(mk("comparison", []))).toBe("shared-material");
+    expect(layoutModeOf(mk("cloze", ["s1", "s2"]))).toBe("cloze");
+    expect(layoutModeOf(mk("single", [], false))).toBe("standalone");
+    expect(layoutModeOf({ ...mk("passage", [], false), materials: [img("image")] }))
+      .toBe("shared-material");
+    expect(layoutModeOf({ ...mk("single", [], false), materials: [img("audio"), img("image")] }))
+      .toBe("standalone"); // listening keeps its own layout
   });
 
   it("non-split: no panel, questions render in order", () => {

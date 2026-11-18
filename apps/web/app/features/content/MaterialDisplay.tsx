@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { VmMaterial, VmUnit } from "./viewModel";
 import { RichText } from "./richtext/RichText";
 
@@ -10,10 +10,12 @@ import { RichText } from "./richtext/RichText";
  * (role comparison_a/b) render side by side on wide screens, stacked on
  * narrow ones.
  */
-export function MaterialDisplay({ unit, materials, onDiagnostic }: {
+export function MaterialDisplay({ unit, materials, onDiagnostic, imageZoom }: {
   unit: VmUnit;
   materials: VmMaterial[];
   onDiagnostic?: (reason: string) => void;
+  /** Open images in an in-page viewer (exam: never leave the page). */
+  imageZoom?: boolean;
 }) {
   const passages = materials.filter((m) => m.kind === "passage" && m.content);
   const comparisonA = materials.filter((m) => m.role === "comparison_a");
@@ -52,7 +54,7 @@ export function MaterialDisplay({ unit, materials, onDiagnostic }: {
 
       {images.length > 0 ? (
         <div className="material-images">
-          {images.map((m) => <ImageMaterial key={m.id} material={m} />)}
+          {images.map((m) => <ImageMaterial key={m.id} material={m} zoom={imageZoom} />)}
         </div>
       ) : null}
 
@@ -69,13 +71,27 @@ export function MaterialDisplay({ unit, materials, onDiagnostic }: {
 
 /** Real image material (tables, figures). Click opens the full image so
  * dense tables stay legible on narrow screens; failures are explicit. */
-function ImageMaterial({ material }: { material: VmMaterial }) {
+function ImageMaterial({ material, zoom }: { material: VmMaterial; zoom?: boolean }) {
   const [failed, setFailed] = useState(false);
+  const [open, setOpen] = useState(false);
   if (!material.imageUrl) {
     return <p className="image-unavailable" role="alert">图片暂不可用</p>;
   }
   if (failed) {
     return <p className="image-unavailable" role="alert">图片加载失败，请刷新重试。</p>;
+  }
+  if (zoom) {
+    return (
+      <figure className="material-image is-zoomable" data-asset-id={material.imageAssetId ?? undefined}>
+        <button type="button" className="material-image-zoom" onClick={() => setOpen(true)}
+                aria-label="放大查看图片">
+          <img src={material.imageUrl} alt="题目图片" loading="lazy"
+               onError={() => setFailed(true)} />
+          <span className="material-image-hint" aria-hidden="true">⤢ 放大</span>
+        </button>
+        {open ? <ImageViewer src={material.imageUrl} onClose={() => setOpen(false)} /> : null}
+      </figure>
+    );
   }
   return (
     <figure className="material-image" data-asset-id={material.imageAssetId ?? undefined}>
@@ -85,6 +101,33 @@ function ImageMaterial({ material }: { material: VmMaterial }) {
              loading="lazy" onError={() => setFailed(true)} />
       </a>
     </figure>
+  );
+}
+
+/** Full-size viewer below the exam bar (the countdown stays visible):
+ * fit-to-width or 100% (natural size, scroll/drag to pan). Esc closes. */
+export function ImageViewer({ src, onClose }: { src: string; onClose(): void }) {
+  const [actual, setActual] = useState(false);
+  const closeBtn = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    closeBtn.current?.focus();
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+  return (
+    <div className="image-viewer" role="dialog" aria-modal="true" aria-label="查看大图">
+      <div className="image-viewer-bar">
+        <button type="button" aria-pressed={!actual} onClick={() => setActual(false)}>适应宽度</button>
+        <button type="button" aria-pressed={actual} onClick={() => setActual(true)}>原始大小</button>
+        <button type="button" ref={closeBtn} className="image-viewer-close" onClick={onClose}>
+          关闭
+        </button>
+      </div>
+      <div className="image-viewer-stage">
+        <img src={src} alt="题目图片（大图）" className={actual ? "is-actual" : "is-fit"} />
+      </div>
+    </div>
   );
 }
 
