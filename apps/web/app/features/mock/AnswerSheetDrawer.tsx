@@ -10,7 +10,7 @@ import type { ExamGroup } from "./mockModel";
  * only — never right or wrong.
  */
 export function AnswerSheetDrawer({ open, onClose, groups, currentGroupIdx,
-  currentQid, isAnswered, flags, onJump, actionLabel, onAction, phaseTitle }: {
+  currentQid, isAnswered, flags, onJump, actionLabel, onAction, onAbandon, phaseTitle }: {
   open: boolean;
   onClose(): void;
   groups: ExamGroup[];
@@ -21,6 +21,7 @@ export function AnswerSheetDrawer({ open, onClose, groups, currentGroupIdx,
   onJump(qid: string): void;
   actionLabel: string;
   onAction(): void;
+  onAbandon(): void;
   phaseTitle: string;
 }) {
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
@@ -140,6 +141,9 @@ export function AnswerSheetDrawer({ open, onClose, groups, currentGroupIdx,
         <footer className="sheet-foot">
           <Button variant="secondary" onClick={onClose}>返回作答</Button>
           <Button variant="primary" onClick={onAction}>{actionLabel}</Button>
+          <button type="button" className="sheet-abandon" onClick={onAbandon}>
+            放弃考试
+          </button>
         </footer>
       </aside>
     </div>

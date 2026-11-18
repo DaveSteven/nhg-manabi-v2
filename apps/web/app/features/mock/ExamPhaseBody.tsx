@@ -293,7 +293,6 @@ export function ExamPhaseBody({ sessionId, state, phase, content, drafts,
                   where={`${phase.title} · ${group.label}`}
                   answered={answeredN} total={flat.length}
                   remaining={needsConfirm ? phase.duration_seconds : remaining}
-                  onAbandon={() => { setSheetOpen(false); setAbandoning(true); }}
                   saveProblem={saveProblem} onOpenSheet={() => setSheetOpen(true)} />
       {phaseAudio && phaseLive ? (
         // ONE player for the phase, mounted even under the confirm page so
@@ -356,7 +355,9 @@ export function ExamPhaseBody({ sessionId, state, phase, content, drafts,
                          currentGroupIdx={(current && groupOfQuestion.get(current)) || groupIdx}
                          currentQid={current} isAnswered={isAnswered} flags={flags}
                          onJump={jumpTo} actionLabel={actionLabel}
-                         onAction={openConfirm} phaseTitle={phase.title} />
+                         onAction={openConfirm}
+                         onAbandon={() => { setSheetOpen(false); setAbandoning(true); }}
+                         phaseTitle={phase.title} />
 
       {abandoning ? (
         <AbandonExamDialog sessionId={sessionId} onCancel={() => setAbandoning(false)}

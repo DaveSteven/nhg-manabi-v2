@@ -277,7 +277,7 @@ describe("Exam Mode", () => {
     expect(document.querySelector(".exam-options")).not.toHaveClass("is-grid");
   });
 
-  it("the exam bar can abandon the exam after confirmation", async () => {
+  it("the answer sheet can abandon the exam after confirmation", async () => {
     authStore.setSession("tok", USER);
     setup();
     let abandoned = false;
@@ -287,11 +287,16 @@ describe("Exam Mode", () => {
     }));
     const user = userEvent.setup();
     renderExam();
-    await user.click(await screen.findByRole("button", { name: "放弃考试" }));
+    const openAndAbandon = async () => {
+      await user.click(await screen.findByRole("button", { name: "答题卡" }));
+      const sheet = await screen.findByRole("dialog", { name: "答题卡" });
+      await user.click(within(sheet).getByRole("button", { name: "放弃考试" }));
+    };
+    await openAndAbandon();
     const dlg = await screen.findByRole("dialog", { name: "放弃考试" });
     await user.click(within(dlg).getByRole("button", { name: "继续考试" }));
     expect(abandoned).toBe(false);
-    await user.click(screen.getByRole("button", { name: "放弃考试" }));
+    await openAndAbandon();
     await user.click(within(await screen.findByRole("dialog", { name: "放弃考试" }))
       .getByRole("button", { name: "放弃考试" }));
     await waitFor(() => expect(abandoned).toBe(true));
