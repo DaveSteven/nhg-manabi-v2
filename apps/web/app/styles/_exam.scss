@@ -84,11 +84,8 @@
 .exam-shell .exam-question {
   position: relative;
   padding: 16px;
-  transition: background var(--motion-fast), box-shadow var(--motion-fast);
-  .question-fieldset legend { padding-bottom: 8px; padding-right: 130px; transition: color var(--motion-fast); }
+  .question-fieldset legend { padding-bottom: 8px; padding-right: 130px; }
   .question-fieldset > div[lang] { margin-bottom: 10px; }
-  /* light emphasis only: tinted surface + coloured number, no pink frame */
-  &.is-current .question-fieldset legend { color: var(--color-primary); }
 }
 /* ADR-0021: one option per row by default; 2×2 only when every option is
    short for the width it gets (decided in mockModel.optionColumns) */

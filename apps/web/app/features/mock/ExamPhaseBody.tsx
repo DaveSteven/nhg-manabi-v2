@@ -404,7 +404,7 @@ function UnitBlock({ unit, noOf, manager, flags, onFlag, onCurrent, current,
         const flagged = flags.has(question.id);
         return (
           <li key={question.id} data-question-id={question.id}
-              className={`question-card card exam-question${current === question.id ? " is-current" : ""}`}
+              className="question-card card exam-question"
               onFocusCapture={() => onCurrent(question.id)}
               onClickCapture={() => onCurrent(question.id)}>
             <fieldset className="question-fieldset">
