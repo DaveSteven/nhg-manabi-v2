@@ -17,6 +17,7 @@ export function ExamTopBar({ examName, examTitle, where, answered, total,
   const tone: TimeTone = remaining === null ? "normal" : timeTone(remaining);
   const pct = total ? Math.round((answered / total) * 100) : 0;
   return (
+    <div className="exam-bar-wrap">
     <header className="exam-bar">
       <div className="exam-bar-brand">
         <img src="/favicon.svg" alt="" width={26} height={26} />
@@ -39,5 +40,6 @@ export function ExamTopBar({ examName, examTitle, where, answered, total,
       </span>
       <Button variant="secondary" size="sm" onClick={onOpenSheet}>答题卡</Button>
     </header>
+    </div>
   );
 }

@@ -26,12 +26,20 @@ export function AnswerSheetDrawer({ open, onClose, groups, currentGroupIdx,
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const closeRef = useRef<HTMLButtonElement>(null);
   const lastFocus = useRef<HTMLElement | null>(null);
+  const groupEls = useRef<Record<string, HTMLElement | null>>({});
 
-  // groups other than the current one start folded; the user's own
-  // expand/collapse choices survive until the current group changes
+  // Every time the sheet opens: expand ONLY the group of the question the
+  // user is on and bring it into view (the list scrolls, header/footer don't).
   useEffect(() => {
-    setCollapsed(new Set(groups.filter((_, i) => i !== currentGroupIdx).map((g) => g.layerId)));
-  }, [groups, currentGroupIdx]);
+    if (!open) return;
+    const cur = groups[currentGroupIdx];
+    setCollapsed(new Set(groups.filter((g) => g.layerId !== cur?.layerId).map((g) => g.layerId)));
+    const id = requestAnimationFrame(() => {
+      if (cur) groupEls.current[cur.layerId]?.scrollIntoView?.({ block: "nearest" });
+    });
+    return () => cancelAnimationFrame(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -55,15 +63,17 @@ export function AnswerSheetDrawer({ open, onClose, groups, currentGroupIdx,
       <div className="sheet-scrim" onClick={onClose} />
       <aside className="sheet-panel" role="dialog" aria-modal="true" aria-label="答题卡">
         <header className="sheet-head">
-          <div>
+          <div className="sheet-title-row">
             <h2>答题卡</h2>
-            <p className="sheet-summary" aria-live="polite">
-              已作答 {answered} · 未作答 {all.length - answered} · 标记 {flagged}
-            </p>
-            <p className="text-aux">{phaseTitle}</p>
+            <button ref={closeRef} type="button" className="sheet-close"
+                    aria-label="关闭答题卡" onClick={onClose}>×</button>
           </div>
-          <button ref={closeRef} type="button" className="sheet-close"
-                  aria-label="关闭答题卡" onClick={onClose}>×</button>
+          <dl className="sheet-stats" aria-live="polite">
+            <div className="sheet-stat"><dd>{answered}</dd><dt>已作答</dt></div>
+            <div className="sheet-stat"><dd>{all.length - answered}</dd><dt>未作答</dt></div>
+            <div className="sheet-stat is-flag"><dd>{flagged}</dd><dt>标记待检查</dt></div>
+          </dl>
+          <p className="text-aux sheet-phase">{phaseTitle}</p>
         </header>
 
         <div className="sheet-body">
@@ -71,7 +81,8 @@ export function AnswerSheetDrawer({ open, onClose, groups, currentGroupIdx,
             const isCollapsed = collapsed.has(g.layerId);
             const done = g.questions.filter((q) => isAnswered(q.qid)).length;
             return (
-              <section key={g.layerId} className="sheet-group">
+              <section key={g.layerId} className="sheet-group"
+                       ref={(el) => { groupEls.current[g.layerId] = el; }}>
                 <button type="button" className="sheet-group-head"
                         aria-expanded={!isCollapsed}
                         onClick={() => setCollapsed((c) => {
@@ -79,9 +90,8 @@ export function AnswerSheetDrawer({ open, onClose, groups, currentGroupIdx,
                           if (n.has(g.layerId)) n.delete(g.layerId); else n.add(g.layerId);
                           return n;
                         })}>
-                  <span aria-hidden="true">{isCollapsed ? "▸" : "▾"}</span>
-                  <span className="sheet-group-title">{g.label}</span>
-                  <span className="sheet-group-count">{done}/{g.questions.length}</span>
+                  <span className="sheet-group-title">{g.label} · {done}/{g.questions.length}</span>
+                  <span className="sheet-chevron" aria-hidden="true">{isCollapsed ? "▾" : "▴"}</span>
                 </button>
                 {!isCollapsed ? (
                   <ul className="sheet-grid">

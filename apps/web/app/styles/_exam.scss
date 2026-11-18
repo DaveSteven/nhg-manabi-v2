@@ -2,7 +2,7 @@
    Colours/radii come from tokens; the sheet is a fixed overlay so the page
    behind never reflows. */
 .exam-shell {
-  --exam-bar-h: 64px;
+  --exam-bar-h: 84px; /* capsule + its top/bottom breathing room */
   min-height: 100dvh;
   background: var(--color-bg);
   .exam-main { padding-top: var(--space-6); padding-bottom: var(--space-8); }
@@ -14,30 +14,40 @@
 
 .exam-status { max-width: 520px; margin: 20vh auto; padding: var(--space-6); text-align: center; display: grid; gap: var(--space-3); justify-items: center; }
 
-/* ---- sticky status bar ------------------------------------------------ */
-.exam-bar {
+/* ---- floating capsule status bar (same capsule language as the site header) */
+.exam-bar-wrap {
   position: sticky;
   top: 0;
   z-index: 30;
+  padding: var(--space-3) var(--space-6) var(--space-2);
+  pointer-events: none;
+}
+.exam-bar {
+  pointer-events: auto;
   display: flex;
   align-items: center;
-  gap: var(--space-4);
-  min-height: var(--exam-bar-h);
-  padding: 0 var(--space-6);
-  background: color-mix(in srgb, var(--color-surface) 96%, transparent);
-  border-bottom: 1px solid var(--color-border);
-  box-shadow: 0 2px 12px rgba(43, 43, 51, 0.05);
+  gap: var(--space-6);
+  max-width: var(--page-max-width);
+  margin: 0 auto;
+  min-height: 60px;
+  padding: var(--space-2) var(--space-6);
+  border: 1px solid var(--color-border);
+  border-radius: 36px;
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow: var(--shadow-floating);
+  backdrop-filter: blur(14px) saturate(1.4);
 
   .exam-bar-brand { display: flex; align-items: center; gap: var(--space-2); flex: none; }
   .exam-bar-title { flex: none; font-size: var(--text-h6); }
-  .exam-bar-where { flex: 1 1 auto; min-width: 0; color: var(--color-text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .exam-bar-progress { flex: none; display: grid; gap: 4px; font-size: 13px; min-width: 120px; font-variant-numeric: tabular-nums; }
-  .exam-save-problem { color: var(--color-danger); font-size: 13px; font-weight: 600; }
+  .exam-bar-where { flex: 1 1 auto; min-width: 0; color: var(--color-text-secondary); font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .exam-bar-progress { flex: none; display: grid; gap: 4px; font-size: 13px; min-width: 128px; font-variant-numeric: tabular-nums; }
+  .exam-save-problem { color: var(--color-danger); font-size: 13px; font-weight: 600; flex: none; }
 
   @media (max-width: 900px) {
     flex-wrap: wrap;
-    gap: var(--space-2) var(--space-3);
-    padding: var(--space-2) var(--space-4);
+    gap: var(--space-2) var(--space-4);
+    padding: var(--space-3) var(--space-4);
+    border-radius: 28px;
     .exam-bar-wordmark { display: none; }
     .exam-bar-where { order: 10; flex-basis: 100%; }
   }
@@ -54,6 +64,8 @@
 
 .exam-clock {
   flex: none;
+  min-width: 5.2ch;
+  text-align: right;
   font-size: 22px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
@@ -63,28 +75,38 @@
   &.tone-danger { color: var(--color-danger); }
 }
 
-/* ---- answer area -------------------------------------------------------- */
+/* ---- answer area: compact continuous questions -------------------------- */
 .exam-group-head { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-3); margin-bottom: var(--space-4); h1 { margin: 0; font-size: var(--text-h3); } }
-.exam-unit { margin-bottom: var(--space-6); }
-.exam-unit .question-list { display: grid; gap: var(--space-3); list-style: none; margin: 0; padding: 0; }
-.exam-question { position: relative; &.is-current { border-color: var(--color-primary); } }
-.exam-options { display: grid; gap: var(--space-2); @media (min-width: 900px) { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.exam-unit { margin-bottom: var(--space-4); }
+.exam-unit .question-list { display: grid; gap: 16px; list-style: none; margin: 0; padding: 0; }
+.exam-shell .exam-question {
+  position: relative;
+  padding: 16px;
+  transition: background var(--motion-fast), box-shadow var(--motion-fast);
+  .question-fieldset legend { padding-bottom: 8px; padding-right: 130px; transition: color var(--motion-fast); }
+  .question-fieldset > div[lang] { margin-bottom: 10px; }
+  /* light emphasis only: tinted surface + coloured number, no pink frame */
+  &.is-current { background: color-mix(in srgb, var(--color-primary-soft) 38%, var(--color-surface)); }
+  &.is-current .question-fieldset legend { color: var(--color-primary); }
+}
+.exam-options { display: grid; gap: 8px; @media (min-width: 900px) { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .exam-flag {
   appearance: none;
-  margin-top: var(--space-3);
-  padding: 4px 12px;
-  border: 1px solid var(--color-border);
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  padding: 2px 10px;
+  border: 1px solid transparent;
   border-radius: var(--radius-pill);
-  background: var(--color-surface);
-  color: var(--color-text-secondary);
+  background: transparent;
+  color: var(--color-text-muted);
   font: inherit;
   font-size: 13px;
   cursor: pointer;
-  &:hover { border-color: var(--color-primary); }
+  &:hover { color: var(--color-primary); background: var(--color-primary-soft); }
   &.is-on { color: var(--color-primary); border-color: var(--color-primary); background: var(--color-primary-soft); }
   &:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
 }
-.exam-audio-note { margin: 0 0 var(--space-3); padding: var(--space-3) var(--space-4); border-radius: var(--radius-sm); background: var(--accent-apricot-soft); color: var(--accent-apricot); font-size: 14px; }
 .exam-bottom-nav { display: flex; justify-content: space-between; gap: var(--space-3); margin-top: var(--space-6); }
 
 /* ---- answer sheet drawer (fixed overlay, never pushes the page) ------- */
@@ -97,25 +119,36 @@
   transition: visibility 0s linear var(--motion-normal);
   &.is-open { pointer-events: auto; visibility: visible; transition-delay: 0s; }
 }
-.sheet-scrim { position: absolute; inset: 0; background: rgba(43, 43, 51, 0.45); opacity: 0; transition: opacity var(--motion-normal); .is-open & { opacity: 1; } }
+.sheet-scrim { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.3); opacity: 0; transition: opacity var(--motion-normal); .is-open & { opacity: 1; } }
 .sheet-panel {
   position: absolute;
   top: 0; right: 0; bottom: 0;
-  width: min(400px, 100vw);
+  width: min(410px, 100vw);
   display: flex;
   flex-direction: column;
   background: var(--color-surface);
-  box-shadow: var(--shadow-floating);
+  box-shadow: -12px 0 40px rgba(43, 43, 51, 0.14);
   transform: translateX(100%);
   transition: transform var(--motion-normal) ease-out;
   .is-open & { transform: none; }
 }
-.sheet-head { display: flex; justify-content: space-between; gap: var(--space-3); padding: var(--space-4) var(--space-6); border-bottom: 1px solid var(--color-border); h2 { margin: 0; font-size: var(--text-h4); } p { margin: 4px 0 0; } .sheet-summary { font-variant-numeric: tabular-nums; } }
+/* header + footer are fixed; only .sheet-body scrolls */
+.sheet-head { flex: none; padding: var(--space-4) var(--space-6) var(--space-3); display: grid; gap: var(--space-3); .sheet-title-row { display: flex; align-items: center; justify-content: space-between; } h2 { margin: 0; font-size: var(--text-h4); } .sheet-phase { margin: 0; } }
 .sheet-close { appearance: none; border: 0; background: none; font-size: 28px; line-height: 1; width: 40px; height: 40px; border-radius: var(--radius-pill); cursor: pointer; color: var(--color-text-secondary); &:hover { background: var(--color-surface-subtle); } &:focus-visible { outline: 2px solid var(--color-primary); } }
-.sheet-body { flex: 1 1 auto; overflow-y: auto; overscroll-behavior: contain; padding: var(--space-3) var(--space-6); }
-.sheet-group + .sheet-group { border-top: 1px solid var(--color-border); }
-.sheet-group-head { appearance: none; width: 100%; display: flex; align-items: center; gap: var(--space-2); padding: var(--space-3) 0; border: 0; background: none; font: inherit; cursor: pointer; text-align: left; color: var(--color-ink); .sheet-group-title { flex: 1; font-weight: 600; } .sheet-group-count { color: var(--color-text-secondary); font-variant-numeric: tabular-nums; font-size: 13px; } &:focus-visible { outline: 2px solid var(--color-primary); } }
-.sheet-grid { list-style: none; margin: 0 0 var(--space-3); padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); gap: var(--space-2); }
+.sheet-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-2); margin: 0; }
+.sheet-stat {
+  display: flex; flex-direction: column-reverse; align-items: center; gap: 2px;
+  padding: var(--space-2) var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-subtle);
+  dd { margin: 0; font-size: 22px; font-weight: 700; line-height: 1.2; font-variant-numeric: tabular-nums; }
+  dt { font-size: 12px; color: var(--color-text-secondary); }
+  &.is-flag dd { color: var(--color-warning); }
+}
+.sheet-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: var(--space-2) var(--space-6) var(--space-4); display: grid; gap: 10px; align-content: start; }
+.sheet-group { border-radius: var(--radius-sm); background: var(--color-surface-subtle); padding: 0 var(--space-3); }
+.sheet-group-head { appearance: none; width: 100%; display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); padding: var(--space-3) 0; border: 0; background: none; font: inherit; cursor: pointer; text-align: left; color: var(--color-ink); .sheet-group-title { font-weight: 600; font-variant-numeric: tabular-nums; } .sheet-chevron { color: var(--color-text-muted); font-size: 12px; } &:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; } }
+.sheet-grid { list-style: none; margin: 0; padding: 0 0 var(--space-3); display: grid; grid-template-columns: repeat(5, 1fr); gap: var(--space-2); }
 .sheet-no {
   position: relative;
   appearance: none;
@@ -128,14 +161,16 @@
   font: inherit;
   font-variant-numeric: tabular-nums;
   cursor: pointer;
+  transition: border-color var(--motion-fast);
   &:hover { border-color: var(--color-primary); }
   &:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
   &.is-answered { background: var(--color-primary-soft); border-color: var(--color-primary-soft); }
   &.is-current { background: var(--color-primary); border-color: var(--color-primary); color: #fff; }
-  .sheet-flag { position: absolute; top: 1px; right: 4px; font-size: 11px; color: var(--color-warning); }
+  /* a flag never replaces the state colour, it sits in the corner on top */
+  .sheet-flag { position: absolute; top: 1px; right: 4px; font-size: 11px; line-height: 1; color: var(--color-warning); }
   &.is-current .sheet-flag { color: #fff; }
 }
-.sheet-foot { display: flex; justify-content: flex-end; gap: var(--space-3); padding: var(--space-4) var(--space-6); border-top: 1px solid var(--color-border); }
+.sheet-foot { flex: none; display: flex; justify-content: flex-end; gap: var(--space-3); padding: var(--space-3) var(--space-6) var(--space-4); box-shadow: 0 -6px 16px rgba(43, 43, 51, 0.05); }
 
 /* ---- hand-in dialog ----------------------------------------------------- */
 .exam-dialog-layer { position: fixed; inset: 0; z-index: 50; background: rgba(43, 43, 51, 0.45); .exam-dialog { z-index: 51; } }

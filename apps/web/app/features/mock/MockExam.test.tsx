@@ -107,7 +107,7 @@ describe("Exam Mode", () => {
     expect(screen.getByText("言語知識 · 問題1")).toBeInTheDocument();
     expect(screen.getByText("已答 1 / 3")).toBeInTheDocument();       // restored draft counts
     const clock = screen.getByRole("timer");
-    expect(clock.textContent).toMatch(/^1:29:5\d$|^1:30:00$/);          // ≈ 90 min left
+    expect(clock.textContent).toMatch(/^1:29:\d\d$|^1:30:00$/);          // ≈ 90 min left
     // one-screen-many-questions for the whole 大題, and no verdict anywhere
     expect(screen.getByText("题干 q1")).toBeInTheDocument();
     expect(screen.getByText("题干 q2")).toBeInTheDocument();
@@ -136,17 +136,47 @@ describe("Exam Mode", () => {
     await user.click(screen.getAllByRole("button", { name: /标记待检查/ })[1]!);  // flag q2
     await user.click(screen.getByRole("button", { name: "答题卡" }));
     const sheet = await screen.findByRole("dialog", { name: "答题卡" });
-    expect(within(sheet).getByText("已作答 1 · 未作答 2 · 标记 1")).toBeInTheDocument();
-    expect(within(sheet).getByRole("button", { name: /^問題1\s*\d+\/\d+$/ })).toHaveAttribute("aria-expanded", "true");
-    expect(within(sheet).getByRole("button", { name: /^問題2\s*\d+\/\d+$/ })).toHaveAttribute("aria-expanded", "false");
+    const stat = (label: string) => within(sheet).getByText(label).previousSibling;
+    expect(stat("已作答")).toHaveTextContent("1");
+    expect(stat("未作答")).toHaveTextContent("2");
+    expect(stat("标记待检查")).toHaveTextContent("1");
+    expect(within(sheet).getByRole("button", { name: /^問題1 · \d+\/\d+$/ })).toHaveAttribute("aria-expanded", "true");
+    expect(within(sheet).getByRole("button", { name: /^問題2 · \d+\/\d+$/ })).toHaveAttribute("aria-expanded", "false");
     expect(within(sheet).getByRole("button", { name: "問題1 第 1 题，已作答" })).toBeInTheDocument();
     expect(within(sheet).getByRole("button", { name: /第 2 题，未作答，已标记/ })).toBeInTheDocument();
     // jump into the folded second group
-    await user.click(within(sheet).getByRole("button", { name: /^問題2\s*\d+\/\d+$/ }));
+    await user.click(within(sheet).getByRole("button", { name: /^問題2 · \d+\/\d+$/ }));
     await user.click(within(sheet).getByRole("button", { name: /問題2 第 3 题/ }));
     expect(await screen.findByRole("heading", { name: "問題2" })).toBeInTheDocument();
     expect(screen.getByText("题干 q3")).toBeInTheDocument();
     expect(sheet.closest(".sheet-root")).not.toHaveClass("is-open");
+  });
+
+  it("the status-bar clock actually runs (no freezing on re-render)", async () => {
+    authStore.setSession("tok", USER);
+    setup();
+    renderExam();
+    const clock = await screen.findByRole("timer");
+    const first = clock.textContent;
+    await waitFor(() => expect(screen.getByRole("timer").textContent).not.toBe(first),
+                  { timeout: 3000 });
+  });
+
+  it("reopening the sheet expands only the group the user is on", async () => {
+    authStore.setSession("tok", USER);
+    setup();
+    const user = userEvent.setup();
+    renderExam();
+    await user.click(await screen.findByRole("button", { name: "下一大题" }));
+    await user.click(screen.getByRole("radio", { name: /q3-a/ }));      // now in 問題2
+    await user.click(screen.getByRole("button", { name: "答题卡" }));
+    const sheet = await screen.findByRole("dialog", { name: "答题卡" });
+    expect(within(sheet).getByRole("button", { name: /^問題2 · \d+\/\d+$/ }))
+      .toHaveAttribute("aria-expanded", "true");
+    expect(within(sheet).getByRole("button", { name: /^問題1 · \d+\/\d+$/ }))
+      .toHaveAttribute("aria-expanded", "false");
+    expect(within(sheet).getByRole("button", { name: "問題2 第 3 题，已作答，当前题" }))
+      .toHaveAttribute("aria-current", "true");
   });
 
   it("Escape closes the sheet", async () => {

@@ -134,6 +134,7 @@ export function ExamPhaseBody({ sessionId, state, phase, content, drafts,
     setGroupIdx(gi);
     saveGroupIndex(sessionId, phase.phase_id, gi);
     setCurrent(qid);
+    pinnedUntil.current = Date.now() + 900;
     setFocusReq((r) => ({ id: qid, n: (r?.n ?? 0) + 1 }));
     setSheetOpen(false);
   }, [groupOfQuestion, phase.phase_id, sessionId]);
@@ -151,6 +152,32 @@ export function ExamPhaseBody({ sessionId, state, phase, content, drafts,
     }); });
     return () => { cancelAnimationFrame(id1); cancelAnimationFrame(id2); };
   }, [focusReq]);
+
+  // The "current" question follows what the user is actually looking at: the
+  // first visible card whose top has passed under the exam bar. A jump from
+  // the sheet pins it for a moment so the smooth scroll cannot flip it back.
+  const pinnedUntil = useRef(0);
+  useEffect(() => {
+    let raf = 0;
+    const spy = () => {
+      raf = 0;
+      if (Date.now() < pinnedUntil.current) return;
+      const root = document.querySelector(".exam-main");
+      if (!root) return;
+      const barH = (document.querySelector(".exam-bar-wrap") as HTMLElement | null)
+        ?.getBoundingClientRect().bottom ?? 80;
+      let pick: string | null = null;
+      for (const el of root.querySelectorAll<HTMLElement>(".exam-question")) {
+        if (el.offsetParent === null) continue;          // hidden panel questions
+        const r = el.getBoundingClientRect();
+        if (r.bottom > barH + 24) { pick = el.dataset.questionId ?? null; break; }
+      }
+      if (pick) setCurrent((c) => (c === pick ? c : pick));
+    };
+    const onScroll = () => { if (!raf) raf = requestAnimationFrame(spy); };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => { window.removeEventListener("scroll", onScroll); if (raf) cancelAnimationFrame(raf); };
+  }, [groupIdx]);
 
   const submit = useMutation<MockState, ApiError, void>({
     mutationFn: () => submitMockPhase(sessionId, phase.phase_id, flat.map((q) => ({
@@ -224,7 +251,8 @@ export function ExamPhaseBody({ sessionId, state, phase, content, drafts,
       </main>
 
       <AnswerSheetDrawer open={sheetOpen} onClose={() => setSheetOpen(false)}
-                         groups={groups} currentGroupIdx={groupIdx}
+                         groups={groups}
+                         currentGroupIdx={(current && groupOfQuestion.get(current)) || groupIdx}
                          currentQid={current} isAnswered={isAnswered} flags={flags}
                          onJump={jumpTo} actionLabel={actionLabel}
                          onAction={openConfirm} phaseTitle={phase.title} />
