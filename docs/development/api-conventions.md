@@ -34,7 +34,7 @@
 | 端点 | 说明 |
 |---|---|
 | `GET /api/exams/{id}/mock` | 公开：该试卷是否可模考（`available`/`reason`/Phase 与时限），不含内容与答案 |
-| `POST /api/mock-exams` `{exam_id}` | 开始模考：固定当前 release，开始第 1 个 Phase 计时；同事务放弃进行中的练习或模考，无确认；不可模考 → 422 `mock_not_available` |
+| `POST /api/mock-exams` `{exam_id}` | 开始模考：固定当前 release，开始第 1 个 Phase 计时；独立名额，不影响练习/Quick（ADR-0020）；已有进行中模考 → 409 `mock_in_progress`（带 session_id），`replace_active=true` 才放弃旧模考；不可模考 → 422 `mock_not_available` |
 | `GET /api/mock-exams/current` / `{id}` | 权威状态（含 `server_now`、各 Phase `status/expires_at/remaining_seconds`、仅当前 Phase 的 `active_units`）；读取时顺带封存已到期 Phase |
 | `GET /api/mock-exams/{id}/units/{sessionUnitId}` | 无答案 Unit 内容，仅限当前 Phase，否则 409 `unit_not_in_active_phase` |
 | `PUT .../units/{suid}/drafts`、`GET .../drafts` | 草稿（row_version 乐观锁，同练习）；恢复只返回当前 Phase |

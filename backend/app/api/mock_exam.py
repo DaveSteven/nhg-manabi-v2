@@ -10,9 +10,12 @@ Rules enforced here (the client only displays):
   (skip != wrong). Closing the page is not ending the exam.
 - Order: Phases run strictly in sequence; a closed Phase is never reopened or
   editable, early submission does not carry leftover time forward.
-- One slot: practice and mock share one in-progress slot (`ux_one_active_main`).
-  Starting a mock abandons the in-progress practice or mock in the same
-  transaction, no confirmation; Quick Practice is untouched.
+- Slots (ADR-0020): a mock has its OWN single in-progress slot
+  (`ux_one_active_mock`) and never interacts with practice or Quick Practice
+  — starting either leaves a running mock untouched and vice versa. Starting a
+  second mock while one is still running is a 409 `mock_in_progress` naming
+  the running one (the client offers to continue); `replace_active=true`
+  deliberately abandons it.
 - Leakage: nothing here returns correct options, explanations or transcripts
   before the LAST Phase is closed. Unit content comes only for the ACTIVE
   Phase and only through the public (answer-free) payload. After completion
@@ -277,16 +280,17 @@ def _state(conn, session_id: uuid.UUID) -> dict:
 
 class MockCreate(BaseModel):
     exam_id: str
+    replace_active: bool = False   # explicit consent to abandon a running mock
 
 
 @router.post("/api/mock-exams", status_code=201)
 def create_mock_exam(body: MockCreate,
                      user_id: uuid.UUID = Depends(get_current_user_id)) -> dict:
-    """Start a strict mock of the exam's current release. Replaces any
-    in-progress practice or mock of the user atomically (no confirmation)."""
+    """Start a strict mock of the exam's current release. Independent of
+    practice; a running mock must be continued or explicitly replaced."""
     for attempt in (1, 2):
         try:
-            return _create(body.exam_id, user_id)
+            return _create(body.exam_id, user_id, body.replace_active)
         except IntegrityError:
             if attempt == 2:
                 raise HTTPException(
@@ -296,7 +300,7 @@ def create_mock_exam(body: MockCreate,
     raise AssertionError("unreachable")
 
 
-def _create(exam_id: str, user_id: uuid.UUID) -> dict:
+def _create(exam_id: str, user_id: uuid.UUID, replace_active: bool) -> dict:
     with get_engine().begin() as conn:
         plan = _plan(conn, exam_id)
         if not plan["available"]:
@@ -306,11 +310,30 @@ def _create(exam_id: str, user_id: uuid.UUID) -> dict:
                         "message": "this exam cannot be taken as a mock",
                         "reason": plan["reason"]})
         rid = uuid.UUID(plan["release_id"])
-        conn.execute(text(
-            "UPDATE study_sessions SET state = 'abandoned', ended_at = now(),"
-            " version = version + 1 WHERE user_id = :u"
-            " AND mode IN ('practice', 'mock') AND state = 'in_progress'"),
-            {"u": user_id})
+        running = conn.execute(text(
+            "SELECT id FROM study_sessions WHERE user_id = :u"
+            " AND mode = 'mock' AND state = 'in_progress' FOR UPDATE"),
+            {"u": user_id}).scalar()
+        if running is not None:
+            # a run whose time is up is already over: seal it first
+            _owned_advanced(conn, running, user_id)
+            running = conn.execute(text(
+                "SELECT s.id, r.exam_id FROM study_sessions s"
+                " JOIN exam_releases r ON r.id = s.mock_release_id"
+                " WHERE s.id = :i AND s.state = 'in_progress'"),
+                {"i": running}).mappings().first()
+        if running is not None:
+            if not replace_active:
+                raise HTTPException(
+                    status_code=409,
+                    detail={"code": "mock_in_progress",
+                            "message": "a mock exam is already in progress",
+                            "session_id": str(running["id"]),
+                            "exam_id": running["exam_id"]})
+            conn.execute(text(
+                "UPDATE study_sessions SET state = 'abandoned',"
+                " ended_at = now(), version = version + 1"
+                " WHERE id = :i"), {"i": running["id"]})
         sid = conn.execute(text(
             "INSERT INTO study_sessions (id, user_id, mode, feedback_mode,"
             " state, mock_release_id, config)"

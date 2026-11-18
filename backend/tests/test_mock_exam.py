@@ -313,7 +313,7 @@ def states(pg_engine, user=USER_A):
 
 
 @requires_db
-def test_mock_and_practice_replace_each_other_without_prompt(
+def test_mock_is_independent_of_practice_and_quick(
         pg_engine, published_release, monkeypatch):
     client = make_client(monkeypatch, pg_engine)
     add_phases(pg_engine, published_release)
@@ -323,42 +323,79 @@ def test_mock_and_practice_replace_each_other_without_prompt(
     quick = client.post("/api/quick-practice/sessions", json={
         "release_id": str(published_release), "unit_id": SINGLE_UNIT},
         headers=auth(USER_A)).json()
-    m1 = start(client)
+    m = start(client)                       # starting a mock touches neither
     st = states(pg_engine)
-    assert st[practice["id"]] == "abandoned"          # mock replaced practice
-    assert st[quick["id"]] == "in_progress"           # quick untouched
-    assert st[m1["id"]] == "in_progress"
+    assert st[practice["id"]] == st[quick["id"]] == st[m["id"]] == "in_progress"
 
-    m2 = start(client)                                # new mock replaces old
-    st = states(pg_engine)
-    assert st[m1["id"]] == "abandoned" and st[m2["id"]] == "in_progress"
-    # abandoned mock is gone for the user
-    assert client.get(f"/api/mock-exams/{m1['id']}/units/x",
-                      headers=auth(USER_A)).status_code in (404, 422)
-
+    # starting practice (new topic session) leaves the running mock alone
     p2 = client.post("/api/topic-practice/sessions", json={
-        "level": "N5", "question_type_id": "grammar_cloze", "count": 1,
-        "feedback_mode": "immediate"}, headers=auth(USER_A)).json()
+        "level": "N5", "question_type_id": "vocabulary_kanji_reading",
+        "count": 1, "feedback_mode": "immediate"}, headers=auth(USER_A)).json()
+    client.post("/api/quick-practice/sessions", json={
+        "release_id": str(published_release), "unit_id": CLOZE_UNIT},
+        headers=auth(USER_A))
     st = states(pg_engine)
-    assert st[m2["id"]] == "abandoned" and st[p2["id"]] == "in_progress"
-    assert st[quick["id"]] == "in_progress"
-    # an abandoned mock can no longer be submitted into
-    assert submit_phase(client, m2["id"], "p1", []).status_code in (404, 409)
-    assert client.get("/api/mock-exams/current", headers=auth(USER_A)).status_code == 404
+    assert st[practice["id"]] == "abandoned" and st[p2["id"]] == "in_progress"
+    assert st[m["id"]] == "in_progress"
+    s = client.get(f"/api/mock-exams/{m['id']}", headers=auth(USER_A)).json()
+    assert s["state"] == "in_progress" and s["active_phase_id"] == "p1"
+    assert client.get("/api/mock-exams/current",
+                      headers=auth(USER_A)).json()["id"] == m["id"]
+    # mock answers/submits don't disturb the practice session either
+    su1 = unit_ids(s)[CLOZE_UNIT]
+    assert submit_phase(client, m["id"], "p1", [(su1, Q1, Q1 + "-o2")]).status_code == 200
+    assert states(pg_engine)[p2["id"]] == "in_progress"
 
 
 @requires_db
-def test_db_forbids_two_active_main_sessions(pg_engine, published_release,
-                                             monkeypatch):
+def test_second_mock_needs_explicit_replace(pg_engine, published_release,
+                                            monkeypatch):
+    client = make_client(monkeypatch, pg_engine)
+    add_phases(pg_engine, published_release)
+    m1 = start(client)
+    r = client.post("/api/mock-exams", json={"exam_id": EXAM_ID},
+                    headers=auth(USER_A))
+    assert r.status_code == 409
+    d = r.json()["detail"]
+    assert d["code"] == "mock_in_progress" and d["session_id"] == m1["id"]
+    assert d["exam_id"] == EXAM_ID
+    assert states(pg_engine)[m1["id"]] == "in_progress"     # nothing lost
+    r = client.post("/api/mock-exams", json={"exam_id": EXAM_ID,
+                                             "replace_active": True},
+                    headers=auth(USER_A))
+    assert r.status_code == 201
+    m2 = r.json()
+    st = states(pg_engine)
+    assert st[m1["id"]] == "abandoned" and st[m2["id"]] == "in_progress"
+    assert submit_phase(client, m1["id"], "p1", []).status_code == 409
+    # a finished-by-time mock never blocks a new start
+    shift(pg_engine, m2["id"], 7200)
+    r = client.post("/api/mock-exams", json={"exam_id": EXAM_ID},
+                    headers=auth(USER_A))
+    assert r.status_code == 201
+    assert states(pg_engine)[m2["id"]] == "completed"
+    # another user is unaffected
+    assert start(client, USER_B)["state"] == "in_progress"
+
+
+@requires_db
+def test_db_allows_one_practice_plus_one_mock_but_not_two_of_a_kind(
+        pg_engine, published_release, monkeypatch):
     client = make_client(monkeypatch, pg_engine)
     add_phases(pg_engine, published_release)
     start(client)
+    ins = ("INSERT INTO study_sessions (id, user_id, mode, feedback_mode,"
+           " state, mock_release_id, config) VALUES (gen_random_uuid(), :u,"
+           " :m, 'immediate', 'in_progress', {r}, '{{}}'::jsonb)")
+    with pg_engine.begin() as conn:       # practice next to a mock: allowed
+        conn.execute(sa.text(ins.format(r="NULL")), {"u": USER_A, "m": "practice"})
     with pytest.raises(sa.exc.IntegrityError):
         with pg_engine.begin() as conn:
-            conn.execute(sa.text(
-                "INSERT INTO study_sessions (id, user_id, mode, feedback_mode,"
-                " state, config) VALUES (gen_random_uuid(), :u, 'practice',"
-                " 'immediate', 'in_progress', '{}'::jsonb)"), {"u": USER_A})
+            conn.execute(sa.text(ins.format(r="NULL")), {"u": USER_A, "m": "practice"})
+    with pytest.raises(sa.exc.IntegrityError):
+        with pg_engine.begin() as conn:
+            conn.execute(sa.text(ins.format(r=f"'{published_release}'")),
+                         {"u": USER_A, "m": "mock"})
     with pytest.raises(sa.exc.IntegrityError):
         with pg_engine.begin() as conn:                # one run per phase
             conn.execute(sa.text(

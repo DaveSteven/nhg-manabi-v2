@@ -180,7 +180,7 @@ def _replace_and_create(engine, body: PracticeSessionCreate,
         conn.execute(text(
             "UPDATE study_sessions SET state = 'abandoned', ended_at = now(),"
             " version = version + 1"
-            " WHERE user_id = :u AND mode IN ('practice', 'mock')"
+            " WHERE user_id = :u AND mode = 'practice'"
             "   AND state = 'in_progress'"), {"u": user_id})
 
         session_id = conn.execute(text(
