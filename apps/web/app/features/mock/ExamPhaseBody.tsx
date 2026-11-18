@@ -355,7 +355,7 @@ function UnitBlock({ unit, noOf, manager, flags, onFlag, onCurrent, current,
     return (
       <div className="exam-unit" data-unit-id={vm.unit.id}>
         {audioNote}
-        <SharedMaterialLayout content={vm} focusRequest={focusRequest}
+        <SharedMaterialLayout content={vm} focusRequest={focusRequest} flow={unit.flow}
           numberOf={(q) => noOf.get(q.id) ?? q.position}
           material={<MaterialDisplay unit={vm.unit} materials={vm.materials} />}
           footer={null}>

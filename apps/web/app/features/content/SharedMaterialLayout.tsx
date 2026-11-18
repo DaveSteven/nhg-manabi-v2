@@ -18,10 +18,13 @@ export function usesSplitLayout(c: VmContentUnit): boolean {
   return hasText && (c.unit.kind === "passage" || c.unit.slotIds.length > 0);
 }
 
-export function SharedMaterialLayout({ content, material, footer, children, numberOf, focusRequest }: {
+export function SharedMaterialLayout({ content, material, footer, children, numberOf, focusRequest, flow }: {
   content: VmContentUnit;
   /** Display number for a question chip (default: the paper's printed number). */
   numberOf?: (q: VmContentUnit["questions"][number]) => string | number;
+  /** Flow mode (short passages): no sticky panel, no one-at-a-time switching —
+   * article and ALL its questions simply scroll together. */
+  flow?: boolean;
   /** Programmatic activation (exam answer sheet jump): a new `n` re-focuses
    * the question and scrolls its slot into view, like clicking the chip. */
   focusRequest?: { id: string; n: number } | null;
@@ -89,13 +92,13 @@ export function SharedMaterialLayout({ content, material, footer, children, numb
   const activeIdx = content.questions.findIndex((q) => q.id === active);
 
   return (
-    <div className="shared-material-layout" ref={root}>
+    <div className={`shared-material-layout${flow ? " is-flow" : ""}`} ref={root}>
       {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
       <div className="shared-material-article" onClick={onArticleClick}>
         {material}
       </div>
       <aside className="reading-question-panel" aria-label="答题面板">
-        {content.questions.length > 1 ? (
+        {content.questions.length > 1 && !flow ? (
           <nav aria-label="本篇题号" className="panel-question-nav">
             <button type="button" aria-label="上一小题" disabled={activeIdx <= 0}
                     onClick={() => gotoQuestion(content.questions[activeIdx - 1]!.id)}>

@@ -179,6 +179,30 @@ describe("Exam Mode", () => {
       .toHaveAttribute("aria-current", "true");
   });
 
+  it("short passages flow with the page (no sticky panel, no chip switching); long ones keep it", async () => {
+    authStore.setSession("tok", USER);
+    setup();
+    const mkPassage = (qtype: string, id: string) => ({
+      ...unit(id, `su-${id}`, L1, [question(`${id}-q1`, 1, "1"), question(`${id}-q2`, 2, "2")]),
+      question_type_id: qtype, kind: "passage",
+      materials: [{ id: `${id}-m`, kind: "passage", role: "primary", language: "ja",
+                    content: rt("本文"), asset_id: null }],
+    });
+    server.use(http.get("*/api/mock-exams/m-1/content", () => HttpResponse.json({
+      phase_id: "p1", units: [mkPassage("reading_short", "ua"), mkPassage("reading_long", "ub")] })));
+    renderExam();
+    await screen.findByText("N2 模拟考试");
+    const layouts = await waitFor(() => {
+      const l = document.querySelectorAll(".shared-material-layout");
+      expect(l).toHaveLength(2);
+      return l;
+    });
+    expect(layouts[0]).toHaveClass("is-flow");
+    expect(layouts[0]!.querySelector(".panel-question-nav")).toBeNull();
+    expect(layouts[1]).not.toHaveClass("is-flow");
+    expect(layouts[1]!.querySelector(".panel-question-nav")).not.toBeNull();
+  });
+
   it("Escape closes the sheet", async () => {
     authStore.setSession("tok", USER);
     setup();

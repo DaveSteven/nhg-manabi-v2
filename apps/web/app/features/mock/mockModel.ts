@@ -34,8 +34,15 @@ export interface ExamQuestion {
   slotId: string | null;
 }
 
+/** Short passages (one or several per big question) flow with the page: a
+ * sticky panel would vanish with its own article and feel broken. Long
+ * readings and cloze keep the sticky answer panel. */
+const FLOW_TYPES = new Set(["reading_short", "reading_short_set"]);
+export const isFlowType = (questionTypeId: string) => FLOW_TYPES.has(questionTypeId);
+
 export interface ExamUnit {
   sessionUnitId: string;
+  flow: boolean;
   /** Server playback status per audio material at load time. */
   audio: Record<string, AudioStatus>;
   vm: VmContentUnit;
@@ -72,7 +79,7 @@ export function buildGroups(units: MockContentUnit[]): ExamGroup[] {
     }
     const vm = toViewModel(u);
     g.units.push({
-      sessionUnitId: u.session_unit_id, vm,
+      sessionUnitId: u.session_unit_id, vm, flow: isFlowType(u.question_type_id),
       audio: Object.fromEntries(u.audio.map((a) => [a.material_id, a])),
       split: usesSplitLayout(vm),
       hasAudio: vm.materials.some((m) => m.kind === "audio"),
