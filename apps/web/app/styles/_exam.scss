@@ -173,7 +173,7 @@
   .sheet-flag { position: absolute; top: 1px; right: 4px; font-size: 11px; line-height: 1; color: var(--color-warning); }
   &.is-current .sheet-flag { color: #fff; }
 }
-.sheet-foot { flex: none; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--space-3); padding: var(--space-3) var(--space-6) var(--space-4); box-shadow: 0 -6px 16px rgba(43, 43, 51, 0.05); }
+.sheet-foot { flex: none; display: flex; align-items: center; justify-content: flex-end; gap: var(--space-3); padding: var(--space-3) var(--space-6) var(--space-4); box-shadow: 0 -6px 16px rgba(43, 43, 51, 0.05); }
 
 /* ---- hand-in dialog ----------------------------------------------------- */
 .exam-dialog-layer { position: fixed; inset: 0; z-index: 50; background: rgba(43, 43, 51, 0.45); .exam-dialog { z-index: 51; } }
@@ -347,11 +347,12 @@
   }
 }
 
-/* quiet, full-width link row under the sheet's primary actions */
+/* destructive but quiet: sits at the left of the sheet's action row */
 .sheet-abandon {
-  flex: 1 0 100%; appearance: none; background: none; border: 0; cursor: pointer;
-  padding: var(--space-1) 0 0; font: inherit; font-size: 13px; text-align: center;
-  color: var(--color-text-secondary);
-  &:hover { color: var(--color-danger); text-decoration: underline; }
-  &:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; border-radius: 4px; }
+  margin-right: auto; appearance: none; background: none; border: 0; cursor: pointer;
+  min-height: 40px; padding: 0 var(--space-2); border-radius: var(--radius-pill);
+  font: inherit; font-size: 14px; color: var(--color-danger);
+  opacity: 0.8; transition: opacity var(--motion-fast), background var(--motion-fast);
+  &:hover { opacity: 1; background: color-mix(in srgb, var(--color-danger) 10%, transparent); }
+  &:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
 }

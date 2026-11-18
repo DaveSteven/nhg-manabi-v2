@@ -139,11 +139,11 @@ export function AnswerSheetDrawer({ open, onClose, groups, currentGroupIdx,
         </div>
 
         <footer className="sheet-foot">
-          <Button variant="secondary" onClick={onClose}>返回作答</Button>
-          <Button variant="primary" onClick={onAction}>{actionLabel}</Button>
           <button type="button" className="sheet-abandon" onClick={onAbandon}>
             放弃考试
           </button>
+          <Button variant="secondary" onClick={onClose}>返回作答</Button>
+          <Button variant="primary" onClick={onAction}>{actionLabel}</Button>
         </footer>
       </aside>
     </div>
