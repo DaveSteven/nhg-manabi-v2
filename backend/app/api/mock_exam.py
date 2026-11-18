@@ -16,6 +16,11 @@ Rules enforced here (the client only displays):
   second mock while one is still running is a 409 `mock_in_progress` naming
   the running one (the client offers to continue); `replace_active=true`
   deliberately abandons it.
+- Listening (M3): each audio plays ONCE on a server timeline. Pressing play
+  records `study_audio_plays.started_at` (idempotent claim); from then on the
+  position is `now - started_at` — no rewind, no replay. A refresh resumes at
+  the live position; after the duration has elapsed the audio is consumed.
+  Transcripts/cues are never part of any mock payload.
 - Leakage: nothing here returns correct options, explanations or transcripts
   before the LAST Phase is closed. Unit content comes only for the ACTIVE
   Phase and only through the public (answer-free) payload. After completion
@@ -276,6 +281,43 @@ def _state(conn, session_id: uuid.UUID) -> dict:
     }
 
 
+
+# --------------------------------------------------------------- listening ----
+
+def _audio_status(conn, session_unit_id, release_id, unit_id: str,
+                  only_material: str | None = None) -> list[dict]:
+    """Per audio material of a unit: idle / playing (live position) / ended.
+    Unknown duration + already started => ended (never guessed as replayable)."""
+    rows = conn.execute(text(
+        "SELECT m.material_id, m.asset_id,"
+        " coalesce(ms.verified_duration_ms, ma.duration_ms) AS duration_ms,"
+        " p.started_at,"
+        " (extract(epoch FROM (now() - p.started_at)) * 1000)::bigint AS elapsed_ms"
+        " FROM release_unit_materials m"
+        " LEFT JOIN media_assets ma ON ma.id = m.asset_id"
+        " LEFT JOIN media_storage ms ON ms.asset_id = m.asset_id"
+        "  AND ms.state = 'stored'"
+        " LEFT JOIN study_audio_plays p ON p.session_unit_id = :su"
+        "  AND p.material_id = m.material_id"
+        " WHERE m.release_id = :r AND m.unit_id = :u AND m.kind = 'audio'"
+        "  AND (CAST(:mid AS text) IS NULL OR m.material_id = :mid)"
+        " ORDER BY m.position"),
+        {"su": session_unit_id, "r": release_id, "u": unit_id,
+         "mid": only_material}).mappings().all()
+    out = []
+    for r in rows:
+        dur = r["duration_ms"]
+        if r["started_at"] is None:
+            state, pos = "idle", 0
+        elif dur is None or r["elapsed_ms"] >= dur:
+            state, pos = "ended", dur
+        else:
+            state, pos = "playing", int(r["elapsed_ms"])
+        out.append({"material_id": r["material_id"], "state": state,
+                    "position_ms": pos, "duration_ms": dur})
+    return out
+
+
 # -------------------------------------------------------------------- API ----
 
 class MockCreate(BaseModel):
@@ -467,12 +509,35 @@ def get_mock_phase_content(
                                          r["unit_id"], include_private=False)
             payload["session_unit_id"] = str(r["id"])
             payload["session_unit_state"] = r["state"]
+            payload["audio"] = _audio_status(conn, r["id"], r["release_id"],
+                                             r["unit_id"])
             payload["layer"] = {
                 "layer_id": r["layer_id"], "label": r["display_label"],
                 "position": r["layer_position"], "subject": r["subject"],
                 "section_title": r["section_title"]}
             units.append(payload)
     return {"phase_id": phase_id, "units": units}
+
+
+@router.post("/api/mock-exams/{session_id}/units/{session_unit_id}/audio/{material_id}/start")
+def start_mock_audio(session_id: uuid.UUID, session_unit_id: uuid.UUID,
+                     material_id: str,
+                     user_id: uuid.UUID = Depends(get_current_user_id)) -> dict:
+    """Claim the one playback of an audio material. Idempotent: the first call
+    stamps the server start time; later calls (refresh, retry, a second tab)
+    just report the live position — they never restart the audio."""
+    with get_engine().begin() as conn:
+        sess = _owned_advanced(conn, session_id, user_id)
+        unit = _active_unit(conn, sess, session_id, session_unit_id)
+        if not _audio_status(conn, session_unit_id, unit["release_id"],
+                             unit["unit_id"], material_id):
+            raise HTTPException(status_code=404, detail="audio not found")
+        conn.execute(text(
+            "INSERT INTO study_audio_plays (session_unit_id, material_id)"
+            " VALUES (:su, :m) ON CONFLICT DO NOTHING"),
+            {"su": session_unit_id, "m": material_id})
+        return _audio_status(conn, session_unit_id, unit["release_id"],
+                             unit["unit_id"], material_id)[0]
 
 
 @router.put("/api/mock-exams/{session_id}/units/{session_unit_id}/drafts")

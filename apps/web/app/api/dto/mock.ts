@@ -69,6 +69,13 @@ export const MockContentSchema = z.object({
   units: z.array(PublicUnitSchema.extend({
     session_unit_id: z.string(),
     session_unit_state: z.string(),
+    /** Server-timeline playback status per audio material (strict mock). */
+    audio: z.array(z.object({
+      material_id: z.string(),
+      state: z.enum(["idle", "playing", "ended"]),
+      position_ms: z.number().int(),
+      duration_ms: z.number().int().nullable(),
+    })),
     layer: z.object({
       layer_id: z.string(),
       label: z.string().nullable(),
@@ -78,6 +85,13 @@ export const MockContentSchema = z.object({
     }),
   })),
 });
+export const AudioStatusSchema = z.object({
+  material_id: z.string(),
+  state: z.enum(["idle", "playing", "ended"]),
+  position_ms: z.number().int(),
+  duration_ms: z.number().int().nullable(),
+});
+export type AudioStatus = z.infer<typeof AudioStatusSchema>;
 export type MockContent = z.infer<typeof MockContentSchema>;
 export type MockContentUnit = MockContent["units"][number];
 

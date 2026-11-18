@@ -39,6 +39,7 @@
 | `GET /api/mock-exams/{id}/units/{sessionUnitId}` | 无答案 Unit 内容，仅限当前 Phase，否则 409 `unit_not_in_active_phase` |
 | `PUT .../units/{suid}/drafts`、`GET .../drafts` | 草稿（row_version 乐观锁，同练习）；恢复只返回当前 Phase |
 | `POST /api/mock-exams/{id}/phases/{phaseId}/submit` | 交本 Phase；Phase 写在路径上，重复/重试对已关闭 Phase 幂等，绝不会误关下一个 Phase |
+| `POST .../units/{suid}/audio/{materialId}/start` | 登记音频唯一一次播放（幂等）；返回 `state`(idle/playing/ended)、`position_ms`、`duration_ms`；`/content` 的每个 Unit 也带 `audio` 状态 |
 | `GET /api/mock-exams/{id}/results` | 最后一个 Phase 关闭后才开放：各 Phase/科目答对数与正确率、逐题回顾；之前 409 `mock_not_finished` |
 
 服务端无后台任务：到期封存发生在任何访问该会话的请求中，按已存草稿正式提交，未选为 skip，下一 Phase 自上一 Phase 到期时刻起计时。模考答案不写入 `user_question_progress`，也不进入练习历史/概览。

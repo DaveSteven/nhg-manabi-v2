@@ -25,6 +25,7 @@ const unit = (id: string, suId: string, layer: { id: string; label: string },
   release_id: "r-1", id, layer_id: layer.id, question_type_id: "t", kind: "single",
   position: 1, label: null, slot_ids: [], conversion_status: "complete" as const,
   materials: [], questions: qs, session_unit_id: suId, session_unit_state: "pending",
+  audio: [] as unknown[],
   layer: { layer_id: layer.id, label: layer.label, position: 1, subject: "vocabulary",
            section_title: "文字・語彙" },
 });

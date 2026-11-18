@@ -2,9 +2,9 @@ import { apiFetch } from "../client";
 import { parseDto } from "../dto/exam";
 import { DraftSaveResultSchema, DraftsListSchema,
          type DraftSaveResult, type DraftsList } from "../dto/practice";
-import { MockAvailabilitySchema, MockContentSchema, MockResultsSchema,
+import { AudioStatusSchema, MockAvailabilitySchema, MockContentSchema, MockResultsSchema,
          MockStateSchema, type MockAvailability, type MockContent,
-         type MockResults, type MockState } from "../dto/mock";
+         type AudioStatus, type MockResults, type MockState } from "../dto/mock";
 import type { SaveDraftInput } from "./sessions";
 
 const enc = encodeURIComponent;
@@ -76,4 +76,14 @@ export function getMockResults(sessionId: string,
                                signal?: AbortSignal): Promise<MockResults> {
   return apiFetch(`/api/mock-exams/${enc(sessionId)}/results`, { signal })
     .then((p) => parseDto(MockResultsSchema, "GET mock results", p));
+}
+
+/** Claim the single playback of an audio material (idempotent, server clock). */
+export function startMockAudio(sessionId: string, sessionUnitId: string,
+                               materialId: string,
+                               signal?: AbortSignal): Promise<AudioStatus> {
+  return apiFetch(
+    `/api/mock-exams/${enc(sessionId)}/units/${enc(sessionUnitId)}/audio/${enc(materialId)}/start`,
+    { method: "POST", signal })
+    .then((p) => parseDto(AudioStatusSchema, "POST mock audio start", p));
 }

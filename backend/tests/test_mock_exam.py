@@ -438,3 +438,113 @@ def test_concurrent_phase_submits_close_the_phase_once(
             "SELECT count(*) FROM study_submitted_answers sa JOIN"
             " study_session_units su ON su.id = sa.session_unit_id"
             " WHERE su.session_id = :s"), {"s": sid}).scalar() == 2
+
+
+# ---------------------------------------------------------------- listening ----
+
+AUDIO_MAT = f"{SINGLE_UNIT}-m-audio"
+
+
+def add_audio(pg_engine, release_id, duration_ms=30000):
+    with pg_engine.begin() as conn:
+        conn.execute(sa.text(
+            "INSERT INTO release_unit_materials (release_id, material_id,"
+            " unit_id, position, kind, role, language, content, cues, asset_id)"
+            " VALUES (:r, :m, :u, 9, 'audio', 'primary', 'ja', NULL, NULL,"
+            " 'JLPTGO-N5-TEST-EX-as001')"),
+            {"r": release_id, "m": AUDIO_MAT, "u": SINGLE_UNIT})
+        conn.execute(sa.text(
+            "UPDATE media_assets SET duration_ms = :d WHERE id ="
+            " 'JLPTGO-N5-TEST-EX-as001'"), {"d": duration_ms})
+
+
+def to_phase2(client, pg_engine, sid):
+    with pg_engine.connect() as conn:
+        su1 = str(conn.execute(sa.text(
+            "SELECT id FROM study_session_units WHERE session_id = :s AND"
+            " unit_id = :u"), {"s": sid, "u": CLOZE_UNIT}).scalar())
+    st = submit_phase(client, sid, "p1", [(su1, Q1, Q1 + "-o2")]).json()
+    assert st["active_phase_id"] == "p2"
+    return unit_ids(st)[SINGLE_UNIT]
+
+
+def start_audio(client, sid, su, user=USER_A):
+    return client.post(
+        f"/api/mock-exams/{sid}/units/{su}/audio/{AUDIO_MAT}/start",
+        headers=auth(user))
+
+
+@requires_db
+def test_audio_plays_once_on_a_server_timeline(pg_engine, published_release,
+                                               monkeypatch):
+    client = make_client(monkeypatch, pg_engine)
+    add_phases(pg_engine, published_release)
+    add_audio(pg_engine, published_release)
+    sid = start(client)["id"]
+    # not in the active phase yet: cannot start (and the unit is not served)
+    with pg_engine.connect() as conn:
+        su2 = str(conn.execute(sa.text(
+            "SELECT id FROM study_session_units WHERE session_id = :s AND"
+            " unit_id = :u"), {"s": sid, "u": SINGLE_UNIT}).scalar())
+    assert start_audio(client, sid, su2).status_code == 409
+    su2 = to_phase2(client, pg_engine, sid)
+
+    # content reports idle before pressing play; never a transcript / cues
+    c = client.get(f"/api/mock-exams/{sid}/content", headers=auth(USER_A)).json()
+    a = c["units"][0]["audio"]
+    assert a == [{"material_id": AUDIO_MAT, "state": "idle", "position_ms": 0,
+                  "duration_ms": 30000}]
+    assert_no_leak(c)
+
+    r = start_audio(client, sid, su2)
+    assert r.status_code == 200 and r.json()["state"] == "playing"
+    assert r.json()["position_ms"] < 2000
+    with pg_engine.connect() as conn:
+        t0 = conn.execute(sa.text(
+            "SELECT started_at FROM study_audio_plays")).scalar()
+    # second press / refresh / other tab: same start time, live position
+    r2 = start_audio(client, sid, su2).json()
+    assert r2["state"] == "playing"
+    with pg_engine.connect() as conn:
+        assert conn.execute(sa.text(
+            "SELECT count(*), min(started_at) FROM study_audio_plays")).one() == (1, t0)
+
+    # 10s later the live position follows the server clock
+    with pg_engine.begin() as conn:
+        conn.execute(sa.text(
+            "UPDATE study_audio_plays SET started_at = started_at - interval"
+            " '10 seconds'"))
+    pos = client.get(f"/api/mock-exams/{sid}/content", headers=auth(USER_A)
+                     ).json()["units"][0]["audio"][0]
+    assert pos["state"] == "playing" and 10000 <= pos["position_ms"] < 13000
+
+    # after the duration it is consumed for good: no replay
+    with pg_engine.begin() as conn:
+        conn.execute(sa.text(
+            "UPDATE study_audio_plays SET started_at = started_at - interval"
+            " '60 seconds'"))
+    done = start_audio(client, sid, su2).json()
+    assert done["state"] == "ended" and done["position_ms"] == 30000
+    with pg_engine.connect() as conn:
+        assert conn.execute(sa.text(
+            "SELECT count(*) FROM study_audio_plays")).scalar() == 1
+
+
+@requires_db
+def test_audio_start_validation_and_isolation(pg_engine, published_release,
+                                              monkeypatch):
+    client = make_client(monkeypatch, pg_engine)
+    add_phases(pg_engine, published_release)
+    add_audio(pg_engine, published_release)
+    sid = start(client)["id"]
+    su2 = to_phase2(client, pg_engine, sid)
+    assert client.post(
+        f"/api/mock-exams/{sid}/units/{su2}/audio/nope/start",
+        headers=auth(USER_A)).status_code == 404
+    assert start_audio(client, sid, su2, user=USER_B).status_code == 404
+    assert client.post(
+        f"/api/mock-exams/{sid}/units/{su2}/audio/{AUDIO_MAT}/start"
+    ).status_code == 401
+    # once the phase is sealed the audio can no longer be started
+    shift(pg_engine, sid, 7200)
+    assert start_audio(client, sid, su2).status_code == 409

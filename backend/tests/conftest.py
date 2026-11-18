@@ -85,7 +85,7 @@ def clean_publish(pg_engine):
             # Study-domain rows may reference the fixture release via
             # study_session_units (FK fk_session_unit_snapshot); clear them
             # (isolated test DB) before the release cascade.
-            for table in ("study_answer_drafts", "study_submitted_answers",
+            for table in ("study_audio_plays", "study_answer_drafts", "study_submitted_answers",
                           "study_session_units", "study_results",
                           "study_phase_runs", "study_sessions",
                           "user_question_progress", "user_favorites"):
@@ -158,7 +158,7 @@ def clean_study(pg_engine):
 
     def wipe():
         with pg_engine.begin() as conn:
-            for table in ("study_answer_drafts", "study_submitted_answers",
+            for table in ("study_audio_plays", "study_answer_drafts", "study_submitted_answers",
                           "study_session_units", "study_results",
                           "study_phase_runs", "study_sessions",
                           "user_question_progress", "user_favorites"):

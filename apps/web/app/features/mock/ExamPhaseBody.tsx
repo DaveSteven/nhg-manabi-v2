@@ -15,6 +15,7 @@ import { clearSessionPendingRetries, loadPendingRetries } from "../practice/pend
 import { AnswerSheetDrawer } from "./AnswerSheetDrawer";
 import { ExamSubmitDialog } from "./ExamSubmitDialog";
 import { ExamTopBar } from "./ExamTopBar";
+import { StrictAudioPlayer, type LiveAudio } from "./StrictAudioPlayer";
 import { buildGroups, loadFlags, loadGroupIndex, saveFlags, saveGroupIndex,
          type ExamUnit } from "./mockModel";
 
@@ -95,6 +96,18 @@ export function ExamPhaseBody({ sessionId, state, phase, content, drafts,
   const [confirming, setConfirming] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [focusReq, setFocusReq] = useState<{ id: string; n: number } | null>(null);
+  // playback status per audio material, kept above the units so leaving and
+  // re-entering a 大題 continues on the same server timeline
+  const [audioLive, setAudioLive] = useState<Record<string, LiveAudio>>(() => {
+    const now = Date.now();
+    const m: Record<string, LiveAudio> = {};
+    for (const g of groups) for (const u of g.units) {
+      for (const a of Object.values(u.audio)) m[a.material_id] = { ...a, at: now };
+    }
+    return m;
+  });
+  const onAudio = useCallback((id: string, next: LiveAudio) =>
+    setAudioLive((prev) => ({ ...prev, [id]: next })), []);
 
   const toggleFlag = useCallback((qid: string) => {
     setFlags((prev) => {
@@ -194,7 +207,8 @@ export function ExamPhaseBody({ sessionId, state, phase, content, drafts,
           <UnitBlock key={u.sessionUnitId} unit={u} noOf={noOf}
                      manager={manager} flags={flags} onFlag={toggleFlag}
                      onCurrent={setCurrent} current={current}
-                     focusRequest={focusReq} />
+                     focusRequest={focusReq} sessionId={sessionId}
+                     audioLive={audioLive} onAudio={onAudio} />
         ))}
 
         {submitError ? <p role="alert">{submitError}</p> : null}
@@ -233,7 +247,10 @@ export function ExamPhaseBody({ sessionId, state, phase, content, drafts,
 }
 
 function UnitBlock({ unit, noOf, manager, flags, onFlag, onCurrent, current,
-  focusRequest }: {
+  focusRequest, sessionId, audioLive, onAudio }: {
+  sessionId: string;
+  audioLive: Record<string, LiveAudio>;
+  onAudio(id: string, next: LiveAudio): void;
   unit: ExamUnit;
   noOf: Map<string, string>;
   manager: ReturnType<typeof useDraftManager>;
@@ -293,9 +310,17 @@ function UnitBlock({ unit, noOf, manager, flags, onFlag, onCurrent, current,
     </ol>
   );
   const audioNote = unit.hasAudio ? (
-    <p className="exam-audio-note" role="note">
-      听力题：严格模考播放器（音频只播一次）尚未接入，本阶段暂不播放音频。
-    </p>
+    <>
+      {vm.materials.filter((m) => m.kind === "audio").map((m) => {
+        const st = audioLive[m.id];
+        return st ? (
+          <StrictAudioPlayer key={m.id} sessionId={sessionId}
+            sessionUnitId={unit.sessionUnitId} materialId={m.id}
+            src={m.audio?.kind === "url" ? m.audio.url : null}
+            status={st} onStatus={onAudio} />
+        ) : null;
+      })}
+    </>
   ) : null;
 
   if (unit.split) {

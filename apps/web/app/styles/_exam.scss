@@ -157,3 +157,16 @@
   font-size: 14px;
   .mock-banner-clock { font-weight: 700; font-variant-numeric: tabular-nums; &.tone-warn { color: var(--color-warning); } &.tone-danger { color: var(--color-danger); } }
 }
+
+/* ---- strict exam audio (played once, no controls) --------------------- */
+.strict-audio {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-6);
+  margin-bottom: var(--space-4);
+  .strict-audio-head { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2); }
+  .strict-audio-track { height: 6px; border-radius: var(--radius-pill); background: var(--color-surface-subtle); overflow: hidden; > span { display: block; height: 100%; background: var(--color-primary); border-radius: inherit; } }
+  .strict-audio-foot { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
+  .strict-audio-time { font-variant-numeric: tabular-nums; color: var(--color-text-secondary); }
+  p { margin: 0; }
+}

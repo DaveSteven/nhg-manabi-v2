@@ -1,4 +1,4 @@
-import type { MockContentUnit } from "../../api/dto/mock";
+import type { AudioStatus, MockContentUnit } from "../../api/dto/mock";
 import { toViewModel } from "../content/toViewModel";
 import { usesSplitLayout } from "../content/SharedMaterialLayout";
 import type { VmContentUnit } from "../content/viewModel";
@@ -36,6 +36,8 @@ export interface ExamQuestion {
 
 export interface ExamUnit {
   sessionUnitId: string;
+  /** Server playback status per audio material at load time. */
+  audio: Record<string, AudioStatus>;
   vm: VmContentUnit;
   split: boolean;
   hasAudio: boolean;
@@ -71,6 +73,7 @@ export function buildGroups(units: MockContentUnit[]): ExamGroup[] {
     const vm = toViewModel(u);
     g.units.push({
       sessionUnitId: u.session_unit_id, vm,
+      audio: Object.fromEntries(u.audio.map((a) => [a.material_id, a])),
       split: usesSplitLayout(vm),
       hasAudio: vm.materials.some((m) => m.kind === "audio"),
     });

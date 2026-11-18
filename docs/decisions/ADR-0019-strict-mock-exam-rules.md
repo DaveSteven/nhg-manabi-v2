@@ -40,3 +40,4 @@ V1 `exam_runs` 以 `section_expires_at` 由服务端控制分节时限、进行�
 - 单名额（已由 ADR-0020 / Alembic 0014 改回独立名额）：0013 曾以 `ux_one_active_main` 合并练习与模考，随后撤回。`study_phase_runs` 增加每 Phase 仅一次、每会话仅一个未关闭 run、`expires_at > started_at`。
 - 到期封存为惰性（请求触发，无后台任务）；下一 Phase 自上一 Phase 到期时刻起算。M7「不混入练习统计」落实为：模考答案不写 `user_question_progress`，不进练习历史。
 - 暂未实现（留给后续步骤）：严格听力播放（播放一次/服务器记录播放开始）、音频资产可用性作为模考开放条件、逐题解析与听力原文在结果页的开放、模考成绩列表入口、前端。
+- 听力（2026-11-18）：Alembic 0015 `study_audio_plays`（每 session unit × 音频一行，只插入）；开始播放即登记服务器时间，位置按 `now - started_at` 计算，刷新只能续播，超过时长即永久消耗；前端严格播放器无暂停/拖动/倍速/重播控件。仍未做：音频文件可用性作为开放条件、结果页开放原文。
