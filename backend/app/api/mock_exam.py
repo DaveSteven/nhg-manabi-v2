@@ -60,6 +60,43 @@ SCORING_METHOD = "mock_phases"
 
 # ------------------------------------------------------------ eligibility ----
 
+# R4: a strict mock must not open when its listening cannot actually be
+# played. Per Phase that has audio-bearing units, one of two sources must be
+# usable: (a) continuous mode — the Phase is a listening Phase (every unit
+# carries audio) AND the exam has a stored, non-corrupt full recording with a
+# known positive duration (same conditions as `_phase_audio`); or (b) every
+# audio material of every unit in the Phase has a stored, non-corrupt file
+# with a known positive duration (what the per-unit player needs). Pre-exam
+# check only: network failures during the exam are a separate concern.
+_PLAYABLE_ASSET = (
+    "EXISTS (SELECT 1 FROM media_assets ma"
+    " JOIN media_storage ms ON ms.asset_id = ma.id AND ms.state = 'stored'"
+    " WHERE ma.id = m.asset_id AND ma.availability <> 'corrupt'"
+    "  AND coalesce(ms.verified_duration_ms, ma.duration_ms) > 0)")
+_UNPLAYABLE_LISTENING_SQL = (
+    "SELECT 1 FROM release_exam_phases p"
+    " WHERE p.release_id = :r"
+    " AND EXISTS (SELECT 1 FROM release_phase_units pu"
+    "  JOIN release_unit_materials m ON m.release_id = pu.release_id"
+    "   AND m.unit_id = pu.unit_id AND m.kind = 'audio'"
+    "  WHERE pu.release_id = p.release_id AND pu.phase_id = p.phase_id"
+    f"  AND NOT {_PLAYABLE_ASSET})"
+    " AND NOT ("
+    "  NOT EXISTS (SELECT 1 FROM release_phase_units pu"
+    "   WHERE pu.release_id = p.release_id AND pu.phase_id = p.phase_id"
+    "    AND NOT EXISTS (SELECT 1 FROM release_unit_materials m"
+    "     WHERE m.release_id = pu.release_id AND m.unit_id = pu.unit_id"
+    "      AND m.kind = 'audio'))"
+    "  AND EXISTS (SELECT 1 FROM release_exam_media em"
+    "   JOIN media_assets ma ON ma.id = em.asset_id"
+    "    AND ma.availability <> 'corrupt'"
+    "   JOIN media_storage ms ON ms.asset_id = em.asset_id"
+    "    AND ms.state = 'stored'"
+    "   WHERE em.release_id = p.release_id AND em.role = 'full_audio'"
+    "    AND coalesce(ms.verified_duration_ms, ma.duration_ms) > 0))"
+    " LIMIT 1")
+
+
 def _plan(conn, exam_id: str) -> dict:
     """Mock plan of the exam's CURRENT published release, or the reason it
     cannot be mocked. Never raises for 'not mockable' (public availability)."""
@@ -108,6 +145,9 @@ def _plan(conn, exam_id: str) -> dict:
             "   WHERE pu.release_id = u.release_id AND pu.unit_id = u.unit_id))"
             " LIMIT 1"), {"r": rid}).scalar():
         reason = "units_not_ready"
+    if reason is None and conn.execute(text(_UNPLAYABLE_LISTENING_SQL),
+                                       {"r": rid}).scalar():
+        reason = "listening_audio_unavailable"
     plan["available"] = reason is None
     plan["reason"] = reason
     plan["total_seconds"] = (sum(p["duration_seconds"] for p in phases)
@@ -670,6 +710,19 @@ def start_mock_audio(session_id: uuid.UUID, session_unit_id: uuid.UUID,
         if not _audio_status(conn, session_unit_id, unit["release_id"],
                              unit["unit_id"], material_id):
             raise HTTPException(status_code=404, detail="audio not found")
+        if not conn.execute(text(
+                "SELECT 1 FROM release_unit_materials m"
+                " WHERE m.release_id = :r AND m.unit_id = :u"
+                "  AND m.material_id = :mid AND m.kind = 'audio'"
+                f" AND {_PLAYABLE_ASSET}"),
+                {"r": unit["release_id"], "u": unit["unit_id"],
+                 "mid": material_id}).scalar():
+            # never register a play (and burn the one-shot) for a file that
+            # is missing / corrupt / of unknown length
+            raise HTTPException(
+                status_code=409,
+                detail={"code": "audio_unavailable",
+                        "message": "this recording cannot be played"})
         conn.execute(text(
             "INSERT INTO study_audio_plays (session_unit_id, material_id)"
             " VALUES (:su, :m) ON CONFLICT DO NOTHING"),

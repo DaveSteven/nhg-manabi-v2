@@ -446,7 +446,32 @@ def test_concurrent_phase_submits_close_the_phase_once(
 AUDIO_MAT = f"{SINGLE_UNIT}-m-audio"
 
 
-def add_audio(pg_engine, release_id, duration_ms=30000):
+CLIP_ASSET = "JLPTGO-N5-TEST-EX-as001"
+
+
+@pytest.fixture(autouse=True)
+def _clip_storage_cleanup(pg_engine):
+    yield
+    with pg_engine.begin() as conn:
+        conn.execute(sa.text(
+            "DELETE FROM media_storage WHERE asset_id = :a"), {"a": CLIP_ASSET})
+
+
+def store_clip(pg_engine, state="stored", verified_ms=30000):
+    """The clip's file as the media sync would record it (R4: a mock only
+    opens when listening is actually playable)."""
+    with pg_engine.begin() as conn:
+        conn.execute(sa.text("DELETE FROM media_storage WHERE asset_id = :a"),
+                     {"a": CLIP_ASSET})
+        conn.execute(sa.text(
+            "INSERT INTO media_storage (asset_id, state, verified_duration_ms,"
+            " rule_version) VALUES (:a, :s, :d, 'test')"),
+            {"a": CLIP_ASSET, "s": state, "d": verified_ms})
+
+
+def add_audio(pg_engine, release_id, duration_ms=30000, stored=True):
+    if stored:
+        store_clip(pg_engine, verified_ms=duration_ms)
     with pg_engine.begin() as conn:
         conn.execute(sa.text(
             "INSERT INTO release_unit_materials (release_id, material_id,"
@@ -748,3 +773,102 @@ def test_mock_id_is_invisible_to_every_practice_endpoint(
     if not abandon_first:                  # the mock itself is still alive
         again = client.get(f"/api/mock-exams/{sid}", headers=h)
         assert again.status_code == 200 and again.json()["state"] == "in_progress"
+
+
+# ------------------------------------------- R4: listening playability ----
+
+def availability(client):
+    return client.get(f"/api/exams/{EXAM_ID}/mock").json()
+
+
+@requires_db
+def test_clip_without_stored_file_blocks_mock_and_play(
+        pg_engine, published_release, monkeypatch):
+    client = make_client(monkeypatch, pg_engine)
+    add_phases(pg_engine, published_release)
+    add_audio(pg_engine, published_release, stored=False)   # no file at all
+    a = availability(client)
+    assert a["available"] is False and a["reason"] == "listening_audio_unavailable"
+    r = client.post("/api/mock-exams", json={"exam_id": EXAM_ID},
+                    headers=auth(USER_A))
+    assert r.status_code != 201
+
+
+@requires_db
+@pytest.mark.parametrize("state,verified_ms,asset_duration", [
+    ("unavailable", 30000, 30000),   # file not stored
+    ("stored", None, None),           # stored, unknown duration
+    ("stored", 0, None),              # stored, zero duration
+])
+def test_unplayable_clip_states_block_availability(
+        pg_engine, published_release, monkeypatch,
+        state, verified_ms, asset_duration):
+    client = make_client(monkeypatch, pg_engine)
+    add_phases(pg_engine, published_release)
+    add_audio(pg_engine, published_release, stored=False)
+    store_clip(pg_engine, state=state, verified_ms=verified_ms)
+    with pg_engine.begin() as conn:
+        conn.execute(sa.text("UPDATE media_assets SET duration_ms = :d"
+                             " WHERE id = :a"),
+                     {"d": asset_duration, "a": CLIP_ASSET})
+    assert availability(client)["reason"] == "listening_audio_unavailable"
+
+
+@requires_db
+def test_corrupt_clip_blocks_availability(pg_engine, published_release,
+                                          monkeypatch):
+    client = make_client(monkeypatch, pg_engine)
+    add_phases(pg_engine, published_release)
+    add_audio(pg_engine, published_release)
+    assert availability(client)["available"] is True
+    with pg_engine.begin() as conn:
+        conn.execute(sa.text("UPDATE media_assets SET availability = 'corrupt'"
+                             " WHERE id = :a"), {"a": CLIP_ASSET})
+    assert availability(client)["reason"] == "listening_audio_unavailable"
+
+
+@requires_db
+def test_full_recording_makes_missing_clips_irrelevant(
+        pg_engine, published_release, full_audio, monkeypatch):
+    """Continuous mode needs only the full recording; clips are withheld."""
+    client = make_client(monkeypatch, pg_engine)
+    add_phases(pg_engine, published_release)
+    with pg_engine.begin() as conn:
+        conn.execute(sa.text("DELETE FROM media_storage WHERE asset_id = :a"),
+                     {"a": CLIP_ASSET})
+    assert availability(client)["available"] is True
+
+
+@requires_db
+def test_both_sources_missing_blocks_and_recording_loss_falls_back_to_clips(
+        pg_engine, published_release, full_audio, monkeypatch):
+    client = make_client(monkeypatch, pg_engine)
+    add_phases(pg_engine, published_release)
+    with pg_engine.begin() as conn:
+        # recording lost, clips present -> per-unit mode is fine
+        conn.execute(sa.text("UPDATE media_storage SET state = 'unavailable'"
+                             " WHERE asset_id = :a"), {"a": FULL})
+    assert availability(client)["available"] is True
+    with pg_engine.begin() as conn:
+        # clips lost as well -> nothing playable
+        conn.execute(sa.text("DELETE FROM media_storage WHERE asset_id = :a"),
+                     {"a": CLIP_ASSET})
+    assert availability(client)["reason"] == "listening_audio_unavailable"
+
+
+@requires_db
+def test_per_unit_start_refuses_unplayable_clip_without_burning_it(
+        pg_engine, published_release, monkeypatch):
+    client = make_client(monkeypatch, pg_engine)
+    add_phases(pg_engine, published_release)
+    add_audio(pg_engine, published_release)
+    sid = start(client)["id"]
+    su2 = to_phase2(client, pg_engine, sid)
+    with pg_engine.begin() as conn:      # file disappears after the exam opened
+        conn.execute(sa.text("DELETE FROM media_storage WHERE asset_id = :a"),
+                     {"a": CLIP_ASSET})
+    r = start_audio(client, sid, su2)
+    assert r.status_code == 409 and r.json()["detail"]["code"] == "audio_unavailable"
+    with pg_engine.connect() as conn:
+        assert conn.execute(sa.text(
+            "SELECT count(*) FROM study_audio_plays")).scalar() == 0

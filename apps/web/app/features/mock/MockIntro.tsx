@@ -16,6 +16,7 @@ const REASON: Record<string, string> = {
   phase_without_duration: "这套试卷缺少考试时限，暂不能模拟考试。",
   empty_phase: "这套试卷的考试阶段数据不完整，暂不能模拟考试。",
   units_not_ready: "这套试卷还有题目未整理完成，暂不能模拟考试。",
+  listening_audio_unavailable: "这套试卷的听力音频暂未就绪，暂不能模拟考试。",
 };
 
 /** 模拟考试说明页: real phases/time limits from the release, the rules the
