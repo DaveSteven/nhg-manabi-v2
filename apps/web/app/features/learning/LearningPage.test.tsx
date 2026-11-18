@@ -35,7 +35,9 @@ const FILLED = {
   ],
   weak_types: [
     { question_type_id: "grammar_cloze", subject: "grammar", label_zh: "文法填空",
-      attempts: 12, wrong: 4, accuracy: 0.6667, still_wrong: 2 }],
+      attempts: 12, wrong: 4, accuracy: 0.6667, low_sample: false, still_wrong: 2 },
+    { question_type_id: "vocab_kanji", subject: "vocabulary", label_zh: "汉字读音",
+      attempts: 3, wrong: 2, accuracy: 0.3333, low_sample: true, still_wrong: 2 }],
 };
 const RECORD = {
   question_id: "q1", exam_id: "e1", release_id: "r1", exam_title: "2018年12月 N2",
@@ -93,14 +95,38 @@ describe("LearningView", () => {
     renderPage();
     expect(await screen.findByText("75%")).toBeInTheDocument();
     expect(screen.getByText("45%")).toBeInTheDocument();
-    expect(screen.getByText("已练 18 / 共 40 题")).toBeInTheDocument();
+    expect(screen.getByText("已练 18 / 共 40 道不同题目")).toBeInTheDocument();
+    for (const l of ["已作答正确率", "题库覆盖率", "最近仍错", "练习次数"]) {
+      expect(screen.getAllByText(l).length).toBeGreaterThan(0);
+    }
     const subjects = screen.getByRole("region", { name: "按科目" });
-    const reading = within(subjects).getByRole("row", { name: /读解/ });
+    const reading = within(subjects).getByRole("link", { name: /读解/ });
     expect(within(reading).getByText("—")).toBeInTheDocument();
+    expect(reading).toHaveAttribute("href", "/study/practice?subject=reading");
     const weak = screen.getByRole("region", { name: "薄弱题型" });
     expect(within(weak).getByText("文法填空")).toBeInTheDocument();
-    expect(within(weak).getByRole("link", { name: "去练习" }))
-      .toHaveAttribute("href", "/study/practice?subject=grammar");
+    const go = within(weak).getAllByRole("link", { name: "去练习" });
+    expect(go[0]).toHaveAttribute("href", "/study/practice?type=grammar_cloze");
+    // small sample is flagged, not judged; reliable one is not flagged
+    expect(within(weak).getAllByText("数据较少")).toHaveLength(1);
+  });
+
+  it("overview: 建议先复习 shows the real count and links to the records tab", async () => {
+    authStore.setSession("tok", USER);
+    server.use(http.get("*/api/me/learning/overview", () => HttpResponse.json(FILLED)));
+    renderPage();
+    const banner = await screen.findByRole("link", { name: /建议先复习/ });
+    expect(banner).toHaveTextContent("3 道最近仍错");
+    expect(banner).toHaveAttribute("href", "/study/learning?tab=records");
+  });
+
+  it("overview: no 建议先复习 when nothing is still wrong", async () => {
+    authStore.setSession("tok", USER);
+    server.use(http.get("*/api/me/learning/overview", () => HttpResponse.json({
+      ...FILLED, totals: { ...FILLED.totals, still_wrong_questions: 0 } })));
+    renderPage();
+    await screen.findByText("75%");
+    expect(screen.queryByText(/建议先复习/)).not.toBeInTheDocument();
   });
 
   it("overview explains when samples are too small for weak types", async () => {
@@ -108,7 +134,7 @@ describe("LearningView", () => {
     server.use(http.get("*/api/me/learning/overview", () =>
       HttpResponse.json({ ...FILLED, weak_types: [] })));
     renderPage();
-    expect(await screen.findByText(/样本还不够/)).toBeInTheDocument();
+    expect(await screen.findByText(/暂时没有明显薄弱的题型/)).toBeInTheDocument();
   });
 
   it("history lists real sessions; results link only when a result exists", async () => {
@@ -125,11 +151,15 @@ describe("LearningView", () => {
           total: 2, has_result: false }] })));
     renderPage("/study/learning?tab=history");
     expect(await screen.findByText("文法填空")).toBeInTheDocument();
-    expect(screen.getByText("专项")).toBeInTheDocument();
+    expect(screen.getByText("专项练习")).toBeInTheDocument();
     expect(screen.getByText(/提前结束/)).toBeInTheDocument();
-    const links = screen.getAllByRole("link", { name: "查看结果" });
+    expect(screen.queryByRole("link", { name: "查看结果" })).not.toBeInTheDocument();
+    // the whole row is the link; ended-early rows have no result page
+    const links = screen.getAllByRole("link");
     expect(links).toHaveLength(1);
     expect(links[0]).toHaveAttribute("href", "/study/practice/s-1/results");
+    expect(links[0]).toHaveTextContent("3 题");
+    expect(links[0]).toHaveTextContent("50%");
   });
 
   it("records: filters follow strategy B and re-practice starts a quick session", async () => {
@@ -158,7 +188,7 @@ describe("LearningView", () => {
     await user.click(screen.getByRole("radio", { name: "曾经答错" }));
     await screen.findByText("2018年12月 N2");
     expect(seen).toContain("ever_wrong|N2");
-    await user.click(screen.getByRole("button", { name: "再练这一组" }));
+    await user.click(screen.getByRole("button", { name: "重新练习" }));
     expect(await screen.findByText("practice page")).toBeInTheDocument();
     expect(started).toEqual({ release_id: "r1", unit_id: "u-1" });
   });

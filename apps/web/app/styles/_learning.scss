@@ -27,16 +27,6 @@
 .learning-block { display: grid; gap: var(--space-3); padding: var(--space-4) var(--space-6); }
 .learning-block .module-title { margin: 0; }
 
-.learning-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-variant-numeric: tabular-nums;
-
-  th, td { padding: var(--space-2) var(--space-2); text-align: left; }
-  thead th { color: var(--color-text-secondary); font-weight: 500; font-size: 14px; }
-  tbody tr + tr { border-top: 1px solid var(--color-border); }
-}
-
 .learning-list { list-style: none; margin: 0; padding: 0; display: grid; }
 .card.learning-list { padding: var(--space-2) var(--space-6); }
 
@@ -123,20 +113,75 @@
 
 .learning-meta, .learning-counts { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
 
-/* stat cards: tinted surface + accent top edge + accent value */
-.learning-stat {
-  border-top: 3px solid var(--tone);
-  background: linear-gradient(180deg, var(--tone-soft), var(--color-surface) 70%);
-  .learning-stat-value { color: var(--tone); }
-  &.tone-matcha   { --tone: var(--accent-matcha);   --tone-soft: var(--accent-matcha-soft); }
-  &.tone-lavender { --tone: var(--accent-lavender); --tone-soft: var(--accent-lavender-soft); }
-  &.tone-sakura   { --tone: var(--accent-sakura);   --tone-soft: var(--accent-sakura-soft); }
-  &.tone-apricot  { --tone: var(--accent-apricot);  --tone-soft: var(--accent-apricot-soft); }
-}
+/* stat cards: one neutral surface; colour only carries meaning (accuracy
+   tone, danger for 仍错) so the same colour never means two things */
+.learning-stat .learning-stat-value { color: var(--color-ink); }
+.learning-stat .learning-stat-value.acc-good { color: var(--color-success); }
+.learning-stat .learning-stat-value.acc-mid  { color: var(--color-warning); }
+.learning-stat .learning-stat-value.acc-bad  { color: var(--color-danger); }
+.learning-stat .learning-stat-value.acc-none { color: var(--color-text-muted); }
 
-.coverage-cell { display: flex; align-items: center; gap: var(--space-3); min-width: 160px; }
+.review-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-pill);
+  border: 1px solid color-mix(in srgb, var(--color-danger) 25%, white);
+  background: color-mix(in srgb, var(--color-danger) 7%, white);
+  color: var(--color-ink);
+  text-decoration: none;
+  transition: border-color var(--motion-fast);
+  strong { color: var(--color-danger); font-variant-numeric: tabular-nums; }
+  &:hover { border-color: var(--color-danger); }
+  &:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+}
+.review-banner-go { color: var(--color-danger); font-weight: 600; white-space: nowrap; }
+
+.row-chevron { color: var(--color-text-muted); font-size: 20px; width: 12px; text-align: center; }
+
+.subject-row {
+  display: grid;
+  grid-template-columns: 96px minmax(120px, 1fr) 76px 64px 12px;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-2);
+  border-radius: var(--radius-sm);
+  color: inherit;
+  text-decoration: none;
+  transition: background var(--motion-fast);
+  &:hover { background: var(--color-surface-subtle); }
+  &:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+  li + li > & { border-top: 1px solid var(--color-border); border-radius: 0; }
+  .acc { font-size: 18px; }
+  @media (max-width: 560px) {
+    grid-template-columns: 1fr auto auto 12px;
+    .coverage-cell { grid-column: 1 / -1; grid-row: 2; }
+  }
+}
+.subject-metric { display: grid; gap: 2px; justify-items: start; font-variant-numeric: tabular-nums; .text-aux { font-size: 12px; } }
+
+.history-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 12px;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-3) 0;
+  color: inherit;
+  text-decoration: none;
+  .history-main { display: grid; gap: var(--space-1); min-width: 0; }
+  .history-score { display: grid; gap: 2px; justify-items: end; font-variant-numeric: tabular-nums; .acc { font-size: 18px; } }
+  &.is-link { cursor: pointer; }
+  &.is-link:hover .learning-title { color: var(--color-primary); }
+  &.is-link:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+}
+li + li > .history-row { border-top: 1px solid var(--color-border); }
+
+.coverage-cell { display: flex; align-items: center; gap: var(--space-3); min-width: 0; .text-aux { white-space: nowrap; font-variant-numeric: tabular-nums; } }
 .coverage-bar {
   flex: 1;
+  min-width: 48px;
   height: 8px;
   border-radius: var(--radius-pill);
   background: var(--subj-soft, var(--color-surface-subtle));

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import type { TopicSelection, TopicType } from "../../api/dto/topic";
 import { describeLoadError } from "../../api/errors";
@@ -22,7 +22,11 @@ export function TopicPracticeView() {
   const query = useTopicTypes(level);
   const types = query.data?.types ?? [];
 
-  const requested = params.get("subject");
+  // `?type=` (from 我的学习 → 薄弱题型) pre-selects one question type; it is
+  // ignored when the type does not exist at the current level.
+  const requestedType = params.get("type");
+  const typeFromUrl = types.find((t) => t.question_type_id === requestedType);
+  const requested = typeFromUrl?.subject ?? params.get("subject");
   const subject: TopicSubject = isTopicSubject(requested)
     ? requested
     : (TOPIC_SUBJECTS.find((s) => types.some((t) => t.subject === s.key))?.key
@@ -58,6 +62,15 @@ export function TopicPracticeView() {
     setSelection(next);
     setCountText(String(defaultCount(selected, next)));
   }
+
+  const appliedUrlType = useRef<string | null>(null);
+  useEffect(() => {
+    if (typeFromUrl && appliedUrlType.current !== typeFromUrl.question_type_id) {
+      appliedUrlType.current = typeFromUrl.question_type_id;
+      pick(typeFromUrl);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [typeFromUrl]);
 
   const start = useStartTopicPractice((s) =>
     navigate(`/study/practice/${encodeURIComponent(s.id)}`));

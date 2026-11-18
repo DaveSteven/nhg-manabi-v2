@@ -11,8 +11,11 @@ Statistics (business-rules, never mixed):
 - 已作答正确率 = correct / (correct + wrong), skips excluded; no answers → null
   (shown as “—”, never 0%).
 - 覆盖率 = distinct questions with ≥1 valid formal answer / questions in scope.
-- Weak types need MIN_WEAK_SAMPLE valid answers before they are ranked, so a
-  couple of attempts never label a type "weak".
+- Weak types: only types with a wrong answer AND accuracy below
+  WEAK_ACCURACY_BELOW are listed (the list is never padded with strong types),
+  at most MAX_WEAK_TYPES. Types with fewer than MIN_WEAK_SAMPLE valid answers
+  are flagged `low_sample` (UI: 「数据较少」) and ranked after reliable ones;
+  fewer than MIN_WEAK_ATTEMPTS are not listed.
 Time range is all-time for now (the range is still an open product question).
 """
 import uuid
@@ -30,8 +33,11 @@ Level = Literal["N1", "N2", "N3", "N4", "N5"]
 Subject = Literal["vocabulary", "grammar", "reading", "listening"]
 RecordFilter = Literal["ever_wrong", "still_wrong", "recovered"]
 
-MIN_WEAK_SAMPLE = 5   # tunable, not a product rule
-MAX_WEAK_TYPES = 5
+# Tunable thresholds, not product rules (time range / weights still open).
+MIN_WEAK_SAMPLE = 5        # >= this many valid answers: a reliable verdict
+MIN_WEAK_ATTEMPTS = 3      # fewer than this: never listed at all
+WEAK_ACCURACY_BELOW = 0.75  # only types clearly below this are "weak"
+MAX_WEAK_TYPES = 3
 
 # Practicable questions of the CURRENT published releases (same gate as the
 # public API: conversion-complete units only).
@@ -110,13 +116,16 @@ def learning_overview(
     weak = []
     for r in rows:
         c, w = int(r["correct"]), int(r["wrong"])
-        if c + w >= MIN_WEAK_SAMPLE and w > 0:
+        acc = _accuracy(c, w)
+        if c + w >= MIN_WEAK_ATTEMPTS and w > 0 and acc < WEAK_ACCURACY_BELOW:
             weak.append({
                 "question_type_id": r["question_type_id"],
                 "subject": r["subject"], "label_zh": r["label_zh"],
-                "attempts": c + w, "wrong": w, "accuracy": _accuracy(c, w),
+                "attempts": c + w, "wrong": w, "accuracy": acc,
+                "low_sample": c + w < MIN_WEAK_SAMPLE,
                 "still_wrong": int(r["still_wrong"])})
-    weak.sort(key=lambda x: (x["accuracy"], -x["wrong"], x["question_type_id"]))
+    weak.sort(key=lambda x: (x["low_sample"], x["accuracy"], -x["wrong"],
+                             x["question_type_id"]))
     return {
         "level": level,
         "totals": {

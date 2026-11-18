@@ -91,16 +91,24 @@ def test_overview_counts_accuracy_coverage_and_skip_semantics(
 
 
 @requires_db
-def test_weak_types_need_enough_samples(pg_engine, published_release,
-                                        monkeypatch):
+def test_weak_types_small_samples_flagged_and_never_padded(
+        pg_engine, published_release, monkeypatch):
     client = make_client(monkeypatch, pg_engine)
-    seed(client)
+    seed(client)                      # grammar_cloze: 2 valid answers, 1 wrong
+    # default: 2 attempts < MIN_WEAK_ATTEMPTS -> not listed at all
     assert get(client, USER_A, "overview", level="N5")["weak_types"] == []
     import app.api.learning as learning
-    monkeypatch.setattr(learning, "MIN_WEAK_SAMPLE", 2)
+    monkeypatch.setattr(learning, "MIN_WEAK_ATTEMPTS", 2)
     weak = get(client, USER_A, "overview", level="N5")["weak_types"]
     assert [w["question_type_id"] for w in weak] == ["grammar_cloze"]
     assert weak[0]["accuracy"] == 0.5 and weak[0]["still_wrong"] == 1
+    assert weak[0]["low_sample"] is True          # 2 < MIN_WEAK_SAMPLE -> 「数据较少」
+    monkeypatch.setattr(learning, "MIN_WEAK_SAMPLE", 2)
+    assert get(client, USER_A, "overview",
+               level="N5")["weak_types"][0]["low_sample"] is False
+    # a type that is not clearly weak is never listed just to fill the list
+    monkeypatch.setattr(learning, "WEAK_ACCURACY_BELOW", 0.4)
+    assert get(client, USER_A, "overview", level="N5")["weak_types"] == []
 
 
 @requires_db

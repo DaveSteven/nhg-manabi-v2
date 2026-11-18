@@ -68,6 +68,14 @@ describe("TopicPracticeView", () => {
     expect(screen.queryByText("汉字读音")).not.toBeInTheDocument();
   });
 
+  it("?type= preselects that question type (from 我的学习 → 薄弱题型)", async () => {
+    authStore.setSession("tok", USER);
+    server.use(http.get("*/api/topic-practice/types", () => HttpResponse.json(TYPES)));
+    renderPage("/study/practice?type=vocabulary_usage");
+    expect(await screen.findByLabelText(/用法/)).toBeChecked();
+    expect(screen.getByRole("button", { name: /开始练习/ })).toBeEnabled();
+  });
+
   it("starts a session with the chosen type/count/feedback and navigates", async () => {
     authStore.setSession("tok", USER);
     let body: unknown = null;

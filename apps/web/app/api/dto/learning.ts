@@ -41,6 +41,8 @@ export const OverviewSchema = z.strictObject({
     attempts: z.number().int(),
     wrong: z.number().int(),
     accuracy: z.number().nullable(),
+    /** fewer than the reliable sample size → show 「数据较少」, not a verdict. */
+    low_sample: z.boolean(),
     still_wrong: z.number().int(),
   })),
 });

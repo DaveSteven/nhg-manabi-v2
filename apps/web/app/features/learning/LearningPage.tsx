@@ -43,15 +43,13 @@ export function LearningView() {
   );
 }
 
-type StatTone = "matcha" | "lavender" | "sakura" | "apricot";
-
-function Stat({ label, value, hint, tone }: {
-  label: string; value: string; hint?: string; tone: StatTone;
+function Stat({ label, value, hint, valueClass }: {
+  label: string; value: string; hint?: string; valueClass?: string;
 }) {
   return (
-    <div className={`card learning-stat tone-${tone}`}>
+    <div className="card learning-stat">
       <span className="text-aux">{label}</span>
-      <strong className="learning-stat-value">{value}</strong>
+      <strong className={`learning-stat-value ${valueClass ?? ""}`}>{value}</strong>
       {hint ? <span className="text-aux">{hint}</span> : null}
     </div>
   );
@@ -63,7 +61,6 @@ function OverviewTab({ level }: { level: ReturnType<typeof useLevel>["level"] })
   if (q.error) return <p role="alert">{describeLoadError(q.error, "学习概览")}</p>;
   const o = q.data;
   const t = o.totals;
-  const scope = level ? `${level} ` : "";
   const ofLevel = level ? ` ${level} 的` : "";
 
   if (t.practiced_questions === 0 && t.skipped === 0) {
@@ -76,55 +73,69 @@ function OverviewTab({ level }: { level: ReturnType<typeof useLevel>["level"] })
   }
   return (
     <div className="learning-overview">
+      {t.still_wrong_questions > 0 ? (
+        <Link className="review-banner" to="/study/learning?tab=records">
+          <span>
+            建议先复习 · <strong>{t.still_wrong_questions}</strong> 道最近仍错
+          </span>
+          <span className="review-banner-go" aria-hidden="true">去复习 ›</span>
+        </Link>
+      ) : null}
+
       <div className="learning-stats">
-        <Stat tone="matcha" label="已作答正确率" value={formatPercent(t.answered_accuracy)}
-              hint={`答对 ${t.correct} / 答错 ${t.wrong}（未答不计入）`} />
-        <Stat tone="lavender" label={`${scope}覆盖率`} value={formatPercent(o.coverage.ratio)}
-              hint={`已练 ${o.coverage.practiced_questions} / 共 ${o.coverage.total_questions} 题`} />
-        <Stat tone="sakura" label="最近仍错" value={String(t.still_wrong_questions)}
+        <Stat label="已作答正确率" value={formatPercent(t.answered_accuracy)}
+              valueClass={`acc-${accuracyTone(t.answered_accuracy)}`}
+              hint={`答对 ${t.correct} · 答错 ${t.wrong}（未答不计入）`} />
+        <Stat label="题库覆盖率" value={formatPercent(o.coverage.ratio)}
+              hint={`已练 ${o.coverage.practiced_questions} / 共 ${o.coverage.total_questions} 道不同题目`} />
+        <Stat label="最近仍错" value={String(t.still_wrong_questions)}
+              valueClass={t.still_wrong_questions > 0 ? "acc-bad" : undefined}
               hint="最近一次有效作答为错的题" />
-        <Stat tone="apricot" label="完成练习" value={String(t.completed_sessions)}
+        <Stat label="练习次数" value={String(t.completed_sessions)}
               hint={t.last_practiced_at
                 ? `全部等级 · 最近 ${formatDate(t.last_practiced_at)}` : "全部等级"} />
       </div>
 
       <section className="card learning-block" aria-label="按科目">
         <h2 className="module-title">按科目</h2>
-        <table className="learning-table">
-          <thead>
-            <tr><th scope="col">科目</th><th scope="col">覆盖</th>
-                <th scope="col">正确率</th><th scope="col">仍错</th></tr>
-          </thead>
-          <tbody>
-            {o.by_subject.map((s) => (
-              <tr key={s.subject} data-subject={s.subject}>
-                <th scope="row">
-                  <span className="subject-chip">{SUBJECT_LABEL[s.subject]}</span>
-                </th>
-                <td>
-                  <div className="coverage-cell">
-                    <span className="coverage-bar" aria-hidden="true">
-                      <span style={{ width: `${s.total_questions
-                        ? Math.max(2, (s.practiced_questions / s.total_questions) * 100) : 0}%` }} />
-                    </span>
-                    <span>{s.practiced_questions} / {s.total_questions}</span>
-                  </div>
-                </td>
-                <td><span className={`acc acc-${accuracyTone(s.accuracy)}`}>
-                  {formatPercent(s.accuracy)}</span></td>
-                <td>{s.still_wrong > 0
-                  ? <span className="pill pill-danger">{s.still_wrong}</span> : 0}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <ul className="learning-list">
+          {o.by_subject.map((s) => (
+            <li key={s.subject} data-subject={s.subject}>
+              <Link className="subject-row" to={`/study/practice?subject=${s.subject}`}
+                    aria-label={`${SUBJECT_LABEL[s.subject]}，去专项练习`}>
+                <span className="subject-chip">{SUBJECT_LABEL[s.subject]}</span>
+                <span className="coverage-cell">
+                  <span className="coverage-bar" aria-hidden="true">
+                    <span style={{ width: `${s.total_questions
+                      ? Math.max(2, (s.practiced_questions / s.total_questions) * 100) : 0}%` }} />
+                  </span>
+                  <span className="text-aux">
+                    覆盖 {s.practiced_questions} / {s.total_questions}
+                  </span>
+                </span>
+                <span className="subject-metric">
+                  <span className="text-aux">正确率</span>
+                  <span className={`acc acc-${accuracyTone(s.accuracy)}`}>
+                    {formatPercent(s.accuracy)}</span>
+                </span>
+                <span className="subject-metric">
+                  <span className="text-aux">仍错</span>
+                  {s.still_wrong > 0
+                    ? <span className="pill pill-danger">{s.still_wrong}</span>
+                    : <span className="acc acc-none">0</span>}
+                </span>
+                <span className="row-chevron" aria-hidden="true">›</span>
+              </Link>
+            </li>
+          ))}
+        </ul>
       </section>
 
       <section className="card learning-block" aria-label="薄弱题型">
         <h2 className="module-title">薄弱题型</h2>
         {o.weak_types.length === 0 ? (
           <p className="text-aux">
-            样本还不够，暂不判断薄弱题型（同一题型有效作答达到 5 次后才会参与排名）。
+            暂时没有明显薄弱的题型。继续练习，同一题型有效作答达到 3 次后才会参与判断。
           </p>
         ) : (
           <ul className="learning-list">
@@ -138,10 +149,11 @@ function OverviewTab({ level }: { level: ReturnType<typeof useLevel>["level"] })
                       正确率 {formatPercent(w.accuracy)}
                     </span>
                     <span>{w.attempts} 次有效作答，答错 {w.wrong}</span>
+                    {w.low_sample ? <span className="pill pill-muted">数据较少</span> : null}
                   </span>
                 </div>
                 <ButtonLink variant="secondary"
-                            to={`/study/practice?subject=${w.subject}`}>
+                            to={`/study/practice?type=${encodeURIComponent(w.question_type_id)}`}>
                   去练习
                 </ButtonLink>
               </li>
@@ -155,7 +167,7 @@ function OverviewTab({ level }: { level: ReturnType<typeof useLevel>["level"] })
 
 const RESULT_LABEL = { wrong: "最近答错", correct: "最近答对", none: "—" } as const;
 const RESULT_PILL = { wrong: "pill-danger", correct: "pill-success", none: "pill-muted" } as const;
-const SOURCE_LABEL = { topic: "专项", quick: "快速", exam: "试卷" } as const;
+const SOURCE_LABEL = { topic: "专项练习", quick: "快速练习", exam: "试卷练习" } as const;
 
 /** After a page change the list is replaced; bring its top back into view. */
 function scrollToTop() {
@@ -178,36 +190,41 @@ function HistoryTab() {
   return (
     <>
       <ul className="learning-list card">
-        {q.data.items.map((h) => (
-          <li key={h.session_id} className="learning-row">
-            <div>
-              <strong className="learning-title">
-                <span className={`source-chip source-${h.source.kind}`}>
-                  {SOURCE_LABEL[h.source.kind]}
+        {q.data.items.map((h) => {
+          const body = (
+            <>
+              <div className="history-main">
+                <strong className="learning-title">
+                  <span className={`source-chip source-${h.source.kind}`}>
+                    {SOURCE_LABEL[h.source.kind]}
+                  </span>
+                  {h.source.label ?? "练习"}
+                </strong>
+                <span className="text-aux">
+                  {formatDate(h.happened_at)}{h.level ? ` · ${h.level}` : ""}
+                  {h.state === "ended_early" ? " · 提前结束" : ""}
                 </span>
-                {h.source.label ?? "练习"}
-              </strong>
-              <span className="text-aux">
-                {formatDate(h.happened_at)}{h.level ? ` · ${h.level}` : ""}
-                {h.state === "ended_early" ? " · 提前结束" : ""}
-              </span>
-              <span className="learning-counts">
-                <span className="pill pill-success">答对 {h.correct}</span>
-                <span className="pill pill-danger">答错 {h.wrong}</span>
-                <span className="pill pill-muted">未答 {h.skipped}</span>
+              </div>
+              <span className="history-score">
+                <span className="text-aux">{h.total} 题</span>
                 <span className={`acc acc-${accuracyTone(h.answered_accuracy)}`}>
-                  已作答正确率 {formatPercent(h.answered_accuracy)}
+                  {formatPercent(h.answered_accuracy)}
                 </span>
               </span>
-            </div>
-            {h.has_result ? (
-              <ButtonLink variant="secondary"
-                          to={`/study/practice/${encodeURIComponent(h.session_id)}/results`}>
-                查看结果
-              </ButtonLink>
-            ) : null}
-          </li>
-        ))}
+              <span className="row-chevron" aria-hidden="true">{h.has_result ? "›" : ""}</span>
+            </>
+          );
+          return (
+            <li key={h.session_id}>
+              {h.has_result ? (
+                <Link className="history-row is-link"
+                      to={`/study/practice/${encodeURIComponent(h.session_id)}/results`}>
+                  {body}
+                </Link>
+              ) : <div className="history-row">{body}</div>}
+            </li>
+          );
+        })}
       </ul>
       <Pagination page={page} total={q.data.total} pageSize={PAGE_SIZE}
                   onPage={(p) => { setPage(p); scrollToTop(); }} />
@@ -270,7 +287,7 @@ function RecordsTab({ level }: { level: ReturnType<typeof useLevel>["level"] }) 
                   <Button variant="secondary" disabled={start.isPending}
                           onClick={() => start.mutate({ release_id: r.release_id,
                                                         unit_id: r.unit_id })}>
-                    再练这一组
+                    重新练习
                   </Button>
                 </li>
               ))}
