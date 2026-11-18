@@ -137,7 +137,6 @@ export function TopicPracticeView() {
                     <input type="radio" name="topic-type"
                            checked={on} onChange={() => pick(t)} />
                     <span className="topic-type-label">{t.label_zh}</span>
-                    <span className="topic-type-ja" lang="ja">{t.label_ja}</span>
                     <span className="topic-type-meta">
                       共 {t.available_units} {noun} · 未练习 {t.new_units} {noun}
                       {t.wrong_units > 0 ? ` · 仍错 ${t.wrong_units} ${noun}` : ""}
