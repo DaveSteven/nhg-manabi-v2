@@ -47,7 +47,7 @@ def seed(client):
 @requires_db
 def test_endpoints_require_auth(pg_engine, published_release, monkeypatch):
     client = make_client(monkeypatch, pg_engine)
-    for p in ("overview", "history", "questions"):
+    for p in ("overview", "history", "questions", "streak"):
         assert client.get(f"/api/me/learning/{p}").status_code == 401
 
 
@@ -199,3 +199,21 @@ def test_question_row_shape_filters_and_no_answer_leak(pg_engine,
     bad = client.get("/api/me/learning/questions?filter=nope",
                      headers=auth(USER_A))
     assert bad.status_code == 422
+
+
+@requires_db
+def test_streak_zero_then_counts_today_and_marks_week(pg_engine, published_release,
+                                                      monkeypatch):
+    client = make_client(monkeypatch, pg_engine)
+    z = get(client, USER_A, "streak")
+    assert z["streak_days"] == 0 and z["week_studied"] == 0
+    assert len(z["week"]) == 7 and sum(w["is_today"] for w in z["week"]) == 1
+    practice(client, USER_A, "grammar_cloze", [(Q1, Q1 + "-o2")])
+    s = get(client, USER_A, "streak")
+    assert s["streak_days"] == 1 and s["studied_today"] is True
+    assert s["week_studied"] == 1
+    # Own data only: another user stays at zero.
+    assert get(client, USER_B, "streak")["streak_days"] == 0
+    # Skip-only submissions never count as a study day.
+    practice(client, USER_B, "vocabulary_kanji_reading", [])
+    assert get(client, USER_B, "streak")["streak_days"] == 0

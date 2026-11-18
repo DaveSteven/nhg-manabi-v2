@@ -4,6 +4,9 @@ import type { ExamSummary } from "../../api/dto/exam";
 import type { PracticeSession } from "../../api/dto/practice";
 import { useCurrentSession, useExamList } from "./useExamCatalog";
 import { ButtonLink } from "../../components/Button";
+import { useAuth } from "../auth/authStore";
+import { useStreak } from "../learning/useLearning";
+import { nextSitting } from "./examDates";
 
 /** Page header copy per design-system.md v1.1 §5.2 + the confirmed home
  * UI reference (docs/design/JLPT GO 2.0 首页.png). */
@@ -120,7 +123,56 @@ function ContinueSessionCard({ state, exams }: {
   );
 }
 
+const WEEK_LABELS = ["一", "二", "三", "四", "五", "六", "日"];
+
+function ExamCountdownCard() {
+  const next = nextSitting(new Date());
+  if (!next) return null;
+  return (
+    <section className="card countdown-card" aria-label="考试倒计时">
+      <p className="countdown-chip">{next.sitting.label} · {next.text}</p>
+      <p className="countdown-main">
+        {next.daysLeft === 0 ? (
+          <strong>今天考试</strong>
+        ) : (
+          <>距考试 <strong>{next.daysLeft}</strong> 天</>
+        )}
+      </p>
+    </section>
+  );
+}
+
+function StreakCard() {
+  const streak = useStreak(true).data;
+  return (
+    <section className="card streak-card" aria-label="连续学习">
+      <div className="streak-head">
+        <p className="streak-count">
+          <strong>{streak?.streak_days ?? 0}</strong> 天连续
+        </p>
+        <p className="streak-week">本周 {streak?.week_studied ?? 0}/7</p>
+      </div>
+      <ol className="streak-days">
+        {WEEK_LABELS.map((label, i) => {
+          const day = streak?.week[i];
+          return (
+            <li key={label}
+                data-studied={day?.studied ? "true" : "false"}
+                aria-current={day?.is_today ? "date" : undefined}>
+              <span className="streak-day-label">{label}</span>
+              <span className="streak-dot"
+                    role="img"
+                    aria-label={day?.studied ? "已学习" : "未学习"} />
+            </li>
+          );
+        })}
+      </ol>
+    </section>
+  );
+}
+
 export function StudyHome() {
+  const auth = useAuth();
   const sessionState = useCurrentSession();
   const examList = useExamList().data ?? [];
 
@@ -133,6 +185,11 @@ export function StudyHome() {
       </header>
 
       <ContinueSessionCard state={sessionState} exams={examList} />
+
+      <div className={`progress-row${auth.user ? "" : " is-single"}`}>
+        <ExamCountdownCard />
+        {auth.user ? <StreakCard /> : null}
+      </div>
 
       <section aria-label="专项练习入口">
         <div className="section-head">

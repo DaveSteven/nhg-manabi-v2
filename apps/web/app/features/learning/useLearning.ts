@@ -1,9 +1,9 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import type { History, HistoryKind, Overview, QuestionRecords,
+import type { Streak, History, HistoryKind, Overview, QuestionRecords,
               RecordFilter } from "../../api/dto/learning";
 import type { JlptLevel } from "../../api/endpoints/auth";
 import { ApiError } from "../../api/errors";
-import { getHistory, getOverview,
+import { getStreak, getHistory, getOverview,
          getQuestionRecords } from "../../api/endpoints/learning";
 
 // Always re-read: every formal submit changes these numbers.
@@ -32,5 +32,13 @@ export function useQuestionRecords(filter: RecordFilter, level: JlptLevel | null
     queryKey: ["learning", "questions", filter, level, page, size],
     queryFn: ({ signal }) => getQuestionRecords(filter, level, size, page * size, signal),
     placeholderData: keepPreviousData, enabled, ...live,
+  });
+}
+
+export function useStreak(enabled: boolean) {
+  return useQuery<Streak, ApiError>({
+    queryKey: ["learning", "streak"],
+    queryFn: ({ signal }) => getStreak(signal),
+    enabled, ...live,
   });
 }

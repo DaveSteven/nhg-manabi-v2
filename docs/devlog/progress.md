@@ -2,6 +2,10 @@
 
 最后更新：2026-11-18
 
+## 首页考试倒计时与连续学习（2026-11-18）
+
+- `/study` 继续练习卡下新增「距考试 N 天」与「连续学习 + 本周 7 天」两卡，新增 `GET /api/me/learning/streak`（正式有选择答案、东京日界），见 [日志](2026-11-18-home-countdown-streak.md)。后端 299 passed + 2 skipped，web 353 tests、tsc、build 通过；考试场次日期为手工维护数据，浏览器视觉与多日连续数据未验收。
+
 ## 用户名登录与 V1 用户迁移准备（2026-11-18）
 
 - 学生可用邮箱或用户名登录，`email` 可空；V1 PBKDF2 哈希可直接校验并在首次登录升级为 scrypt；管理端可看/搜用户名并重置密码；新增 V1 导入脚本（默认 dry-run），见 [日志](2026-11-18-username-login-v1-migration.md) 与 ADR-0029。后端 298 passed + 2 skipped，web 348、admin 51 单测，tsc/build 通过；**尚未对真实 V1 库导入，也未升级生产**，导入是部署后单独授权的步骤，浏览器未验收。

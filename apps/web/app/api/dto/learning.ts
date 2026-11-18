@@ -100,3 +100,17 @@ export const QuestionRecordsSchema = z.strictObject({
   })),
 });
 export type QuestionRecords = z.infer<typeof QuestionRecordsSchema>;
+
+/** GET /api/me/learning/streak — study days from formal choices only. */
+export const StreakSchema = z.strictObject({
+  today: z.string(),
+  streak_days: z.number().int(),
+  studied_today: z.boolean(),
+  week: z.array(z.strictObject({
+    date: z.string(),
+    studied: z.boolean(),
+    is_today: z.boolean(),
+  })).length(7),
+  week_studied: z.number().int(),
+});
+export type Streak = z.infer<typeof StreakSchema>;

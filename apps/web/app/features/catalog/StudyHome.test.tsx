@@ -113,4 +113,32 @@ describe("StudyHome", () => {
       .not.toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
+
+  it("shows the exam countdown for guests but no streak card", async () => {
+    renderHome();
+    const card = await screen.findByRole("region", { name: "考试倒计时" });
+    expect(card).toHaveTextContent(/距考试\s*\d+\s*天|今天考试/);
+    expect(screen.queryByRole("region", { name: "连续学习" }))
+      .not.toBeInTheDocument();
+  });
+
+  it("shows the streak and this week's studied days when signed in", async () => {
+    authStore.setSession("tok", {
+      id: "9a1c66d0-1111-4111-8111-111111111111", email: "a@b.c",
+      username: null, display_name: "A", current_level: "N2", avatar: null,
+    });
+    const dates = ["16", "17", "18", "19", "20", "21", "22"];
+    server.use(http.get(`*/api/me/learning/streak`, () => HttpResponse.json({
+      today: "2026-11-18", streak_days: 2, studied_today: true,
+      week: dates.map((d, i) => ({ date: `2026-11-${d}`, studied: i < 3,
+                                   is_today: i === 2 })),
+      week_studied: 3,
+    })));
+    renderHome();
+    const card = await screen.findByRole("region", { name: "连续学习" });
+    expect(await within(card).findByText("本周 3/7")).toBeInTheDocument();
+    expect(card).toHaveTextContent("2 天连续");
+    expect(within(card).getAllByRole("img", { name: "已学习" })).toHaveLength(3);
+    expect(card.querySelector('[aria-current="date"]')).not.toBeNull();
+  });
 });

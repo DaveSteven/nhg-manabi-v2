@@ -1,7 +1,8 @@
 import { apiFetch } from "../client";
 import { parseDto } from "../dto/exam";
-import { HistorySchema, OverviewSchema, QuestionRecordsSchema,
+import { HistorySchema, OverviewSchema, QuestionRecordsSchema, StreakSchema,
          type History, type HistoryKind, type Overview, type QuestionRecords,
+         type Streak,
          type RecordFilter } from "../dto/learning";
 import type { JlptLevel } from "./auth";
 
@@ -29,4 +30,9 @@ export function getQuestionRecords(
   if (level) params.set("level", level);
   return apiFetch(`/api/me/learning/questions?${params}`, { signal })
     .then((p) => parseDto(QuestionRecordsSchema, "GET me/learning/questions", p));
+}
+
+export function getStreak(signal?: AbortSignal): Promise<Streak> {
+  return apiFetch("/api/me/learning/streak", { signal })
+    .then((p) => parseDto(StreakSchema, "GET me/learning/streak", p));
 }

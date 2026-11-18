@@ -19,6 +19,7 @@ Statistics (business-rules, never mixed):
 Time range is all-time for now (the range is still an open product question).
 """
 import uuid
+from datetime import timedelta
 from typing import Literal
 
 from fastapi import APIRouter, Depends, Query
@@ -301,3 +302,39 @@ def learning_questions(
             "last_answered_at": (r["last_answered_at"].isoformat()
                                  if r["last_answered_at"] else None),
         } for r in rows]}
+
+
+# Study-day boundaries follow the same Asia/Tokyo day as visit tracking.
+_STUDY_TZ = "Asia/Tokyo"
+
+
+@router.get("/api/me/learning/streak")
+def learning_streak(user_id: uuid.UUID = Depends(get_current_user_id)) -> dict:
+    """Study streak + this Mon–Sun week. A study day = a day with ≥1 formal
+    submitted answer that has an actual choice (skips and drafts never
+    count). The streak counts back from today; if today has no study yet it
+    counts back from yesterday, so it only resets once a whole day is missed.
+    """
+    with get_engine().connect() as conn:
+        today = conn.execute(text(
+            f"SELECT (now() AT TIME ZONE '{_STUDY_TZ}')::date")).scalar()
+        days = {r[0] for r in conn.execute(text(
+            f"SELECT DISTINCT (a.submitted_at AT TIME ZONE '{_STUDY_TZ}')::date"
+            " FROM study_submitted_answers a"
+            " JOIN study_session_units su ON su.id = a.session_unit_id"
+            " JOIN study_sessions s ON s.id = su.session_id"
+            " WHERE s.user_id = :u AND a.chosen_option_id IS NOT NULL"
+            "  AND a.submitted_at >= now() - interval '800 days'"),
+            {"u": user_id})}
+    cursor = today if today in days else today - timedelta(days=1)
+    streak = 0
+    while cursor in days:
+        streak += 1
+        cursor -= timedelta(days=1)
+    monday = today - timedelta(days=today.weekday())
+    week = [{"date": (d := monday + timedelta(days=i)).isoformat(),
+             "studied": d in days, "is_today": d == today}
+            for i in range(7)]
+    return {"today": today.isoformat(), "streak_days": streak,
+            "studied_today": today in days, "week": week,
+            "week_studied": sum(1 for w in week if w["studied"])}

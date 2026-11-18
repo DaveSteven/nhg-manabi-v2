@@ -463,3 +463,101 @@
   border-radius: var(--radius-card);
   color: var(--color-danger);
 }
+
+/* Exam countdown + study streak, below the continue card. */
+.progress-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-3);
+
+  @media (min-width: 720px) { grid-template-columns: 1fr 1fr; }
+  &.is-single { grid-template-columns: 1fr; }
+}
+
+.countdown-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: var(--space-6);
+  border-radius: var(--radius-lg);
+  background: var(--color-primary-soft);
+}
+
+.countdown-chip {
+  align-self: flex-start;
+  margin: 0;
+  padding: 6px 14px;
+  border-radius: var(--radius-pill);
+  background: rgba(255, 255, 255, 0.6);
+  color: var(--color-primary-hover);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.countdown-main {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: var(--text-h3, 28px);
+  font-weight: 700;
+  line-height: 1.2;
+
+  strong { color: var(--color-primary); font-size: 1.3em; }
+}
+
+.streak-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-6);
+  border-radius: var(--radius-lg);
+}
+
+.streak-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+
+  p { margin: 0; }
+}
+
+.streak-count {
+  color: var(--color-ink);
+  font-weight: 600;
+
+  strong { color: var(--color-primary); font-size: 28px; margin-right: 4px; }
+}
+
+.streak-week { color: var(--color-text-muted); font-size: 14px; }
+
+.streak-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    display: grid;
+    justify-items: center;
+    gap: var(--space-2);
+  }
+}
+
+.streak-day-label { color: var(--color-text-muted); font-size: 13px; }
+
+.streak-dot {
+  box-sizing: border-box;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--color-surface-subtle);
+
+  [data-studied="true"] > & { background: var(--color-primary); }
+  [aria-current="date"] > & {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 3px;
+  }
+}
