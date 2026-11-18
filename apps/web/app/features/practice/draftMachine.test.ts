@@ -142,3 +142,47 @@ describe("answersForUnit", () => {
     ]);
   });
 });
+
+describe("R2 · reselect races while a save is in flight", () => {
+  const hydratedA = () => run(withQ(), { type: "hydrated", drafts: [
+    { questionId: "q1", optionId: "A", rowVersion: 1 }] });
+
+  it("A→B→A during saving ends on A (not B)", () => {
+    let s = hydratedA();
+    s = run(s, { type: "select", questionId: "q1", optionId: "B" });
+    s = run(s, { type: "saveStarted", questionId: "q1" });
+    s = run(s, { type: "select", questionId: "q1", optionId: "A" });
+    expect(displayOptionId(s.questions.q1!)).toBe("A");
+    s = run(s, { type: "saveSucceeded", questionId: "q1", optionId: "B", rowVersion: 2 });
+    expect(s.questions.q1!.status).toBe("dirty");
+    expect(displayOptionId(s.questions.q1!)).toBe("A");
+    s = run(s, { type: "saveStarted", questionId: "q1" });
+    s = run(s, { type: "saveSucceeded", questionId: "q1", optionId: "A", rowVersion: 3 });
+    expect(s.questions.q1!.status).toBe("saved");
+    expect(displayOptionId(s.questions.q1!)).toBe("A");
+  });
+
+  it("clear during saving is kept and flushed after the ack", () => {
+    let s = hydratedA();
+    s = run(s, { type: "select", questionId: "q1", optionId: "B" });
+    s = run(s, { type: "saveStarted", questionId: "q1" });
+    s = run(s, { type: "clear", questionId: "q1" });
+    expect(displayOptionId(s.questions.q1!)).toBeNull();
+    s = run(s, { type: "saveSucceeded", questionId: "q1", optionId: "B", rowVersion: 2 });
+    expect(s.questions.q1!.status).toBe("dirty");
+    expect(displayOptionId(s.questions.q1!)).toBeNull();
+  });
+
+  it("re-selecting the acked value on a settled question stays a no-op", () => {
+    const s = hydratedA();
+    expect(run(s, { type: "select", questionId: "q1", optionId: "A" })).toBe(s);
+  });
+
+  it("clearing an acked answer displays as cleared until saved", () => {
+    let s = hydratedA();
+    s = run(s, { type: "clear", questionId: "q1" });
+    expect(displayOptionId(s.questions.q1!)).toBeNull();
+    s = run(s, { type: "saveFailed", questionId: "q1", message: "x" });
+    expect(displayOptionId(s.questions.q1!)).toBeNull();
+  });
+});

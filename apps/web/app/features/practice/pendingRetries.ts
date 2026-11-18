@@ -53,3 +53,44 @@ export function loadPendingRetries(sessionId: string): PendingRetry[] {
 export function clearSessionPendingRetries(sessionId: string): void {
   writeAll(readAll().filter((e) => e.sessionId !== sessionId));
 }
+
+export interface RetryServerDraft {
+  questionId: string;
+  optionId: string | null;
+  rowVersion: number;
+}
+
+export interface RetryRestoreTarget {
+  select(questionId: string, optionId: string): void;
+  clear(questionId: string): void;
+}
+
+/**
+ * Re-apply failed-save intents after a refresh, per question and limited to
+ * `scope` (the questions this view hydrated — other units/phases keep their
+ * records). `knownVersion` is the last server-confirmed version when the save
+ * failed, so an unchanged server (same version) means the intent never
+ * landed and is restored as a normal dirty edit (including first answers,
+ * 0/0, and explicit clears). A moved server version means the draft changed
+ * elsewhere (or our request landed and only the response was lost): the
+ * server wins and the stale record is dropped — never a silent overwrite.
+ */
+export function restorePendingRetries(
+  sessionId: string,
+  server: RetryServerDraft[],
+  target: RetryRestoreTarget,
+  scope: ReadonlySet<string>,
+): void {
+  for (const retry of loadPendingRetries(sessionId)) {
+    if (!scope.has(retry.questionId)) continue;
+    const s = server.find((d) => d.questionId === retry.questionId);
+    const serverVersion = s ? s.rowVersion : 0;
+    const serverOption = s ? s.optionId : null;
+    if (retry.knownVersion !== serverVersion || retry.optionId === serverOption) {
+      clearPendingRetry(sessionId, retry.questionId);
+      continue;
+    }
+    if (retry.optionId === null) target.clear(retry.questionId);
+    else target.select(retry.questionId, retry.optionId);
+  }
+}

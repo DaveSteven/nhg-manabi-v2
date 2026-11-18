@@ -110,10 +110,14 @@ def _session_payload(conn, session_id: uuid.UUID) -> dict | None:
 
 def _load_owned_session(conn, session_id: uuid.UUID,
                         user_id: uuid.UUID) -> dict | None:
-    """Session header owned by user_id; 404-worthy when missing/foreign."""
+    """Practice-mode session header owned by user_id; 404-worthy when
+    missing/foreign. Strict-mock sessions are invisible here (they live
+    behind /api/mock-exams, whose phase/abandon rules these routes would
+    bypass) — a mock id answers exactly like an unknown id."""
     return conn.execute(text(
         "SELECT id, state, version FROM study_sessions"
-        " WHERE id = :s AND user_id = :u"),
+        " WHERE id = :s AND user_id = :u"
+        " AND mode IN ('practice', 'quick_practice')"),
         {"s": session_id, "u": user_id}).mappings().first()
 
 
@@ -381,7 +385,8 @@ def _load_session_unit(conn, session_id: uuid.UUID,
         " su.submitted_at, s.state AS session_state, s.feedback_mode, s.mode"
         " FROM study_session_units su"
         " JOIN study_sessions s ON s.id = su.session_id"
-        " WHERE su.session_id = :s AND su.id = :u AND s.user_id = :user"),
+        " WHERE su.session_id = :s AND su.id = :u AND s.user_id = :user"
+        " AND s.mode IN ('practice', 'quick_practice')"),
         {"s": session_id, "u": session_unit_id,
          "user": user_id}).mappings().first()
 
@@ -981,7 +986,8 @@ def finish_practice_session(
     with engine.begin() as conn:
         owned = conn.execute(text(
             "SELECT id, state, version FROM study_sessions"
-            " WHERE id = :s AND user_id = :u FOR UPDATE"),
+            " WHERE id = :s AND user_id = :u"
+            " AND mode IN ('practice', 'quick_practice') FOR UPDATE"),
             {"s": session_id, "u": user_id}).mappings().first()
         if owned is None:
             raise HTTPException(status_code=404, detail="session not found")
@@ -1065,7 +1071,8 @@ def submit_practice_session(
     with engine.begin() as conn:
         owned = conn.execute(text(
             "SELECT id, state, mode, feedback_mode FROM study_sessions"
-            " WHERE id = :s AND user_id = :u FOR UPDATE"),
+            " WHERE id = :s AND user_id = :u"
+            " AND mode IN ('practice', 'quick_practice') FOR UPDATE"),
             {"s": session_id, "u": user_id}).mappings().first()
         if owned is None:
             raise HTTPException(status_code=404, detail="session not found")

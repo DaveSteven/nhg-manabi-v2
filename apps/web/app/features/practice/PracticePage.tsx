@@ -19,7 +19,7 @@ import { PracticeBreadcrumb } from "./PracticeBreadcrumb";
 import { FeedbackView } from "./FeedbackView";
 import { UnifiedPracticeView } from "./UnifiedPractice";
 import { DraftConflictDialog, UnansweredConfirmDialog } from "./SubmitDialogs";
-import { clearSessionPendingRetries, loadPendingRetries } from "./pendingRetries";
+import { clearSessionPendingRetries, restorePendingRetries } from "./pendingRetries";
 import { Button, ButtonLink } from "../../components/Button";
 
 const STATUS_TEXT: Record<string, string> = {
@@ -123,15 +123,7 @@ function StepPracticePage({ sessionId }: { sessionId: string }) {
                      rowVersion: d.row_version }));
     manager.hydrate(server);
     if (unitSubmitted) manager.markSubmitted(questionIds);
-    for (const retry of loadPendingRetries(sessionId)) {
-      const s = server.find((d) => d.questionId === retry.questionId);
-      const local = s ? s.rowVersion : 0;
-      if (retry.knownVersion > local) {
-        manager.select(retry.questionId, retry.optionId ?? "");
-      } else {
-        clearSessionPendingRetries(sessionId);
-      }
-    }
+    restorePendingRetries(sessionId, server, manager, new Set(questionIds));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bundle.data, current?.sessionUnitId, unitSubmitted]);
 

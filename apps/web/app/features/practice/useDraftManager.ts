@@ -68,6 +68,9 @@ export function useDraftManager(sessionId: string,
   const timers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const stateRef = useRef(state);
   stateRef.current = state;
+  // One PUT per question at a time: a debounce timer firing while a slower
+  // save is still in flight would send a stale expected_row_version (409).
+  const inflight = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     const pending = timers.current;
@@ -78,7 +81,8 @@ export function useDraftManager(sessionId: string,
 
   const flushQuestion = useCallback((questionId: string) => {
     const q = stateRef.current.questions[questionId];
-    if (!q || q.status !== "dirty") return;
+    if (!q || q.status !== "dirty" || inflight.current.has(questionId)) return;
+    inflight.current.add(questionId);
     dispatch({ type: "saveStarted", questionId });
     saveRef.current(sessionId, {
       session_unit_id: unitOfRef.current?.(questionId) ?? sessionUnitId,
@@ -86,10 +90,15 @@ export function useDraftManager(sessionId: string,
       chosen_option_id: q.pendingOptionId,
       expected_row_version: q.rowVersion,
     }).then((result) => {
+      inflight.current.delete(questionId);
       dispatch({ type: "saveSucceeded", questionId,
                  optionId: result.chosen_option_id, rowVersion: result.row_version });
       clearPendingRetry(sessionId, questionId);
+      // A newer edit made during the flight is flushed (with the fresh version).
+      timers.current[questionId] = setTimeout(
+        () => flushQuestion(questionId), AUTOSAVE_DEBOUNCE_MS);
     }).catch((cause: unknown) => {
+      inflight.current.delete(questionId);
       if (cause instanceof ApiError
           && cause.code === "draft_version_conflict") {
         const serverVersion = typeof cause.details.current_row_version === "number"

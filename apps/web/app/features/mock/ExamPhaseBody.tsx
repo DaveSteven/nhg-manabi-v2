@@ -12,7 +12,7 @@ import { SharedMaterialLayout } from "../content/SharedMaterialLayout";
 import type { VmContentUnit } from "../content/viewModel";
 import { useDraftManager } from "../practice/useDraftManager";
 import { DraftConflictDialog } from "../practice/SubmitDialogs";
-import { clearSessionPendingRetries, loadPendingRetries } from "../practice/pendingRetries";
+import { clearSessionPendingRetries, restorePendingRetries } from "../practice/pendingRetries";
 import { useNavigate } from "react-router";
 import { AbandonExamDialog } from "./AbandonExamDialog";
 import { AnswerSheetDrawer } from "./AnswerSheetDrawer";
@@ -79,14 +79,8 @@ export function ExamPhaseBody({ sessionId, state, phase, content, drafts,
       questionId: d.question_id, optionId: d.chosen_option_id,
       rowVersion: d.row_version }));
     manager.hydrate(server);
-    for (const retry of loadPendingRetries(sessionId)) {
-      const s = server.find((d) => d.questionId === retry.questionId);
-      if (retry.knownVersion > (s ? s.rowVersion : 0)) {
-        manager.select(retry.questionId, retry.optionId ?? "");
-      } else {
-        clearSessionPendingRetries(sessionId);
-      }
-    }
+    restorePendingRetries(sessionId, server, manager,
+      new Set(flat.map((f) => f.qid)));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

@@ -65,3 +65,4 @@
 - `ADR-0022-mock-continuous-listening.md`
 - `ADR-0023-mock-one-material-per-page.md`（取代 ADR-0021 第 3 条）
 - `ADR-0024-mock-listening-clock-and-abandon.md`
+- `ADR-0025-abandoned-mock-not-recorded.md`（放弃的模考不保留可见记录；practice 接口隔离模考）

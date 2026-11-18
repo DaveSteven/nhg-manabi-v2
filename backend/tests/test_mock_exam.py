@@ -694,3 +694,57 @@ def test_phase_audio_isolation_and_fallback(pg_engine, published_release,
     # a sealed phase can no longer be started
     shift(pg_engine, sid, 7200)
     assert start_phase_audio(client, sid).status_code == 409
+
+
+# ------------------------------------------------ practice route isolation ----
+
+@requires_db
+@pytest.mark.parametrize("abandon_first", [False, True])
+def test_mock_id_is_invisible_to_every_practice_endpoint(
+        pg_engine, published_release, monkeypatch, abandon_first):
+    """R3: /api/practice/* never touches a mock session — in progress or
+    abandoned. Answers submitted in an earlier Phase stay unreadable through
+    the ordinary feedback/transcript/results routes; finish cannot flip the
+    mock state. Every call answers like an unknown id (404)."""
+    client = make_client(monkeypatch, pg_engine)
+    add_phases(pg_engine, published_release)
+    st = start(client)
+    sid = st["id"]
+    su1 = unit_ids(st)[CLOZE_UNIT]
+    r = submit_phase(client, sid, "p1", [(su1, Q1, Q1 + "-o2"), (su1, Q2, Q2 + "-o1")])
+    assert r.status_code == 200, r.text
+    if abandon_first:
+        assert client.post(f"/api/mock-exams/{sid}/abandon",
+                           headers=auth(USER_A)).status_code == 200
+    with pg_engine.connect() as conn:
+        before = conn.execute(sa.text(
+            "SELECT state, version FROM study_sessions WHERE id = :s"),
+            {"s": sid}).one()
+
+    h = auth(USER_A)
+    p = f"/api/practice/sessions/{sid}"
+    calls = [
+        client.get(p, headers=h),
+        client.get(p + "/drafts", headers=h),
+        client.put(f"{p}/units/{su1}/drafts", headers=h,
+                   json={"question_id": Q1, "chosen_option_id": Q1 + "-o1",
+                         "expected_row_version": 0}),
+        client.post(f"{p}/units/{su1}/submit", headers=h, json={"answers": []}),
+        client.get(f"{p}/units/{su1}/feedback", headers=h),
+        client.get(f"{p}/units/{su1}/transcript", headers=h),
+        client.post(p + "/finish", headers=h),
+        client.post(p + "/submit", headers=h, json={"answers": []}),
+        client.get(p + "/results", headers=h),
+    ]
+    for resp in calls:
+        assert resp.status_code == 404, (resp.request.url, resp.text)
+        assert_no_leak(resp.json())
+
+    with pg_engine.connect() as conn:
+        after = conn.execute(sa.text(
+            "SELECT state, version FROM study_sessions WHERE id = :s"),
+            {"s": sid}).one()
+    assert tuple(after) == tuple(before)   # nothing was mutated
+    if not abandon_first:                  # the mock itself is still alive
+        again = client.get(f"/api/mock-exams/{sid}", headers=h)
+        assert again.status_code == 200 and again.json()["state"] == "in_progress"

@@ -15,7 +15,7 @@ import { useFeedback } from "./useFeedback";
 import { FeedbackView } from "./FeedbackView";
 import { PracticeBreadcrumb } from "./PracticeBreadcrumb";
 import { DraftConflictDialog, UnansweredConfirmDialog } from "./SubmitDialogs";
-import { clearSessionPendingRetries, loadPendingRetries } from "./pendingRetries";
+import { clearSessionPendingRetries, restorePendingRetries } from "./pendingRetries";
 import { Button, ButtonLink } from "../../components/Button";
 import { quickPracticeCopy } from "./quickPracticeCopy";
 
@@ -72,14 +72,8 @@ export function UnifiedPracticeView({ sessionId, bundle }: {
       questionId: d.question_id, optionId: d.chosen_option_id,
       rowVersion: d.row_version }));
     manager.hydrate(server);
-    for (const retry of loadPendingRetries(sessionId)) {
-      const s = server.find((d) => d.questionId === retry.questionId);
-      if (retry.knownVersion > (s ? s.rowVersion : 0)) {
-        manager.select(retry.questionId, retry.optionId ?? "");
-      } else {
-        clearSessionPendingRetries(sessionId);
-      }
-    }
+    restorePendingRetries(sessionId, server, manager,
+      new Set(flat.map((f) => f.qid)));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

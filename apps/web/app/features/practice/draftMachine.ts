@@ -81,9 +81,12 @@ export function draftReducer(
       const q = state.questions[action.questionId];
       if (!q || q.status === "conflict") return state; // frozen until resolved
       const optionId = action.type === "select" ? action.optionId : null;
-      if (q.optionId === optionId && q.status !== "save_error"
-          && q.status !== "dirty") {
-        return state; // no-op reselect of the acked value
+      // Only a settled question may ignore a re-selection of the acked value.
+      // While dirty/saving/save_error the user's latest intent differs from
+      // (or races with) the server value, so A→B→A must still be recorded.
+      if (q.optionId === optionId
+          && (q.status === "idle" || q.status === "saved")) {
+        return state;
       }
       return {
         ...state,
@@ -114,7 +117,11 @@ export function draftReducer(
     case "saveSucceeded": {
       const q = state.questions[action.questionId];
       if (!q) return state;
-      const newLocalEdit = q.pendingOptionId !== null
+      // A select/clear that arrived while this save was in flight leaves the
+      // question `dirty` (saveStarted is the only way out of dirty→saving), so
+      // dirty at ack time means a newer intent exists — including a clear
+      // (pending null) — unless it already equals what the server stored.
+      const newLocalEdit = q.status === "dirty"
         && q.pendingOptionId !== action.optionId;
       return {
         ...state,
@@ -243,7 +250,9 @@ export function draftReducer(
 
 /** UI display value: what the user last intended (pending > acked). */
 export function displayOptionId(q: QuestionDraftState): string | null {
-  return q.status === "conflict" ? q.optionId : (q.pendingOptionId ?? q.optionId);
+  // pending only has meaning while an edit is unacked; there null = "cleared".
+  return q.status === "dirty" || q.status === "saving" || q.status === "save_error"
+    ? q.pendingOptionId : q.optionId;
 }
 
 /** Answers for submit: display values; absent questions are skips. */
