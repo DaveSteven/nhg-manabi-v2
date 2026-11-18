@@ -25,3 +25,7 @@
 ## 追加：专项做题页题号条换行（即时反馈）
 - `StepPracticePage` 题号导航改用 `question-strip`（自动换行），超过 20 组加 `is-dense`（36px 格）；已提交的格子显示 ✓ 与「已提交」标签，当前格 `aria-current="step"`。
 - 测试：前端 335 passed、tsc 通过；未在真实浏览器核对 50 题的实际排布（需重建 Docker 后目视）。
+
+## 追加：信息检索题右列展示
+- 原因：情報検索 Unit 的共享材料是图片（213 个，无文字材料），`usesSplitLayout` 只认文字材料，故不走左材料/右题目的双栏。现图片材料（非听力）与文章同样分栏。
+- 测试：前端 335 passed（`SharedMaterialLayout.test` 新增图片/听力断言）、tsc 通过；未做真实浏览器与窄屏核对。

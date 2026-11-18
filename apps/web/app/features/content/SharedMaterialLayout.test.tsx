@@ -20,6 +20,11 @@ describe("SharedMaterialLayout", () => {
     expect(usesSplitLayout(mk("cloze", ["s1", "s2"]))).toBe(true);
     expect(usesSplitLayout(mk("single", []))).toBe(false);
     expect(usesSplitLayout(mk("passage", [], false))).toBe(false);
+    // image-only shared material (情報検索) also splits; listening does not
+    const img = (kind: string) => ({ id: kind, kind, role: "illustration", language: null,
+      content: null, imageAssetId: "a", imageUrl: "/a.png", audio: null });
+    expect(usesSplitLayout({ ...mk("passage", [], false), materials: [img("image")] })).toBe(true);
+    expect(usesSplitLayout({ ...mk("passage", [], false), materials: [img("audio"), img("image")] })).toBe(false);
   });
 
   it("layoutModeOf: decided by material structure (ADR-0021)", () => {

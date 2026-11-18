@@ -14,7 +14,13 @@ import type { VmContentUnit } from "./viewModel";
  */
 export function usesSplitLayout(c: VmContentUnit): boolean {
   const hasText = c.materials.some((m) => m.kind === "passage" && m.content);
-  return hasText && (c.unit.kind === "passage" || c.unit.slotIds.length > 0);
+  // 信息检索 etc.: the shared material is an image (no article text); it
+  // gets the same left-material / right-questions layout as articles.
+  const hasImage = c.materials.some((m) => m.kind === "image");
+  const hasAudio = c.materials.some((m) => m.kind === "audio");
+  if (hasAudio) return hasText && (c.unit.kind === "passage" || c.unit.slotIds.length > 0);
+  return (hasText || hasImage)
+    && (c.unit.kind === "passage" || c.unit.slotIds.length > 0);
 }
 
 export type LayoutMode = "standalone" | "shared-material" | "cloze";
