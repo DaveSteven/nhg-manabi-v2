@@ -13,7 +13,7 @@
 - `_practice.scss` 增加合并页样式；ADR-0026、文档同步。
 
 ## 测试（实际执行）
-- 新增 `TopicReview.test.tsx`（10 例）；调整 `results.topic.test.tsx`、`UnifiedPractice.test.tsx`。
+- 新增 `TopicReview.test.tsx`（11 例）；调整 `results.topic.test.tsx`、`UnifiedPractice.test.tsx`。
 - `apps/web`：`vitest run` 38 文件 335 passed；`tsc --noEmit` 无错误；`react-router build` 成功。
 - 后端未改动，未重跑。
 - **未做**：真实浏览器验收（桌面/375px 视觉、听力 Unit 在合并页播放与原文）；未覆盖多 Unit 同题型图片/听力题的真实数据走查。
