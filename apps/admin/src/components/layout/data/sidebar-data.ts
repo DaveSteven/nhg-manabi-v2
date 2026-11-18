@@ -1,4 +1,4 @@
-import { FileText, LayoutDashboard } from 'lucide-react'
+import { FileText, LayoutDashboard, Users } from 'lucide-react'
 import { Logo } from '@/assets/logo'
 import { type SidebarData } from '../types'
 
@@ -11,6 +11,7 @@ export const sidebarData: Omit<SidebarData, 'user'> = {
       items: [
         { title: '首页', url: '/', icon: LayoutDashboard },
         { title: '试卷管理', url: '/exams', icon: FileText },
+        { title: '用户管理', url: '/users', icon: Users },
       ],
     },
   ],

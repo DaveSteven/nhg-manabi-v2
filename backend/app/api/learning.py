@@ -192,20 +192,8 @@ _HISTORY_SQL = (
     " LIMIT :limit OFFSET :offset")
 
 
-@router.get("/api/me/learning/history")
-def learning_history(
-    kind: HistoryKind = "all",
-    limit: int = Query(20, ge=1, le=100),
-    offset: int = Query(0, ge=0),
-    user_id: uuid.UUID = Depends(get_current_user_id),
-) -> dict:
-    """Finished practice (completed / ended early) that has at least one
-    formal answer, plus COMPLETED strict mocks (ADR-0027); replaced
-    (abandoned) or empty sessions are not history. `kind` filters."""
-    with get_engine().connect() as conn:
-        rows = conn.execute(text(_HISTORY_SQL), {
-            "u": user_id, "kind": kind, "limit": limit,
-            "offset": offset}).mappings().all()
+def history_items(rows) -> list[dict]:
+    """Shape `_HISTORY_SQL` rows into history entries (shared with admin)."""
     items = []
     for r in rows:
         if r["mode"] == "mock":
@@ -225,6 +213,24 @@ def learning_history(
             "skipped": int(r["skipped"]), "total": int(r["total"]),
             "answered_accuracy": _accuracy(int(r["correct"]), int(r["wrong"])),
             "has_result": r["state"] == "completed"})
+    return items
+
+
+@router.get("/api/me/learning/history")
+def learning_history(
+    kind: HistoryKind = "all",
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    user_id: uuid.UUID = Depends(get_current_user_id),
+) -> dict:
+    """Finished practice (completed / ended early) that has at least one
+    formal answer, plus COMPLETED strict mocks (ADR-0027); replaced
+    (abandoned) or empty sessions are not history. `kind` filters."""
+    with get_engine().connect() as conn:
+        rows = conn.execute(text(_HISTORY_SQL), {
+            "u": user_id, "kind": kind, "limit": limit,
+            "offset": offset}).mappings().all()
+    items = history_items(rows)
     total = int(rows[0]["full_count"]) if rows else _history_total(user_id, kind)
     return {"total": total, "items": items}
 

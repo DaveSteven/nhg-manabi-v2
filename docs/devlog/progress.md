@@ -2,6 +2,10 @@
 
 最后更新：2026-11-18
 
+## 管理端用户管理 P0–P2（2026-11-18）
+
+- 管理端新增「用户管理」：列表（搜索/等级/活跃与账号状态筛选/排序/分页，活跃口径与 Dashboard 一致）、详情（30 天趋势、功能与科目分布、最近练习）、账号启用/禁用（二次确认、撤销会话、审计表迁移 0018），见 [日志](2026-11-18-admin-users.md) 与 [口径](../development/admin-users.md)。后端 287 passed + 2 skipped，admin 43 单测、tsc、build 通过；浏览器未验收，只读结果详情跳转未做。
+
 ## 管理端 Dashboard 访问埋点（2026-11-18）
 
 - 新增 `user_visit_days`（迁移 0017，本地开发库已升级、downgrade/upgrade 验证）与 `POST /api/me/visit`，学生端 `/study` 每日一次上报；Dashboard 现显示访问活跃折线与「访问→开始→完成」漏斗，采集起点之前的日期不造数，见 [日志](2026-11-18-dashboard-visit-tracking.md)。后端 280 passed + 2 skipped，web 347 tests，admin 36 单测，tsc/build 通过；浏览器未验收，仅登录用户计入访问。

@@ -163,3 +163,120 @@ export async function getDashboard(days: 7 | 30): Promise<Dashboard> {
   const res = await api.get('/api/admin/dashboard', { params: { days } })
   return dashboardSchema.parse(res.data)
 }
+
+// ---- user management -------------------------------------------------------
+
+export const ACTIVITY_LABEL = {
+  active: '活跃',
+  inactive: '近期未活跃',
+  dormant: '长期沉默',
+  not_started: '尚未开始',
+} as const
+export type Activity = keyof typeof ACTIVITY_LABEL
+export const ACCOUNT_LABEL = {
+  normal: '正常',
+  disabled: '已禁用',
+  unverified: '未验证邮箱',
+} as const
+export type AccountState = keyof typeof ACCOUNT_LABEL
+
+const activityEnum = z.enum(['active', 'inactive', 'dormant', 'not_started'])
+const accountEnum = z.enum(['normal', 'disabled', 'unverified'])
+
+export const adminUserSchema = z.strictObject({
+  id: z.string(), email: z.string(), display_name: z.string(),
+  current_level: z.string(), created_at: z.string(),
+  account_state: accountEnum, activity: activityEnum,
+  last_visit_date: z.string().nullable(), last_learn_at: z.string().nullable(),
+  days_7d: z.number().int(), answers_7d: z.number().int(),
+})
+export type AdminUser = z.infer<typeof adminUserSchema>
+
+export const userListSchema = z.strictObject({
+  total: z.number().int(), page: z.number().int(), page_size: z.number().int(),
+  items: z.array(adminUserSchema),
+  summary: z.strictObject({
+    total_users: z.number().int(), active_7d: z.number().int(),
+    not_started: z.number().int(),
+  }),
+  timezone: z.string(),
+})
+export type UserList = z.infer<typeof userListSchema>
+
+export type UserListQuery = {
+  q: string; level: string; activity: string; account: string
+  sort: 'created_at' | 'last_learn_at' | 'answers_7d'
+  order: 'asc' | 'desc'; page: number; page_size: number
+}
+
+export async function listAdminUsers(query: UserListQuery): Promise<UserList> {
+  const params: Record<string, string | number> = {
+    sort: query.sort, order: query.order, page: query.page, page_size: query.page_size,
+  }
+  for (const k of ['q', 'level', 'activity', 'account'] as const) {
+    if (query[k].trim()) params[k] = query[k].trim()
+  }
+  const res = await api.get('/api/admin/users', { params })
+  return userListSchema.parse(res.data)
+}
+
+const historyItemSchema = z.object({
+  session_id: z.string(), mode: z.string(), state: z.string(),
+  happened_at: z.string(), level: z.string().nullable(),
+  source: z.object({ kind: z.string(), label: z.string().nullable() }),
+  correct: z.number().int(), wrong: z.number().int(),
+  skipped: z.number().int(), total: z.number().int(),
+  answered_accuracy: z.number().nullable(),
+})
+
+export const userDetailSchema = z.strictObject({
+  user: adminUserSchema.extend({
+    activated_at: z.string().nullable(), disabled_at: z.string().nullable(),
+  }),
+  stats: z.strictObject({
+    total_answers: z.number().int(), completed_sessions: z.number().int(),
+    active_days_30: z.number().int(), answers_30: z.number().int(),
+  }),
+  daily_30: z.array(z.strictObject({ date: z.string(), answers: z.number().int() })),
+  features: z.array(z.strictObject({
+    key: z.string(), label: z.string(),
+    starts: z.number().int(), completions: z.number().int(),
+  })),
+  subjects: z.array(z.strictObject({
+    subject: z.string(), label: z.string(), answers: z.number().int(),
+  })),
+  recent: z.array(historyItemSchema),
+  audit: z.array(z.strictObject({
+    action: z.string(), admin_username: z.string(),
+    reason: z.string().nullable(), created_at: z.string(),
+  })),
+  timezone: z.string(),
+})
+export type UserDetail = z.infer<typeof userDetailSchema>
+
+export async function getAdminUser(id: string): Promise<UserDetail> {
+  const res = await api.get(`/api/admin/users/${encodeURIComponent(id)}`)
+  return userDetailSchema.parse(res.data)
+}
+
+export async function setUserDisabled(id: string, disable: boolean, reason: string) {
+  await api.post(
+    `/api/admin/users/${encodeURIComponent(id)}/${disable ? 'disable' : 'enable'}`,
+    { reason: reason.trim() || null }
+  )
+}
+
+export function describeUserActionError(error: unknown): string {
+  if (error instanceof AxiosError) {
+    const code = (error.response?.data as { detail?: { code?: string } } | undefined)
+      ?.detail?.code
+    if (code === 'already_disabled') return '该账号已是禁用状态，请刷新页面。'
+    if (code === 'not_disabled') return '该账号当前不是禁用状态，请刷新页面。'
+    if (code === 'not_found') return '用户不存在。'
+    if (error.response?.status === 401) return '登录已过期，请重新登录。'
+    if (error.response?.status === undefined || error.response.status >= 500) {
+      return '无法连接管理服务，请稍后重试。'
+    }
+  }
+  return '操作失败，请稍后重试。'
+}
