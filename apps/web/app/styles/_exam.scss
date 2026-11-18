@@ -212,32 +212,38 @@
   p { margin: 0; }
 }
 
-/* ADR-0021 shared-material layout (mock exam). The panel stays sticky inside
-   its own unit. "fit": every question of the unit fits under the exam bar,
-   so all are shown; "switch": one at a time with number chips. Measuring
-   briefly forces all-visible (before paint) to compare heights. */
+/* ADR-0021 / ADR-0023 shared-material layout (mock exam). One material per
+   page; the panel stays sticky inside its unit and shows ONE question at a
+   time with a prev/next pager. */
 .exam-shell .shared-material-layout {
   @media (min-width: 1024px) {
     grid-template-columns: minmax(0, 58fr) minmax(340px, 42fr);
     &.is-image-material { grid-template-columns: minmax(0, 62fr) minmax(320px, 38fr); }
   }
-  &.is-fit, &.is-measuring {
-    .panel-scroll li[data-question-id]:not(.is-active-question) { display: block; }
-  }
-  &.is-measuring .panel-scroll { overflow: visible; max-height: none; }
   .panel-footer:empty { display: none; }
   /* A/B materials read one after another inside the material column */
   .shared-material-article .material-comparison { flex-direction: column; }
   .shared-material-article .material-image { max-width: none; }
-  /* chips mirror the answer sheet: answered = soft sakura, flagged = corner flag */
-  .panel-question-nav button {
-    position: relative;
-    &.is-answered { background: var(--color-primary-soft); }
-    &.is-flagged::after {
-      content: ""; position: absolute; top: 3px; right: 3px;
-      width: 6px; height: 6px; border-radius: 50%; background: var(--color-warning);
+  .panel-pager {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: var(--space-2); margin-bottom: var(--space-3); flex: none;
+    button {
+      min-height: 36px; padding: 0 14px; border-radius: var(--radius-pill);
+      border: 1px solid var(--color-border); background: var(--color-surface);
+      cursor: pointer; font: inherit;
+      &:disabled { opacity: 0.4; cursor: default; }
+      &.is-next-material {
+        border-color: var(--color-primary); background: var(--color-primary-soft);
+        color: var(--color-primary-hover);
+      }
+    }
+    .panel-pager-label {
+      font-variant-numeric: tabular-nums; color: var(--color-text-secondary);
+      font-size: var(--text-aux); text-align: center;
     }
   }
+  /* the question being worked on: light sakura emphasis */
+  .panel-scroll li.is-active-question { background: var(--color-primary-soft); }
 }
 
 /* zoomable image material: the whole image is the button */

@@ -201,35 +201,57 @@ describe("Exam Mode", () => {
     });
   };
 
-  it("layout follows the material, not the type name: questions that fit are all shown", async () => {
-    // jsdom measures 0px, i.e. everything fits — short and long alike
-    const layouts = await renderUnits([mkPassage("reading_short_set", "ua"),
-                                       mkPassage("reading_long", "ub", 4)]);
+  it("layout follows the material, not the type name; always one question at a time", async () => {
+    const layouts = await renderUnits([mkPassage("reading_short_set", "ua", 1)]);
     for (const l of layouts) {
-      expect(l).toHaveClass("is-fit");
       expect(l).toHaveAttribute("data-layout-mode", "shared-material");
-      expect(l.querySelector(".panel-question-nav")).toBeNull();
+      expect(l.querySelector(".panel-pager")).toBeNull();            // single question: no pager
     }
   });
 
-  it("switches to one question at a time with answered/flagged chips when the panel is too tall", async () => {
-    const orig = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "scrollHeight");
-    Object.defineProperty(HTMLElement.prototype, "scrollHeight", { configurable: true, get: () => 5000 });
-    try {
-      const user = userEvent.setup();
-      const [layout] = await renderUnits([mkPassage("reading_long", "ub", 3)]);
-      expect(layout).toHaveClass("is-switch");
-      const nav = within(layout as HTMLElement).getByRole("navigation", { name: "本篇题号" });
-      await user.click(within(layout as HTMLElement).getByRole("radio", { name: "ub-q1-a 选项" }));
-      await user.click(within(nav).getByRole("button", { name: /^2/ }));
-      expect(document.querySelector('[data-question-id="ub-q2"]')).toHaveClass("is-active-question");
-      expect(within(nav).getByRole("button", { name: "1 已作答" })).toHaveClass("is-answered");
-      // switching keeps the earlier answer
-      expect(within(layout as HTMLElement).getByRole("radio", { name: "ub-q1-a 选项" })).toBeChecked();
-    } finally {
-      if (orig) Object.defineProperty(HTMLElement.prototype, "scrollHeight", orig);
-      else delete (HTMLElement.prototype as any).scrollHeight;
-    }
+  it("shows one material per page; multi-question units page questions then materials", async () => {
+    authStore.setSession("tok", USER);
+    setup();
+    const units = [mkPassage("reading_long", "ub", 2), mkPassage("reading_long", "uc", 1)];
+    server.use(http.get("*/api/mock-exams/m-1/content", () =>
+      HttpResponse.json({ phase_id: "p1", units })));
+    const user = userEvent.setup();
+    renderExam();
+    await screen.findByText("N2 模拟考试");
+    await waitFor(() => expect(document.querySelectorAll(".shared-material-layout")).toHaveLength(1));
+    const layout = document.querySelector(".shared-material-layout") as HTMLElement;
+    expect(layout.closest(".exam-unit")).toHaveAttribute("data-unit-id", "ub");
+    const pager = within(layout).getByRole("navigation", { name: "题目切换" });
+    expect(pager).toHaveTextContent("第 1 题 · 1/2");
+    expect(within(pager).getByRole("button", { name: /上一题/ })).toBeDisabled();
+    await user.click(within(layout).getByRole("radio", { name: "ub-q1-a 选项" }));
+    await user.click(within(pager).getByRole("button", { name: /下一题/ }));
+    expect(document.querySelector('[data-question-id="ub-q2"]')).toHaveClass("is-active-question");
+    expect(pager).toHaveTextContent("第 2 题 · 2/2");
+    // last question: next becomes 下一篇
+    await user.click(within(pager).getByRole("button", { name: /下一篇/ }));
+    await waitFor(() => expect(document.querySelector(".exam-unit")).toHaveAttribute("data-unit-id", "uc"));
+    // back: earlier answer and question are restored
+    await user.click(screen.getByRole("button", { name: "上一篇" }));
+    await waitFor(() => expect(document.querySelector(".exam-unit")).toHaveAttribute("data-unit-id", "ub"));
+    expect(screen.getByRole("radio", { name: "ub-q1-a 选项" })).toBeChecked();
+    expect(document.querySelector('[data-question-id="ub-q2"]')).toHaveClass("is-active-question");
+  });
+
+  it("answer sheet jump switches to the material and question", async () => {
+    authStore.setSession("tok", USER);
+    setup();
+    const units = [mkPassage("reading_long", "ub", 1), mkPassage("reading_long", "uc", 2)];
+    server.use(http.get("*/api/mock-exams/m-1/content", () =>
+      HttpResponse.json({ phase_id: "p1", units })));
+    const user = userEvent.setup();
+    renderExam();
+    await screen.findByText("N2 模拟考试");
+    await user.click(await screen.findByRole("button", { name: "答题卡" }));
+    const sheet = await screen.findByRole("dialog", { name: "答题卡" });
+    await user.click(within(sheet).getByRole("button", { name: /第 2 题/ }));
+    await waitFor(() => expect(document.querySelector(".exam-unit")).toHaveAttribute("data-unit-id", "uc"));
+    expect(document.querySelector('[data-question-id="uc-q2"]')).toHaveClass("is-active-question");
   });
 
   it("image-only material (information search) splits too, with an in-page zoom viewer", async () => {

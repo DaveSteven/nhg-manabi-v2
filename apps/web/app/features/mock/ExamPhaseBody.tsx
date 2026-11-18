@@ -19,7 +19,7 @@ import { ExamTopBar } from "./ExamTopBar";
 import { StrictAudioPlayer, type LiveAudio, type StrictAudioControl } from "./StrictAudioPlayer";
 import { ListeningConfirm } from "./ListeningConfirm";
 import { buildGroups, loadFlags, loadGroupIndex, optionColumns, saveFlags,
-         saveGroupIndex, type ExamUnit } from "./mockModel";
+         saveGroupIndex, loadUnitIndex, saveUnitIndex, type ExamUnit } from "./mockModel";
 
 const SUBJECT_LABEL: Record<string, string> = {
   vocabulary: "文字词汇", grammar: "文法", reading: "读解", listening: "听力",
@@ -53,6 +53,12 @@ export function ExamPhaseBody({ sessionId, state, phase, content, drafts,
     return m;
   }, [groups]);
   const noOf = useMemo(() => new Map(flat.map((q) => [q.qid, q.no])), [flat]);
+  const unitIdxOfQuestion = useMemo(() => {
+    const m = new Map<string, number>();
+    groups.forEach((g) => g.units.forEach((u, ui) =>
+      u.vm.questions.forEach((q) => m.set(q.id, ui))));
+    return m;
+  }, [groups]);
 
   const manager = useDraftManager(sessionId, flat[0]?.sessionUnitId ?? "", {
     persist: true, unitOf: (qid) => unitOf.get(qid), save: saveMockDraft,
@@ -92,8 +98,15 @@ export function ExamPhaseBody({ sessionId, state, phase, content, drafts,
   const [groupIdx, setGroupIdx] = useState(() =>
     Math.min(loadGroupIndex(sessionId, phase.phase_id), Math.max(groups.length - 1, 0)));
   const group = groups[groupIdx];
+  // ADR-0023: in a shared-material 大題 only one material (Unit) is on the page
+  const [unitIdx, setUnitIdx] = useState(() => {
+    const g = groups[Math.min(loadGroupIndex(sessionId, phase.phase_id), Math.max(groups.length - 1, 0))];
+    return g?.paged ? Math.min(loadUnitIndex(sessionId, phase.phase_id), g.units.length - 1) : 0;
+  });
+  const lastActive = useRef(new Map<string, string>());
   const [flags, setFlags] = useState(() => loadFlags(sessionId));
-  const [current, setCurrent] = useState<string | null>(group?.questions[0]?.qid ?? null);
+  const [current, setCurrent] = useState<string | null>(
+    (group?.paged ? group.units[unitIdx]?.vm.questions[0]?.id : group?.questions[0]?.qid) ?? null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -145,26 +158,45 @@ export function ExamPhaseBody({ sessionId, state, phase, content, drafts,
     });
   }, [sessionId]);
 
-  const goGroup = (i: number) => {
+  const showUnit = (gi: number, ui: number, qid?: string) => {
+    const g = groups[gi];
+    setGroupIdx(gi);
+    setUnitIdx(ui);
+    saveGroupIndex(sessionId, phase.phase_id, gi);
+    saveUnitIndex(sessionId, phase.phase_id, ui);
+    const u = g?.units[ui];
+    setCurrent(qid ?? (g?.paged
+      ? lastActive.current.get(u?.sessionUnitId ?? "") ?? u?.vm.questions[0]?.id
+      : g?.questions[0]?.qid) ?? null);
+    setFocusReq(null);
+  };
+  const goGroup = (i: number, toEnd = false) => {
     const n = Math.max(0, Math.min(groups.length - 1, i));
-    setGroupIdx(n);
-    saveGroupIndex(sessionId, phase.phase_id, n);
-    setCurrent(groups[n]?.questions[0]?.qid ?? null);
+    showUnit(n, toEnd && groups[n]?.paged ? groups[n]!.units.length - 1 : 0);
     window.scrollTo?.({ top: 0 });
   };
+  const goUnit = (delta: number) => {
+    const n = Math.max(0, Math.min(group!.units.length - 1, unitIdx + delta));
+    showUnit(groupIdx, n);
+    window.scrollTo?.({ top: 0 });
+  };
+  const onCurrent = useCallback((qid: string) => {
+    const u = unitOf.get(qid);
+    if (u) lastActive.current.set(u, qid);
+    setCurrent(qid);
+  }, [unitOf]);
 
   // Answer sheet jump: only questions of THIS phase exist here, so the phase
   // boundary can't be crossed. Closes the sheet; the page behind never moved.
   const jumpTo = useCallback((qid: string) => {
     const gi = groupOfQuestion.get(qid);
     if (gi === undefined) return;
-    setGroupIdx(gi);
-    saveGroupIndex(sessionId, phase.phase_id, gi);
-    setCurrent(qid);
+    showUnit(gi, groups[gi]?.paged ? unitIdxOfQuestion.get(qid) ?? 0 : 0, qid);
     pinnedUntil.current = Date.now() + 900;
     setFocusReq((r) => ({ id: qid, n: (r?.n ?? 0) + 1 }));
     setSheetOpen(false);
-  }, [groupOfQuestion, phase.phase_id, sessionId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [groupOfQuestion, groups, unitIdxOfQuestion, phase.phase_id, sessionId]);
 
   useEffect(() => {
     if (!focusReq) return;
@@ -210,7 +242,7 @@ export function ExamPhaseBody({ sessionId, state, phase, content, drafts,
     const onScroll = () => { if (!raf) raf = requestAnimationFrame(spy); };
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => { window.removeEventListener("scroll", onScroll); if (raf) cancelAnimationFrame(raf); };
-  }, [groupIdx]);
+  }, [groupIdx, unitIdx]);
 
   const submit = useMutation<MockState, ApiError, void>({
     mutationFn: () => submitMockPhase(sessionId, phase.phase_id, flat.map((q) => ({
@@ -245,6 +277,9 @@ export function ExamPhaseBody({ sessionId, state, phase, content, drafts,
   const actionLabel = isLastPhase ? "检查并交卷" : "结束当前阶段";
   const openConfirm = () => { setSubmitError(null); setSheetOpen(false); setConfirming(true); };
   const isLastGroup = groupIdx === groups.length - 1;
+  const paged = group.paged;
+  const lastUnit = unitIdx >= group.units.length - 1;
+  const shownUnits = paged ? group.units.slice(unitIdx, unitIdx + 1) : group.units;
 
   return (
     <div className={`exam-shell${phaseAudio && phaseLive ? " has-listen-mini" : ""}`}>
@@ -276,23 +311,30 @@ export function ExamPhaseBody({ sessionId, state, phase, content, drafts,
           </span>
           <span className="text-aux">
             第 {groupIdx + 1} / {groups.length} 大题 · {group.questions.length} 题
+            {paged ? ` · 第 ${unitIdx + 1} / ${group.units.length} 篇` : ""}
           </span>
         </div>
 
-        {group.units.map((u) => (
+        {shownUnits.map((u) => (
           <UnitBlock key={u.sessionUnitId} unit={u} noOf={noOf}
+                     onNextMaterial={paged && !lastUnit ? () => goUnit(1) : undefined}
                      manager={manager} flags={flags} onFlag={toggleFlag}
-                     isAnswered={isAnswered}
-                     onCurrent={setCurrent} current={current}
+                     onCurrent={onCurrent} current={current}
                      focusRequest={focusReq} sessionId={sessionId}
                      audioLive={audioLive} onAudio={onAudio} />
         ))}
 
         {submitError ? <p role="alert">{submitError}</p> : null}
         <nav className="exam-bottom-nav" aria-label="大题导航">
-          <Button variant="secondary" disabled={groupIdx === 0}
-                  onClick={() => goGroup(groupIdx - 1)}>上一大题</Button>
-          {isLastGroup ? (
+          {paged && unitIdx > 0 ? (
+            <Button variant="secondary" onClick={() => goUnit(-1)}>上一篇</Button>
+          ) : (
+            <Button variant="secondary" disabled={groupIdx === 0}
+                    onClick={() => goGroup(groupIdx - 1, true)}>上一大题</Button>
+          )}
+          {paged && !lastUnit ? (
+            <Button variant="primary" onClick={() => goUnit(1)}>下一篇</Button>
+          ) : isLastGroup ? (
             <Button variant="primary" onClick={openConfirm}>{actionLabel}</Button>
           ) : (
             <Button variant="primary" onClick={() => goGroup(groupIdx + 1)}>下一大题</Button>
@@ -326,8 +368,8 @@ export function ExamPhaseBody({ sessionId, state, phase, content, drafts,
 }
 
 function UnitBlock({ unit, noOf, manager, flags, onFlag, onCurrent, current,
-  focusRequest, sessionId, audioLive, onAudio, isAnswered }: {
-  isAnswered(qid: string): boolean;
+  focusRequest, sessionId, audioLive, onAudio, onNextMaterial }: {
+  onNextMaterial?: () => void;
   sessionId: string;
   audioLive: Record<string, LiveAudio>;
   onAudio(id: string, next: LiveAudio): void;
@@ -410,7 +452,7 @@ function UnitBlock({ unit, noOf, manager, flags, onFlag, onCurrent, current,
         {audioNote}
         <SharedMaterialLayout content={vm} focusRequest={focusRequest} adaptive
           numberOf={(q) => noOf.get(q.id) ?? q.position}
-          chipState={(qid) => ({ answered: isAnswered(qid), flagged: flags.has(qid) })}
+          initialActive={current} onNextMaterial={onNextMaterial}
           onActiveChange={onCurrent}
           material={<MaterialDisplay unit={vm.unit} materials={vm.materials} imageZoom />}
           footer={null}>

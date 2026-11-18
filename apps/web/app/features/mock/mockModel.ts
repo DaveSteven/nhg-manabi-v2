@@ -75,6 +75,8 @@ export interface ExamGroup {
   subject: string;
   units: ExamUnit[];
   questions: ExamQuestion[];
+  /** ADR-0023: shared-material 大題 show ONE material (Unit) per page. */
+  paged: boolean;
 }
 
 function cleanNo(printed: string | null, fallback: number): string {
@@ -93,7 +95,7 @@ export function buildGroups(units: MockContentUnit[]): ExamGroup[] {
     if (!g) {
       g = { layerId: u.layer.layer_id,
             label: u.layer.label ?? `大题 ${u.layer.position}`,
-            subject: u.layer.subject, units: [], questions: [] };
+            subject: u.layer.subject, units: [], questions: [], paged: false };
       groups.push(g);
     }
     const vm = toViewModel(u);
@@ -103,6 +105,7 @@ export function buildGroups(units: MockContentUnit[]): ExamGroup[] {
       split: layoutModeOf(vm) !== "standalone",
       hasAudio: vm.materials.some((m) => m.kind === "audio"),
     });
+    if (g.units[g.units.length - 1]!.split) g.paged = true;
     for (const q of vm.questions) {
       seq += 1;
       g.questions.push({ qid: q.id, sessionUnitId: u.session_unit_id,
@@ -142,5 +145,18 @@ export function loadGroupIndex(sessionId: string, phaseId: string): number {
 
 export function saveGroupIndex(sessionId: string, phaseId: string, idx: number): void {
   try { window.localStorage.setItem(posKey(sessionId, phaseId), String(idx)); }
+  catch { /* best-effort */ }
+}
+
+const unitPosKey = (sessionId: string, phaseId: string) =>
+  `minao-mock-unit:${sessionId}:${phaseId}`;
+
+export function loadUnitIndex(sessionId: string, phaseId: string): number {
+  const n = Number(window.localStorage.getItem(unitPosKey(sessionId, phaseId)));
+  return Number.isInteger(n) && n >= 0 ? n : 0;
+}
+
+export function saveUnitIndex(sessionId: string, phaseId: string, idx: number): void {
+  try { window.localStorage.setItem(unitPosKey(sessionId, phaseId), String(idx)); }
   catch { /* best-effort */ }
 }

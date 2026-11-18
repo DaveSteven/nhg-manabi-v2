@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import type { VmContentUnit } from "./viewModel";
 
 /**
- * Shared-material layout (ADR-0018, ADR-0021): desktop two-column layout —
+ * Shared-material layout (ADR-0018, ADR-0021, ADR-0023): desktop two-column layout —
  * the material scrolls with the page on the left, the question panel stays
  * `position: sticky` on the right (confined to this unit's wrapper, so it
  * never reaches the next article). Narrow screens stack as before.
@@ -35,21 +35,18 @@ export function layoutModeOf(c: VmContentUnit): LayoutMode {
   return "standalone";
 }
 
-/** Extra space a panel must clear before it switches back to "all visible"
- * after it once needed switching — avoids flapping at the threshold. */
-const FIT_HYSTERESIS = 40;
-
 export function SharedMaterialLayout({ content, material, footer, children, numberOf,
-  focusRequest, adaptive, chipState, onActiveChange }: {
+  focusRequest, adaptive, onActiveChange, initialActive, onNextMaterial }: {
   content: VmContentUnit;
   /** Display number for a question chip (default: the paper's printed number). */
   numberOf?: (q: VmContentUnit["questions"][number]) => string | number;
-  /** ADR-0021 (mock exam): split by material structure (text or image), and
-   * show ALL questions while they fit the viewport; only when they don't, the
-   * panel switches to one question at a time with number chips. */
+  /** ADR-0023 (mock exam): split by material structure (text or image) and
+   * ALWAYS show one question at a time with a prev/next pager. */
   adaptive?: boolean;
-  /** Answered / flagged state for the number chips. */
-  chipState?: (questionId: string) => { answered: boolean; flagged: boolean };
+  /** Question to start on (restoring a material page the user left). */
+  initialActive?: string | null;
+  /** Adaptive only: when set, the last question's "下一题" becomes "下一篇". */
+  onNextMaterial?: () => void;
   /** The panel's active question changed (chip, slot, click, jump). */
   onActiveChange?: (questionId: string) => void;
   /** Programmatic activation (exam answer sheet jump): a new `n` re-focuses
@@ -65,11 +62,13 @@ export function SharedMaterialLayout({ content, material, footer, children, numb
   const multi = content.questions.length > 1;
   const root = useRef<HTMLDivElement>(null);
   const firstId = content.questions[0]?.id ?? null;
-  const [active, setActive] = useState<string | null>(firstId);
-  // adaptive panels start with everything visible; measuring may switch them
-  const [fit, setFit] = useState<boolean>(!!adaptive);
+  const startId = initialActive && content.questions.some((q) => q.id === initialActive)
+    ? initialActive : firstId;
+  const [active, setActive] = useState<string | null>(startId);
   // A new unit starts at its first question.
-  useEffect(() => { setActive(firstId); }, [content.unit.id, firstId]);
+  useEffect(() => { setActive(startId); },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [content.unit.id, firstId]);
 
   // Highlight active question card + slot without re-rendering the article.
   useEffect(() => {
@@ -83,37 +82,7 @@ export function SharedMaterialLayout({ content, material, footer, children, numb
     if (q?.slotId) {
       el.querySelector(`[data-slot-id="${CSS.escape(q.slotId)}"]`)?.classList.add("is-active-slot");
     }
-  }, [active, split, content.questions, fit]);
-
-  // Fit-or-switch (ADR-0021): measure the panel with every question shown
-  // (synchronously, before paint) against the space under the sticky offset.
-  useLayoutEffect(() => {
-    const el = root.current;
-    if (!adaptive || !split || !multi || !el) return;
-    const measure = () => {
-      const list = el.querySelector<HTMLElement>(".panel-scroll");
-      if (!list) return;
-      if (window.innerWidth < 1024) { setFit(true); return; } // stacked: show all
-      el.classList.add("is-measuring");
-      const need = list.scrollHeight;
-      el.classList.remove("is-measuring");
-      // the panel's resolved sticky `top` (the CSS var is an unevaluated calc)
-      const panel = el.querySelector<HTMLElement>(".reading-question-panel");
-      const offset = (panel && parseFloat(getComputedStyle(panel).top)) || 104;
-      const avail = window.innerHeight - offset - 24;
-      setFit((prev) => (prev ? need <= avail : need <= avail - FIT_HYSTERESIS));
-    };
-    measure();
-    window.addEventListener("resize", measure);
-    let ro: ResizeObserver | null = null;
-    if (typeof ResizeObserver !== "undefined") {
-      ro = new ResizeObserver(() => measure());
-      ro.observe(el);
-      const list = el.querySelector(".panel-scroll > *");
-      if (list) ro.observe(list);
-    }
-    return () => { window.removeEventListener("resize", measure); ro?.disconnect(); };
-  }, [adaptive, split, multi, content.unit.id]);
+  }, [active, split, content.questions]);
 
   const onActiveRef = useRef(onActiveChange);
   onActiveRef.current = onActiveChange;
@@ -130,8 +99,16 @@ export function SharedMaterialLayout({ content, material, footer, children, numb
     focusQuestion(qid);
     const q = content.questions.find((x) => x.id === qid);
     if (q?.slotId) {
-      root.current?.querySelector(`[data-slot-id="${CSS.escape(q.slotId)}"]`)
-        ?.scrollIntoView?.({ block: "center", behavior: "smooth" });
+      // only move the page when the slot is not already comfortably visible
+      const slot = root.current?.querySelector<HTMLElement>(
+        `[data-slot-id="${CSS.escape(q.slotId)}"]`);
+      if (slot) {
+        const r = slot.getBoundingClientRect();
+        const top = parseFloat(getComputedStyle(slot).scrollMarginTop) || 0;
+        if (r.top < top || r.bottom > window.innerHeight - 24) {
+          slot.scrollIntoView?.({ block: "center", behavior: "smooth" });
+        }
+      }
     }
   };
   const gotoRef = useRef(gotoQuestion);
@@ -162,9 +139,10 @@ export function SharedMaterialLayout({ content, material, footer, children, numb
   };
 
   const activeIdx = content.questions.findIndex((q) => q.id === active);
-  const showNav = multi && !(adaptive && fit);
+  const showNav = multi;
+  const lastQuestion = activeIdx >= content.questions.length - 1;
   const cls = ["shared-material-layout"];
-  if (adaptive) cls.push(fit ? "is-fit" : "is-switch");
+  if (adaptive) cls.push("is-switch");
   if (imageOnly) cls.push("is-image-material");
 
   return (
@@ -176,26 +154,41 @@ export function SharedMaterialLayout({ content, material, footer, children, numb
       {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions */}
       <aside className="reading-question-panel" aria-label="答题面板"
              onClickCapture={onPanelInteract} onFocusCapture={onPanelInteract}>
-        {showNav ? (
+        {showNav && adaptive ? (
+          <nav aria-label="题目切换" className="panel-pager">
+            <button type="button" disabled={activeIdx <= 0}
+                    onClick={() => gotoQuestion(content.questions[activeIdx - 1]!.id)}>
+              ‹ 上一题
+            </button>
+            <span className="panel-pager-label" aria-live="polite">
+              第 {(() => { const q = content.questions[activeIdx]; return q && numberOf ? numberOf(q) : (q?.printedNumber ?? activeIdx + 1); })()} 题
+              {" · "}{activeIdx + 1}/{content.questions.length}
+            </span>
+            {lastQuestion && onNextMaterial ? (
+              <button type="button" className="is-next-material" onClick={onNextMaterial}>
+                下一篇 ›
+              </button>
+            ) : (
+              <button type="button" disabled={lastQuestion}
+                      onClick={() => gotoQuestion(content.questions[activeIdx + 1]!.id)}>
+                下一题 ›
+              </button>
+            )}
+          </nav>
+        ) : null}
+        {showNav && !adaptive ? (
           <nav aria-label="本篇题号" className="panel-question-nav">
             <button type="button" aria-label="上一小题" disabled={activeIdx <= 0}
                     onClick={() => gotoQuestion(content.questions[activeIdx - 1]!.id)}>
               ‹
             </button>
-            {content.questions.map((q) => {
-              const st = chipState?.(q.id);
-              const chipCls = [st?.answered ? "is-answered" : "", st?.flagged ? "is-flagged" : ""]
-                .filter(Boolean).join(" ");
-              return (
-                <button key={q.id} type="button" className={chipCls || undefined}
-                        aria-current={q.id === active ? "true" : undefined}
-                        onClick={() => gotoQuestion(q.id)}>
-                  {numberOf ? numberOf(q) : (q.printedNumber ?? q.position)}
-                  {st?.answered ? <span className="sr-only">已作答</span> : null}
-                  {st?.flagged ? <span className="sr-only">已标记</span> : null}
-                </button>
-              );
-            })}
+            {content.questions.map((q) => (
+              <button key={q.id} type="button"
+                      aria-current={q.id === active ? "true" : undefined}
+                      onClick={() => gotoQuestion(q.id)}>
+                {numberOf ? numberOf(q) : (q.printedNumber ?? q.position)}
+              </button>
+            ))}
             <button type="button" aria-label="下一小题"
                     disabled={activeIdx >= content.questions.length - 1}
                     onClick={() => gotoQuestion(content.questions[activeIdx + 1]!.id)}>
