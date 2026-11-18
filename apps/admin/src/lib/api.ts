@@ -125,3 +125,39 @@ export function describeReleaseError(error: unknown): string {
   }
   return '操作失败，请稍后重试。'
 }
+
+// ---- dashboard (platform-wide operating statistics) ------------------------
+
+const rate = z.number().nullable()
+export const dashboardSchema = z.strictObject({
+  range: z.strictObject({
+    days: z.number().int(), start: z.string(), end: z.string(), timezone: z.string(),
+  }),
+  metrics: z.strictObject({
+    registered_users: z.number().int(), active_learners: z.number().int(),
+    new_users: z.number().int(), answered_questions: z.number().int(),
+  }),
+  daily: z.array(z.strictObject({
+    date: z.string(), learning: z.number().int(), visit: z.number().int().nullable(),
+  })),
+  visit_tracking: z.strictObject({ available: z.boolean(), note: z.string() }),
+  features: z.array(z.strictObject({
+    key: z.string(), label: z.string(), users: z.number().int(),
+    starts: z.number().int(), completions: z.number().int(), completion_rate: rate,
+  })),
+  funnel: z.strictObject({
+    visit_users: z.number().int().nullable(),
+    started_users: z.number().int(), completed_users: z.number().int(),
+    start_to_complete_rate: rate, note: z.string(),
+  }),
+  alerts: z.array(z.strictObject({
+    key: z.string(), label: z.string(), count: z.number().int(),
+    scope: z.enum(['range', 'current']),
+  })),
+})
+export type Dashboard = z.infer<typeof dashboardSchema>
+
+export async function getDashboard(days: 7 | 30): Promise<Dashboard> {
+  const res = await api.get('/api/admin/dashboard', { params: { days } })
+  return dashboardSchema.parse(res.data)
+}

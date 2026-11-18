@@ -2,6 +2,7 @@ from fastapi import FastAPI
 
 from app import env_file
 from app.api.admin_auth import router as admin_auth_router
+from app.api.admin_dashboard import router as admin_dashboard_router
 from app.api.admin_exams import router as admin_exams_router
 from app.api.auth_student import router as auth_student_router
 from app.api.content import router as content_router
@@ -20,6 +21,7 @@ env_file.warn_if_mail_unconfigured()
 
 app.include_router(admin_auth_router)
 app.include_router(admin_exams_router)
+app.include_router(admin_dashboard_router)
 app.include_router(auth_student_router)
 app.include_router(content_router)
 app.include_router(media_router)
