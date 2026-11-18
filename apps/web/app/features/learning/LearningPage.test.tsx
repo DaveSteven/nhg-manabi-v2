@@ -84,7 +84,7 @@ describe("LearningView", () => {
       return HttpResponse.json(EMPTY);
     }));
     renderPage();
-    expect(await screen.findByText(/还没有 N2 的正式作答记录/)).toBeInTheDocument();
+    expect(await screen.findByText(/还没有 N2 的作答记录/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "去专项练习" }))
       .toHaveAttribute("href", "/study/practice");
   });
