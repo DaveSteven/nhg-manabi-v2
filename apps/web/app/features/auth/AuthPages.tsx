@@ -63,7 +63,7 @@ function errorMessage(err: unknown, fallback: string): string {
 
 export function LoginPage() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -73,7 +73,7 @@ export function LoginPage() {
     setBusy(true);
     setError(null);
     try {
-      const { token, user } = await loginAccount(email, password);
+      const { token, user } = await loginAccount(identifier.trim(), password);
       authStore.setSession(token, user);
       navigate("/study");
     } catch (err) {
@@ -86,9 +86,10 @@ export function LoginPage() {
     <AuthShell title="登录">
       <form onSubmit={submit} className="auth-form">
         <label>
-          邮箱
-          <input type="email" required value={email}
-                 onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
+          邮箱或用户名
+          <input type="text" required value={identifier}
+                 onChange={(e) => setIdentifier(e.target.value)}
+                 autoComplete="username" autoCapitalize="none" spellCheck={false} />
         </label>
         <label>
           密码

@@ -95,7 +95,7 @@ describe("StrictAudioPlayer", () => {
 });
 
 function renderListeningExam(opts: { phaseAudio?: unknown; units?: number } = {}) {
-    authStore.setSession("tok", { id: "u1", email: "a@example.com", display_name: "x",
+    authStore.setSession("tok", { id: "u1", email: "a@example.com", username: null, display_name: "x",
       current_level: "N2" as const, avatar: null });
     const rt = (t: string) => ({ format: "jlptgo-richtext-v1" as const,
       blocks: [{ type: "paragraph" as const, children: [{ type: "text" as const, text: t }] }] });

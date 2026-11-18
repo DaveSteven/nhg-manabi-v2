@@ -1,6 +1,6 @@
 """Student accounts and sessions (ADR-0011).
 
-Email is the login identity (lowercased, unique). Accounts start
+Email or username (ADR-0029) is the login identity (lowercased, unique). Accounts start
 unverified; email verification (24h token) activates them. Password
 reset uses 1h one-time tokens and revokes all sessions. Sessions are
 opaque 30-day bearer tokens — only SHA-256 stored. Failures are
@@ -18,7 +18,7 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import text
 from sqlalchemy.engine import Engine
 
-from app.passwords import hash_password, verify_password
+from app.passwords import (hash_password, needs_rehash, verify_password)
 
 SESSION_TTL = timedelta(days=30)
 VERIFY_TOKEN_TTL = timedelta(hours=24)
@@ -216,22 +216,33 @@ def reset_password(engine: Engine, token: str, password: str) -> None:
 _DUMMY_HASH = hash_password("dummy-password-for-timing-equivalence")
 
 
-def login(engine: Engine, email: str, password: str) -> dict:
-    """Authenticate an activated account and open a 30-day session.
+def _identifier_column(identifier: str) -> tuple[str, str]:
+    """(column, normalised value): '@' means email, otherwise username.
+
+    Usernames never contain '@' (users.username CHECK, ADR-0029), so the
+    two identity spaces cannot collide.
+    """
+    value = (identifier or "").strip().lower()
+    return ("email" if "@" in value else "username"), value
+
+
+def login(engine: Engine, identifier: str, password: str) -> dict:
+    """Authenticate an activated account (email or username) and open a
+    30-day session.
 
     Failure bookkeeping (attempt counter, lock) commits BEFORE the
     uniform StudentAuthError is raised — raising inside the transaction
     would roll the counter back and defeat lockout.
     """
-    email_norm = (email or "").strip().lower()
+    column, ident = _identifier_column(identifier)
     now = _now()
     result: dict | None = None
     with engine.begin() as conn:
         row = conn.execute(text(
-            "SELECT id, email, display_name, current_level, avatar, password_hash,"
-            " activated_at, disabled_at, failed_login_count, locked_until"
-            " FROM users WHERE email = :e FOR UPDATE"),
-            {"e": email_norm}).mappings().first()
+            "SELECT id, email, username, display_name, current_level, avatar,"
+            " password_hash, activated_at, disabled_at, failed_login_count,"
+            f" locked_until FROM users WHERE {column} = :e FOR UPDATE"),
+            {"e": ident}).mappings().first()
         if row is None:
             verify_password(password or "", _DUMMY_HASH)  # equalise timing
         else:
@@ -255,6 +266,10 @@ def login(engine: Engine, email: str, password: str) -> dict:
                     "UPDATE users SET failed_login_count = 0,"
                     " locked_until = NULL, last_login_at = :now WHERE id = :id"),
                     {"now": now, "id": row["id"]})
+                if needs_rehash(row["password_hash"]):  # imported V1 hash
+                    conn.execute(text(
+                        "UPDATE users SET password_hash = :h WHERE id = :id"),
+                        {"h": hash_password(password), "id": row["id"]})
                 conn.execute(text(
                     "INSERT INTO user_sessions (id, user_id, token_hash,"
                     " created_at, expires_at) VALUES (:id, :u, :h, :c, :e)"),
@@ -263,6 +278,7 @@ def login(engine: Engine, email: str, password: str) -> dict:
                 result = {"token": token, "expires_at": expires.isoformat(),
                           "user": {"id": str(row["id"]),
                                    "email": row["email"],
+                                   "username": row["username"],
                                    "display_name": row["display_name"],
                                    "current_level": row["current_level"],
                                    "avatar": row["avatar"]}}
@@ -310,8 +326,8 @@ def logout(engine: Engine, token: str) -> None:
 def get_profile(engine: Engine, user_id) -> dict:
     with engine.begin() as conn:
         row = conn.execute(text(
-            "SELECT id, email, display_name, current_level, avatar, created_at,"
-            " activated_at FROM users WHERE id = :u AND disabled_at IS NULL"),
+            "SELECT id, email, username, display_name, current_level, avatar,"
+            " created_at, activated_at FROM users WHERE id = :u AND disabled_at IS NULL"),
             {"u": user_id}).mappings().first()
         if row is None:
             raise StudentAuthError()
@@ -347,7 +363,7 @@ def update_profile(engine: Engine, user_id, display_name: str | None,
         row = conn.execute(text(
             f"UPDATE users SET {', '.join(sets)}"
             " WHERE id = :u AND disabled_at IS NULL"
-            " RETURNING id, email, display_name, current_level, avatar"),
+            " RETURNING id, email, username, display_name, current_level, avatar"),
             params).mappings().first()
         if row is None:
             raise StudentAuthError()

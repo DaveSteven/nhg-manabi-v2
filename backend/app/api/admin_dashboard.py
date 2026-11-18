@@ -49,9 +49,9 @@ _VALID_USERS = """
 valid_users AS (
   SELECT id, created_at FROM users
    WHERE activated_at IS NOT NULL AND disabled_at IS NULL
-     AND lower(email) <> ALL(:ex_exact)
+     AND coalesce(lower(email), '') <> ALL(:ex_exact)
      AND NOT EXISTS (SELECT 1 FROM unnest(CAST(:ex_suffix AS text[])) x
-                      WHERE right(lower(email), length(x)) = x)
+                      WHERE right(coalesce(lower(email), ''), length(x)) = x)
 )
 """
 

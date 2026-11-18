@@ -24,7 +24,7 @@ const TYPES = {
       available_questions: 16, new_units: 8, wrong_units: 0 },
   ],
 };
-const USER = { id: "u1", email: "a@example.com", display_name: "小明",
+const USER = { id: "u1", email: "a@example.com", username: null, display_name: "小明",
                current_level: "N2" as const, avatar: null };
 
 const SESSION = {

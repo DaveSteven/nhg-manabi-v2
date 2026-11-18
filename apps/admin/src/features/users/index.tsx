@@ -43,7 +43,7 @@ const columns: ColumnsType<AdminUser> = [
           <span style={{ minWidth: 0 }}>
             <span style={{ display: 'block', fontWeight: 500 }}>{u.display_name}</span>
             <Typography.Text type='secondary' style={{ fontSize: 12 }}>
-              {u.email}
+              {[u.username, u.email].filter(Boolean).join(' · ')}
             </Typography.Text>
           </span>
         </Flex>

@@ -21,7 +21,7 @@ function load(): AuthState {
     if (!raw) return { token: null, user: null };
     const parsed = JSON.parse(raw) as Partial<AuthState>;
     if (typeof parsed.token !== "string" || !parsed.user ||
-        typeof parsed.user.email !== "string") {
+        typeof parsed.user.id !== "string") {
       return { token: null, user: null };
     }
     return { token: parsed.token, user: parsed.user as UserProfile };

@@ -21,6 +21,7 @@ import { ApiError } from "../../api/errors";
 const USER = {
   id: "9a1c66d0-1111-4111-8111-111111111111",
   email: "student@example.com",
+  username: null,
   display_name: "小明",
   current_level: "N2" as const,
   avatar: null,
@@ -207,17 +208,40 @@ describe("auth pages", () => {
     expect(window.localStorage.getItem("jlptgo.session_token")).toBe("tok-123");
   });
 
+  it("login accepts a username and sends it as `identifier`; email-less accounts work", async () => {
+    const user = userEvent.setup();
+    let body: unknown = null;
+    server.use(http.post(`${ORIGIN}/api/auth/login`, async ({ request }) => {
+      body = await request.json();
+      return HttpResponse.json({
+        token: "tok-v1",
+        expires_at: "2026-12-16T00:00:00+00:00",
+        user: { ...USER, email: null, username: "old_user" },
+      });
+    }));
+    renderRoutes([
+      { path: "login", Component: LoginPage },
+      { path: "study", Component: () => <p>study home</p> },
+    ], "/login");
+    await user.type(screen.getByLabelText(/邮箱或用户名/), " old_user ");
+    await user.type(screen.getByLabelText(/密码/), "study-hard-88");
+    await user.click(screen.getByRole("button", { name: "登录" }));
+    await screen.findByText("study home");
+    expect(body).toEqual({ identifier: "old_user", password: "study-hard-88" });
+    expect(authStore.get().user).toMatchObject({ email: null, username: "old_user" });
+  });
+
   it("login failure surfaces the unified server message", async () => {
     const user = userEvent.setup();
     server.use(http.post(`${ORIGIN}/api/auth/login`, () =>
-      HttpResponse.json({ detail: "邮箱或密码错误，或账户未验证" },
+      HttpResponse.json({ detail: "账号或密码错误，或账户未验证" },
         { status: 401 })));
     renderRoutes([{ path: "login", Component: LoginPage }], "/login");
     await user.type(screen.getByLabelText(/邮箱/), "student@example.com");
     await user.type(screen.getByLabelText(/密码/), "wrong-pass");
     await user.click(screen.getByRole("button", { name: "登录" }));
     expect(await screen.findByRole("alert"))
-      .toHaveTextContent("邮箱或密码错误，或账户未验证");
+      .toHaveTextContent("账号或密码错误，或账户未验证");
     expect(authStore.get().user).toBeNull();
   });
 

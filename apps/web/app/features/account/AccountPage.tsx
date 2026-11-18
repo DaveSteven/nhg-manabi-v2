@@ -36,7 +36,7 @@ export function AccountPage() {
         <UserAvatar user={user} size="xl" />
         <div className="account-identity">
           <p className="account-display-name">{user.display_name}</p>
-          <p className="text-aux">{user.email}</p>
+          <p className="text-aux">{user.email ?? user.username}</p>
         </div>
         <Button variant="secondary"
                 onClick={() => setEditing(true)}>
@@ -62,8 +62,8 @@ export function AccountPage() {
           <h2 className="account-group-title">账号</h2>
           <div className="account-row">
             <div className="account-row-text">
-              <strong>登录邮箱</strong>
-              <small>{user.email}</small>
+              <strong>{user.email ? "登录邮箱" : "登录用户名"}</strong>
+              <small>{user.email ?? user.username}</small>
             </div>
           </div>
           <div className="account-row">

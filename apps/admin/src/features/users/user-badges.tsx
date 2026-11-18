@@ -12,10 +12,10 @@ export function AccountBadge({ state }: { state: AccountState }) {
   return <Tag color={state === 'disabled' ? 'red' : 'gold'}>{ACCOUNT_LABEL[state]}</Tag>
 }
 
-export function UserAvatar({ name, email, size = 32 }: { name: string; email: string; size?: number }) {
+export function UserAvatar({ name, email, size = 32 }: { name: string; email: string | null; size?: number }) {
   return (
     <Avatar size={size} aria-hidden='true'>
-      {(name.trim() || email).slice(0, 1).toUpperCase()}
+      {(name.trim() || email || '?').slice(0, 1).toUpperCase()}
     </Avatar>
   )
 }

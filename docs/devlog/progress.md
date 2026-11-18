@@ -2,6 +2,10 @@
 
 最后更新：2026-11-18
 
+## 用户名登录与 V1 用户迁移准备（2026-11-18）
+
+- 学生可用邮箱或用户名登录，`email` 可空；V1 PBKDF2 哈希可直接校验并在首次登录升级为 scrypt；管理端可看/搜用户名并重置密码；新增 V1 导入脚本（默认 dry-run），见 [日志](2026-11-18-username-login-v1-migration.md) 与 ADR-0029。后端 298 passed + 2 skipped，web 348、admin 51 单测，tsc/build 通过；**尚未对真实 V1 库导入，也未升级生产**，导入是部署后单独授权的步骤，浏览器未验收。
+
 ## 管理端迁移到 Ant Design（2026-11-18）
 
 - `apps/admin` 界面层由 shadcn-admin 换为 Ant Design 6（ADR-0028），登录、Dashboard、试卷管理、用户管理（列表/详情/禁用启用）全部迁移，API 与后端不变，见 [日志](2026-11-18-admin-antd-migration.md)。tsc、eslint、admin 49 单测、build 通过；已在真实后端走查登录、下架/恢复、禁用/启用、深色与移动端（均已还原数据）；Docker 构建、Firefox/Safari 未验证。

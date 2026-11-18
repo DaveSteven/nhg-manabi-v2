@@ -184,7 +184,8 @@ const activityEnum = z.enum(['active', 'inactive', 'dormant', 'not_started'])
 const accountEnum = z.enum(['normal', 'disabled', 'unverified'])
 
 export const adminUserSchema = z.strictObject({
-  id: z.string(), email: z.string(), display_name: z.string(),
+  id: z.string(), email: z.string().nullable(), username: z.string().nullable(),
+  display_name: z.string(),
   current_level: z.string(), created_at: z.string(),
   account_state: accountEnum, activity: activityEnum,
   last_visit_date: z.string().nullable(), last_learn_at: z.string().nullable(),
@@ -264,6 +265,16 @@ export async function setUserDisabled(id: string, disable: boolean, reason: stri
     `/api/admin/users/${encodeURIComponent(id)}/${disable ? 'disable' : 'enable'}`,
     { reason: reason.trim() || null }
   )
+}
+
+/** Admin password reset (ADR-0029): returns the one-time temporary password. */
+export async function resetUserPassword(id: string, reason: string): Promise<string> {
+  const { data } = await api.post(
+    `/api/admin/users/${encodeURIComponent(id)}/reset-password`,
+    { reason: reason.trim() || null }
+  )
+  return z.strictObject({ ok: z.boolean(), temporary_password: z.string() }).parse(data)
+    .temporary_password
 }
 
 export function describeUserActionError(error: unknown): string {

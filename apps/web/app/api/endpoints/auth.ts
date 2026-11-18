@@ -15,7 +15,9 @@ export type JlptLevel = (typeof JLPT_LEVELS)[number];
 
 export const UserProfileSchema = z.strictObject({
   id: z.string(),
-  email: z.string(),
+  /** null for V1-migrated accounts that never had an email (ADR-0029). */
+  email: z.string().nullable(),
+  username: z.string().nullable(),
   display_name: z.string(),
   current_level: z.enum(JLPT_LEVELS),
   /** Fixed-set avatar id; null = default solid-colour avatar. */
@@ -80,9 +82,10 @@ export interface LoginResult {
   user: UserProfile;
 }
 
-export async function loginAccount(email: string, password: string,
+/** `identifier` is an email or a username (ADR-0029). */
+export async function loginAccount(identifier: string, password: string,
                                    signal?: AbortSignal): Promise<LoginResult> {
-  const data = await post("/api/auth/login", { email, password },
+  const data = await post("/api/auth/login", { identifier, password },
                           LoginResponseSchema, signal);
   return { token: data.token, user: data.user };
 }

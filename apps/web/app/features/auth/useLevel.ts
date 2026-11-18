@@ -69,7 +69,7 @@ export function useLevel(): {
     if (authStore.get().user) {
       updateMe({ current_level: level })
         .then((me) => authStore.setUser({
-          id: me.id, email: me.email,
+          id: me.id, email: me.email, username: me.username,
           display_name: me.display_name,
           current_level: me.current_level,
           avatar: me.avatar,

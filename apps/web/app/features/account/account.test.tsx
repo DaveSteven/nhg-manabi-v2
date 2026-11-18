@@ -11,6 +11,7 @@ import { AccountPage } from "./AccountPage";
 const USER = {
   id: "9a1c66d0-1111-4111-8111-111111111111",
   email: "student@example.com",
+  username: null,
   display_name: "小明",
   current_level: "N2" as const,
   avatar: null,

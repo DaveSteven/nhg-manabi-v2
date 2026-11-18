@@ -22,7 +22,7 @@ import {
   theme,
 } from 'antd'
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { type UserDetail, describeUserActionError, getAdminUser, setUserDisabled } from '@/lib/api'
+import { type UserDetail, describeUserActionError, getAdminUser, resetUserPassword, setUserDisabled } from '@/lib/api'
 import { pct } from '@/features/dashboard/format'
 import { formatDay, formatJst } from './format'
 import { AccountBadge, ActivityBadge, UserAvatar } from './user-badges'
@@ -33,7 +33,9 @@ const KIND_LABEL: Record<string, string> = {
   mock: '模拟考试',
   exam: '试卷练习',
 }
-const ACTION_LABEL: Record<string, string> = { user_disable: '禁用账号', user_enable: '启用账号' }
+const ACTION_LABEL: Record<string, string> = { user_disable: '禁用账号', user_enable: '启用账号',
+  user_password_reset: '重置密码',
+}
 
 type Recent = UserDetail['recent'][number]
 type Feature = UserDetail['features'][number]
@@ -51,7 +53,15 @@ function Stat({ label, value, hint }: { label: string; value: number; hint?: str
   )
 }
 
-export function UserDetailView({ data, onToggle }: { data: UserDetail; onToggle: () => void }) {
+export function UserDetailView({
+  data,
+  onToggle,
+  onReset,
+}: {
+  data: UserDetail
+  onToggle: () => void
+  onReset: () => void
+}) {
   const { token } = theme.useToken()
   const u = data.user
   const s = data.stats
@@ -72,13 +82,18 @@ export function UserDetailView({ data, onToggle }: { data: UserDetail; onToggle:
                 <AccountBadge state={u.account_state} />
               </Space>
               <div>
-                <Typography.Text type='secondary'>{u.email}</Typography.Text>
+                <Typography.Text type='secondary'>
+                  {[u.username, u.email].filter(Boolean).join(' · ')}
+                </Typography.Text>
               </div>
             </div>
           </Flex>
-          <Button type='primary' danger={!disabled} onClick={onToggle}>
-            {disabled ? '启用账号' : '禁用账号'}
-          </Button>
+          <Space>
+            <Button onClick={onReset}>重置密码</Button>
+            <Button type='primary' danger={!disabled} onClick={onToggle}>
+              {disabled ? '启用账号' : '禁用账号'}
+            </Button>
+          </Space>
         </Flex>
         <Descriptions
           size='small'
@@ -202,7 +217,7 @@ export function UserDetailView({ data, onToggle }: { data: UserDetail; onToggle:
           <Timeline
             items={data.audit.map((a, i) => ({
               key: i,
-              color: a.action === 'user_disable' ? 'red' : 'green',
+              color: a.action === 'user_disable' ? 'red' : a.action === 'user_password_reset' ? 'blue' : 'green',
               content: (
                 <>
                   <Typography.Text strong>{ACTION_LABEL[a.action] ?? a.action}</Typography.Text>
@@ -226,7 +241,23 @@ export function UserDetailPage({ userId }: { userId: string }) {
   const query = useQuery({ queryKey: ['admin-user', userId], queryFn: () => getAdminUser(userId) })
   const [open, setOpen] = useState(false)
   const [reason, setReason] = useState('')
+  const [resetOpen, setResetOpen] = useState(false)
+  const [tempPassword, setTempPassword] = useState<string | null>(null)
   const disabled = query.data?.user.account_state === 'disabled'
+  const reset = useMutation({
+    mutationFn: () => resetUserPassword(userId, reason),
+    onSuccess: (pw) => {
+      setTempPassword(pw)
+      setReason('')
+    },
+    onError: (e) => message.error(describeUserActionError(e)),
+    onSettled: () => qc.invalidateQueries({ queryKey: ['admin-user', userId] }),
+  })
+  const closeReset = () => {
+    setResetOpen(false)
+    setTempPassword(null)
+    setReason('')
+  }
   const action = useMutation({
     mutationFn: (disable: boolean) => setUserDisabled(userId, disable, reason),
     onSuccess: (_d, disable) => {
@@ -265,7 +296,50 @@ export function UserDetailPage({ userId }: { userId: string }) {
           }
         />
       )}
-      {query.data && <UserDetailView data={query.data} onToggle={() => setOpen(true)} />}
+      {query.data && (
+        <UserDetailView
+          data={query.data}
+          onToggle={() => setOpen(true)}
+          onReset={() => setResetOpen(true)}
+        />
+      )}
+      <Modal
+        open={resetOpen}
+        title={tempPassword ? '临时密码已生成' : '重置该用户的密码？'}
+        okText={tempPassword ? '我已记录' : '确认重置'}
+        cancelButtonProps={{ style: { display: tempPassword ? 'none' : undefined } }}
+        cancelText='取消'
+        confirmLoading={reset.isPending}
+        onCancel={closeReset}
+        onOk={() => (tempPassword ? closeReset() : reset.mutate())}
+        maskClosable={!tempPassword}
+        closable={!tempPassword}
+        destroyOnHidden
+      >
+        {tempPassword ? (
+          <Space orientation='vertical' style={{ width: '100%' }}>
+            <Typography.Paragraph copyable={{ text: tempPassword }} strong>
+              {tempPassword}
+            </Typography.Paragraph>
+            <Typography.Paragraph type='secondary'>
+              只显示这一次，请通过安全渠道告知用户，并提醒其登录后尽快修改。
+            </Typography.Paragraph>
+          </Space>
+        ) : (
+          <Space orientation='vertical' style={{ width: '100%' }}>
+            <Typography.Paragraph type='secondary'>
+              将生成临时密码，用户的旧密码立即失效并退出所有登录；学习记录不受影响。
+            </Typography.Paragraph>
+            <Input.TextArea
+              aria-label='重置原因'
+              placeholder='原因（选填，会记录在操作日志里）'
+              value={reason}
+              maxLength={500}
+              onChange={(e) => setReason(e.target.value)}
+            />
+          </Space>
+        )}
+      </Modal>
       <Modal
         open={open}
         title={disabled ? '启用该账号？' : '禁用该账号？'}

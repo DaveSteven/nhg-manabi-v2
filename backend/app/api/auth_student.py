@@ -29,7 +29,9 @@ class RegisterIn(BaseModel):
 
 
 class LoginIn(BaseModel):
-    email: str
+    """`identifier` = email or username (ADR-0029); `email` is the legacy name."""
+    identifier: str | None = None
+    email: str | None = None
     password: str
 
 
@@ -63,7 +65,7 @@ def _input_error(exc: student_auth.StudentInputError) -> HTTPException:
 
 
 def _auth_error() -> HTTPException:
-    return HTTPException(status_code=401, detail="邮箱或密码错误，或账户未验证")
+    return HTTPException(status_code=401, detail="账号或密码错误，或账户未验证")
 
 
 def current_session(
@@ -93,7 +95,8 @@ def register(body: RegisterIn) -> dict:
 @router.post("/api/auth/login")
 def login(body: LoginIn) -> dict:
     try:
-        return student_auth.login(get_engine(), body.email, body.password)
+        return student_auth.login(
+            get_engine(), body.identifier or body.email or "", body.password)
     except student_auth.StudentAuthError as exc:
         raise _auth_error() from exc
 
@@ -148,6 +151,7 @@ def _profile_payload(profile: dict) -> dict:
     return {
         "id": str(profile["id"]),
         "email": profile["email"],
+        "username": profile.get("username"),
         "display_name": profile["display_name"],
         "current_level": profile["current_level"],
         "avatar": profile.get("avatar"),

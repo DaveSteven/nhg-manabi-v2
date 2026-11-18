@@ -17,6 +17,7 @@ managed); the three summary figures use the Dashboard's "valid user" rule
 Admin identity for the audit log is server-derived; students' answers are
 never modified here.
 """
+import secrets
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Literal
@@ -83,7 +84,8 @@ def _escape_like(q: str) -> str:
 
 def _user_dto(r) -> dict:
     return {
-        "id": str(r["id"]), "email": r["email"], "display_name": r["display_name"],
+        "id": str(r["id"]), "email": r["email"], "username": r["username"],
+        "display_name": r["display_name"],
         "current_level": r["current_level"], "created_at": _iso(r["created_at"]),
         "account_state": r["account_state"], "activity": r["activity"],
         "last_visit_date": _iso(r["last_visit"]),
@@ -109,7 +111,7 @@ def list_users(engine, *, q: str, level: str | None, activity: str | None,
     visit AS (SELECT user_id, max(visit_date) AS last_visit
                 FROM user_visit_days GROUP BY user_id),
     base AS (
-      SELECT u.id, u.email, u.display_name, u.current_level, u.created_at,
+      SELECT u.id, u.email, u.username, u.display_name, u.current_level, u.created_at,
              {_ACCOUNT} AS account_state, {_ACTIVITY} AS activity,
              visit.last_visit, agg.last_learn_at,
              coalesce(agg.days_7d, 0) AS days_7d,
@@ -121,6 +123,7 @@ def list_users(engine, *, q: str, level: str | None, activity: str | None,
     where = """
      WHERE (CAST(:q AS text) IS NULL
             OR lower(email) LIKE CAST(:q AS text) ESCAPE '\\'
+            OR username LIKE CAST(:q AS text) ESCAPE '\\'
             OR lower(display_name) LIKE CAST(:q AS text) ESCAPE '\\')
        AND (CAST(:level AS text) IS NULL OR current_level = :level)
        AND (CAST(:activity AS text) IS NULL OR activity = :activity)
@@ -183,7 +186,7 @@ def user_detail(engine, user_id: uuid.UUID, now: datetime | None = None) -> dict
         row = c.execute(text(
             f"WITH {_AGG}, visit AS (SELECT user_id, max(visit_date) AS last_visit"
             " FROM user_visit_days GROUP BY user_id)"
-            f" SELECT u.id, u.email, u.display_name, u.current_level, u.created_at,"
+            f" SELECT u.id, u.email, u.username, u.display_name, u.current_level, u.created_at,"
             f" u.activated_at, u.disabled_at, {_ACCOUNT} AS account_state,"
             f" {_ACTIVITY} AS activity, visit.last_visit, agg.last_learn_at,"
             " coalesce(agg.days_7d, 0) AS days_7d,"
@@ -319,3 +322,42 @@ def admin_disable_user(user_id: uuid.UUID, body: AccountActionBody | None = None
 def admin_enable_user(user_id: uuid.UUID, body: AccountActionBody | None = None,
                       admin: dict = Depends(require_admin())) -> dict:
     return _account_action(user_id, False, body, admin)
+
+
+def reset_user_password(engine, user_id: uuid.UUID, admin: dict,
+                        reason: str | None) -> str:
+    """Admin resets a student's password (ADR-0029): for accounts that cannot
+    self-recover by email. Returns a one-time temporary password (shown once,
+    never stored or audited); clears the lock and revokes every session.
+    """
+    from app.passwords import hash_password
+    temp = secrets.token_urlsafe(9)  # 12 chars, meets the 8-char minimum
+    with engine.begin() as c:
+        if c.execute(text(
+                "UPDATE users SET password_hash = :h, failed_login_count = 0,"
+                " locked_until = NULL WHERE id = :u RETURNING id"),
+                {"h": hash_password(temp), "u": user_id}).first() is None:
+            raise LookupError("not_found")
+        c.execute(text("UPDATE user_sessions SET revoked_at = now()"
+                       " WHERE user_id = :u AND revoked_at IS NULL"),
+                  {"u": user_id})
+        c.execute(text(
+            "INSERT INTO admin_audit_logs (id, admin_id, admin_username, action,"
+            " target_type, target_id, reason)"
+            " VALUES (:id, :a, :n, 'user_password_reset', 'user', :u, :r)"),
+            {"id": uuid.uuid4(), "a": uuid.UUID(str(admin["id"])),
+             "n": admin["username"], "u": user_id,
+             "r": (reason or "").strip() or None})
+    return temp
+
+
+@router.post("/api/admin/users/{user_id}/reset-password")
+def admin_reset_user_password(user_id: uuid.UUID,
+                              body: AccountActionBody | None = None,
+                              admin: dict = Depends(require_admin())) -> dict:
+    try:
+        temp = reset_user_password(get_engine(), user_id, admin,
+                                   body.reason if body else None)
+    except LookupError:
+        raise HTTPException(status_code=404, detail={"code": "not_found"})
+    return {"ok": True, "temporary_password": temp}

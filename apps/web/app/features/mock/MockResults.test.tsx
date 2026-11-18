@@ -10,7 +10,7 @@ import { MockRecords } from "./MockRecords";
 
 const MockRecordsHost = () => <MockRecords examId="E-1" />;
 
-const USER = { id: "u1", email: "a@example.com", display_name: "小明",
+const USER = { id: "u1", email: "a@example.com", username: null, display_name: "小明",
                current_level: "N2" as const, avatar: null };
 const rt = (text: string) => ({
   format: "jlptgo-richtext-v1" as const,

@@ -40,7 +40,7 @@ export function EditProfileDialog({ user, onClose }: {
     try {
       const me = await updateMe({ avatar, display_name: trimmed });
       authStore.setUser({
-        id: me.id, email: me.email, display_name: me.display_name,
+        id: me.id, email: me.email, username: me.username, display_name: me.display_name,
         current_level: me.current_level, avatar: me.avatar,
       });
       onClose();

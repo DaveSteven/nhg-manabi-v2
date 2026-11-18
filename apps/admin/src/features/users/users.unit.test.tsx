@@ -3,14 +3,16 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { UserDetail, UserList } from '@/lib/api'
 
-const { listAdminUsers, getAdminUser, setUserDisabled } = vi.hoisted(() => ({
+const { listAdminUsers, getAdminUser, setUserDisabled, resetUserPassword } = vi.hoisted(() => ({
   listAdminUsers: vi.fn(), getAdminUser: vi.fn(), setUserDisabled: vi.fn(),
+  resetUserPassword: vi.fn(),
 }))
 vi.mock('@/lib/api', async (orig) => ({
   ...(await orig<typeof import('@/lib/api')>()),
   listAdminUsers: (q: unknown) => listAdminUsers(q),
   getAdminUser: (id: string) => getAdminUser(id),
   setUserDisabled: (...a: unknown[]) => setUserDisabled(...a),
+  resetUserPassword: (...a: unknown[]) => resetUserPassword(...a),
 }))
 vi.mock('@tanstack/react-router', () => ({
   Link: ({ children, className }: { children: React.ReactNode; className?: string }) => (
@@ -28,7 +30,7 @@ import { UserDetailPage } from './detail'
 import { UsersPanel } from './index'
 
 const user = (over = {}) => ({
-  id: 'u1', email: 'alice@example.com', display_name: 'Alice', current_level: 'N2',
+  id: 'u1', email: 'alice@example.com', username: 'alice_01', display_name: 'Alice', current_level: 'N2',
   created_at: '2026-11-01T15:30:00+00:00', account_state: 'normal' as const,
   activity: 'active' as const, last_visit_date: null as string | null,
   last_learn_at: '2026-11-17T01:00:00+00:00', days_7d: 4, answers_7d: 52, ...over,
@@ -131,5 +133,22 @@ describe('UserDetailPage', () => {
     expect(await screen.findByRole('button', { name: '启用账号' })).toBeTruthy()
     expect(screen.getByText('禁用账号')).toBeTruthy()
     expect(screen.getByText(/boss/)).toBeTruthy()
+  })
+
+  it('resets a password after confirmation and shows the temporary one once', async () => {
+    resetUserPassword.mockResolvedValue('Tmp-Pass-1234')
+    wrap(<UserDetailPage userId='u1' />)
+    await userEvent.click(await screen.findByRole('button', { name: '重置密码' }))
+    expect(resetUserPassword).not.toHaveBeenCalled()
+    await userEvent.type(screen.getByLabelText('重置原因'), '用户来电')
+    await userEvent.click(screen.getByRole('button', { name: '确认重置' }))
+    await waitFor(() => expect(resetUserPassword).toHaveBeenCalledWith('u1', '用户来电'))
+    expect(await screen.findByText('Tmp-Pass-1234')).toBeTruthy()
+  })
+
+  it('shows username next to email and copes with an email-less account', async () => {
+    getAdminUser.mockResolvedValue(detail({ user: { ...detail().user, email: null } }))
+    wrap(<UserDetailPage userId='u1' />)
+    expect(await screen.findByText('alice_01')).toBeTruthy()
   })
 })
