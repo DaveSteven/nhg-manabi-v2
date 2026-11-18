@@ -29,6 +29,20 @@
 - 管理端认证（ADR-0009）：`POST /api/admin/auth/login` 换取不透明 Bearer 令牌（12 小时绝对过期，可撤回，库内只存 SHA-256）；缺失/无效/过期令牌 401，角色不足 403（viewer ⊂ reviewer ⊂ publisher）；登录失败一律同一 401 响应，连续 5 次失败锁定 15 分钟；无 dev_test 旁路，学生令牌与管理员令牌互不通用。审核/发布记录的 `reviewer_id` 由服务端写为 `admin:<id>`，不接受客户端传入。
 - 学生端账户认证（ADR-0011）：`POST /api/auth/register`（邮箱+密码，注册后未验证不可登录）、`login`、`logout`、`verify-email`、`resend-verification`、`forgot-password`、`reset-password`；`GET/PATCH /api/me`（display_name、current_level）。会话为 30 天绝对过期的不透明 Bearer 令牌（库内只存 SHA-256，可撤销）；登录失败/未验证/停用/锁定一律同一 401；`resend-verification` 与 `forgot-password` 对任何账号状态统一 200，不泄漏存在性；注册与重置的字段级错误返回 400 `{"detail":{"field","message"}}`；重置成功撤销该用户全部会话；登录连续失败 5 次锁定 15 分钟。作答域身份仍由 `get_current_user_id` 服务端解析：真实会话令牌优先，`AUTH_MODE=dev_test` 仅非生产可用（ADR-0006 语义不变）。
 
+## 严格模拟 API（ADR-0019，2026-11-18 已实现后端）
+
+| 端点 | 说明 |
+|---|---|
+| `GET /api/exams/{id}/mock` | 公开：该试卷是否可模考（`available`/`reason`/Phase 与时限），不含内容与答案 |
+| `POST /api/mock-exams` `{exam_id}` | 开始模考：固定当前 release，开始第 1 个 Phase 计时；同事务放弃进行中的练习或模考，无确认；不可模考 → 422 `mock_not_available` |
+| `GET /api/mock-exams/current` / `{id}` | 权威状态（含 `server_now`、各 Phase `status/expires_at/remaining_seconds`、仅当前 Phase 的 `active_units`）；读取时顺带封存已到期 Phase |
+| `GET /api/mock-exams/{id}/units/{sessionUnitId}` | 无答案 Unit 内容，仅限当前 Phase，否则 409 `unit_not_in_active_phase` |
+| `PUT .../units/{suid}/drafts`、`GET .../drafts` | 草稿（row_version 乐观锁，同练习）；恢复只返回当前 Phase |
+| `POST /api/mock-exams/{id}/phases/{phaseId}/submit` | 交本 Phase；Phase 写在路径上，重复/重试对已关闭 Phase 幂等，绝不会误关下一个 Phase |
+| `GET /api/mock-exams/{id}/results` | 最后一个 Phase 关闭后才开放：各 Phase/科目答对数与正确率、逐题回顾；之前 409 `mock_not_finished` |
+
+服务端无后台任务：到期封存发生在任何访问该会话的请求中，按已存草稿正式提交，未选为 skip，下一 Phase 自上一 Phase 到期时刻起计时。模考答案不写入 `user_question_progress`，也不进入练习历史/概览。
+
 ## 并发和幂等
 
 - 正式提交必须带唯一 idempotency key，重复请求返回相同已提交结果。

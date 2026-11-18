@@ -245,6 +245,7 @@ def test_quick_practice_and_mock_slots_keep_their_own_rules(
         idx = {r[0]: r[1] for r in conn.execute(sa.text(
             "SELECT indexname, indexdef FROM pg_indexes"
             " WHERE tablename = 'study_sessions'"))}
-    for name in ("ux_one_active_practice", "ux_one_active_quick", "ux_one_active_mock"):
+    for name in ("ux_one_active_main", "ux_one_active_quick"):
         assert "UNIQUE" in idx[name]
     assert "ix_sessions_user_active_practice" not in idx
+    assert "ux_one_active_practice" not in idx and "ux_one_active_mock" not in idx

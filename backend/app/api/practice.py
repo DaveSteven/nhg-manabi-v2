@@ -180,7 +180,7 @@ def _replace_and_create(engine, body: PracticeSessionCreate,
         conn.execute(text(
             "UPDATE study_sessions SET state = 'abandoned', ended_at = now(),"
             " version = version + 1"
-            " WHERE user_id = :u AND mode = 'practice'"
+            " WHERE user_id = :u AND mode IN ('practice', 'mock')"
             "   AND state = 'in_progress'"), {"u": user_id})
 
         session_id = conn.execute(text(
@@ -440,64 +440,71 @@ def save_answer_draft(
         if unit is None:
             raise HTTPException(status_code=404, detail="session unit not found")
         _require_active_practice(unit)
-        if unit["state"] != "pending":
-            raise HTTPException(
-                status_code=409,
-                detail={"code": "unit_locked",
-                        "message": "unit already submitted; drafts are frozen"})
+        return _save_draft(conn, unit, session_unit_id, body)
 
-        in_unit = conn.execute(text(
-            "SELECT 1 FROM release_questions"
-            " WHERE release_id = :r AND unit_id = :uid AND question_id = :q"),
-            {"r": unit["release_id"], "uid": unit["unit_id"],
-             "q": body.question_id}).scalar()
-        if in_unit is None:
+
+def _save_draft(conn, unit: dict, session_unit_id: uuid.UUID,
+                body: DraftSave) -> dict:
+    """Shared draft write (practice + strict mock): validation, optimistic
+    row_version locking, insert/update — inside the caller's transaction."""
+    if unit["state"] != "pending":
+        raise HTTPException(
+            status_code=409,
+            detail={"code": "unit_locked",
+                    "message": "unit already submitted; drafts are frozen"})
+
+    in_unit = conn.execute(text(
+        "SELECT 1 FROM release_questions"
+        " WHERE release_id = :r AND unit_id = :uid AND question_id = :q"),
+        {"r": unit["release_id"], "uid": unit["unit_id"],
+         "q": body.question_id}).scalar()
+    if in_unit is None:
+        raise HTTPException(
+            status_code=422,
+            detail={"code": "question_not_in_unit",
+                    "message": "question does not belong to this unit",
+                    "question_id": body.question_id})
+    if body.chosen_option_id is not None:
+        valid_option = conn.execute(text(
+            "SELECT 1 FROM release_options"
+            " WHERE release_id = :r AND question_id = :q"
+            " AND option_id = :o"),
+            {"r": unit["release_id"], "q": body.question_id,
+             "o": body.chosen_option_id}).scalar()
+        if valid_option is None:
             raise HTTPException(
                 status_code=422,
-                detail={"code": "question_not_in_unit",
-                        "message": "question does not belong to this unit",
-                        "question_id": body.question_id})
-        if body.chosen_option_id is not None:
-            valid_option = conn.execute(text(
-                "SELECT 1 FROM release_options"
-                " WHERE release_id = :r AND question_id = :q"
-                " AND option_id = :o"),
-                {"r": unit["release_id"], "q": body.question_id,
-                 "o": body.chosen_option_id}).scalar()
-            if valid_option is None:
-                raise HTTPException(
-                    status_code=422,
-                    detail={"code": "invalid_option",
-                            "message": "option does not belong to question",
-                            "question_id": body.question_id,
-                            "option_id": body.chosen_option_id})
+                detail={"code": "invalid_option",
+                        "message": "option does not belong to question",
+                        "question_id": body.question_id,
+                        "option_id": body.chosen_option_id})
 
-        row = conn.execute(text(
-            "SELECT row_version FROM study_answer_drafts"
-            " WHERE session_unit_id = :u AND question_id = :q FOR UPDATE"),
-            {"u": session_unit_id, "q": body.question_id}).scalar()
-        if row is None:
-            if body.expected_row_version != 0:
-                raise _conflict(0)
-            conn.execute(text(
-                "INSERT INTO study_answer_drafts (session_unit_id, release_id,"
-                " unit_id, question_id, chosen_option_id, row_version,"
-                " updated_at)"
-                " VALUES (:u, :r, :uid, :q, :c, 1, now())"),
-                {"u": session_unit_id, "r": unit["release_id"],
-                 "uid": unit["unit_id"], "q": body.question_id,
-                 "c": body.chosen_option_id})
-            new_version = 1
-        else:
-            if row != body.expected_row_version:
-                raise _conflict(row)
-            conn.execute(text(
-                "UPDATE study_answer_drafts SET chosen_option_id = :c,"
-                " row_version = row_version + 1, updated_at = now()"
-                " WHERE session_unit_id = :u AND question_id = :q"),
-                {"c": body.chosen_option_id, "u": session_unit_id,
-                 "q": body.question_id})
-            new_version = row + 1
+    row = conn.execute(text(
+        "SELECT row_version FROM study_answer_drafts"
+        " WHERE session_unit_id = :u AND question_id = :q FOR UPDATE"),
+        {"u": session_unit_id, "q": body.question_id}).scalar()
+    if row is None:
+        if body.expected_row_version != 0:
+            raise _conflict(0)
+        conn.execute(text(
+            "INSERT INTO study_answer_drafts (session_unit_id, release_id,"
+            " unit_id, question_id, chosen_option_id, row_version,"
+            " updated_at)"
+            " VALUES (:u, :r, :uid, :q, :c, 1, now())"),
+            {"u": session_unit_id, "r": unit["release_id"],
+             "uid": unit["unit_id"], "q": body.question_id,
+             "c": body.chosen_option_id})
+        new_version = 1
+    else:
+        if row != body.expected_row_version:
+            raise _conflict(row)
+        conn.execute(text(
+            "UPDATE study_answer_drafts SET chosen_option_id = :c,"
+            " row_version = row_version + 1, updated_at = now()"
+            " WHERE session_unit_id = :u AND question_id = :q"),
+            {"c": body.chosen_option_id, "u": session_unit_id,
+             "q": body.question_id})
+        new_version = row + 1
     return {"session_unit_id": str(session_unit_id),
             "question_id": body.question_id,
             "chosen_option_id": body.chosen_option_id,
@@ -597,7 +604,8 @@ def _build_unit_feedback(conn, release_id, unit_id: str,
 
 
 def _judge_and_store_unit(conn, release_id, unit_id: str, session_unit_id,
-                          answer_map: dict, user_id: uuid.UUID) -> None:
+                          answer_map: dict, user_id: uuid.UUID,
+                          refresh_progress: bool = True) -> None:
     """Judge every question of one unit and write the formal answers, then
     flip the session unit to 'submitted' — all in the CALLER's transaction.
     Raises HTTPException (422) before writing anything for this unit when
@@ -662,8 +670,10 @@ def _judge_and_store_unit(conn, release_id, unit_id: str, session_unit_id,
         " submitted_at = now() WHERE id = :u AND state = 'pending'"),
         {"u": session_unit_id})
     # Same transaction: the derived per-question cache never lags the
-    # formal answers (and rolls back with them).
-    refresh_question_progress(conn, user_id, list(questions))
+    # formal answers (and rolls back with them). Strict mock answers are kept
+    # out of practice statistics (ADR-0019 M7), so they skip the cache.
+    if refresh_progress:
+        refresh_question_progress(conn, user_id, list(questions))
 
 
 @router.post("/api/practice/sessions/{session_id}/units/{session_unit_id}/submit")
@@ -926,7 +936,8 @@ def _build_results(conn, session_id: uuid.UUID) -> dict:
     }
 
 
-def _complete_session(conn, session_id: uuid.UUID) -> None:
+def _complete_session(conn, session_id: uuid.UUID,
+                      scoring_method: str = "all_questions") -> None:
     """Mark the session completed + write its aggregate result row in the
     CALLER's transaction (correct + wrong + skipped = total, DB CHECKed).
     Shared by the finish endpoint and Quick Practice submit auto-complete.
@@ -944,9 +955,9 @@ def _complete_session(conn, session_id: uuid.UUID) -> None:
         " wrong_count, skipped_count, total_count, scoring_method,"
         " scoring_version)"
         " VALUES (gen_random_uuid(), :s, :c, :w, :sk, :t,"
-        " 'all_questions', '1')"),
+        " :m, '1')"),
         {"s": session_id, "c": correct, "w": wrong, "sk": skipped,
-         "t": total})
+         "t": total, "m": scoring_method})
     conn.execute(text(
         "UPDATE study_sessions SET state = 'completed',"
         " ended_at = now(), version = version + 1"

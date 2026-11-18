@@ -128,3 +128,5 @@
 - **我的学习：学习概览/练习历史/题目记录（2026-11-17）**：见 `docs/devlog/2026-11-17-learning-stats.md`。新增 `/api/me/learning/{overview,history,questions}`（正式作答口径、skip 不入分母、覆盖率、薄弱题型 ≥5 次样本、错题策略 B）与 `/study/learning` 三 tab 页、顶栏「学习」入口。后端 243 passed + 2 skipped，web 266 passed，typecheck/build 通过，容器重建并用真实数据在浏览器核对文本。**视觉走查未做**（浏览器窗格隐藏）；收藏、统计时间范围、趋势、阈值待产品确认。
 - **我的学习走查调整（2026-11-17）**：按用户反馈加入页码分页（每页 10 条、含总数，通用 `Pagination` 组件）并按设计系统既有 token 补色（指标卡/学科标签/进度条/结果胶囊）。web 272 passed，build 通过，容器已重建；视觉与分页条未在浏览器中亲眼核对（窗格隐藏），待用户目检。见 `docs/devlog/2026-11-17-learning-stats.md`。
 - **我的学习页面优化（2026-11-18）**：见 `docs/devlog/2026-11-18-learning-page-optimization.md`。薄弱题型仅列明显偏低者（最多 3、小样本标「数据较少」）并可直达题型；新增「建议先复习 · N 道最近仍错」；按科目整行进入专项；练习历史整行可点；题目记录「重新练习」。后端 243 passed + 2 skipped，web 275 passed，typecheck/build 通过。真实浏览器视觉走查、容器重建未做；完整模拟来源待模考上线。
+
+- **严格模拟后端（2026-11-18，ADR-0019 第 1 步）**：见 `docs/devlog/2026-11-18-mock-exam-backend.md`。迁移 0013（练习/模考共用单名额）、`/api/mock-exams`（Phase 状态机、服务器计时、惰性到期封存、无答案内容接口、交 Phase 幂等、结果仅完成后开放）。后端 252 passed + 2 skipped，迁移测试库 up/down/up 通过。开发库未迁移；前端、严格听力播放器、浏览器验收未开始，对用户尚无可见变化。

@@ -6,6 +6,7 @@ from app.api.admin_exams import router as admin_exams_router
 from app.api.auth_student import router as auth_student_router
 from app.api.content import router as content_router
 from app.api.media import router as media_router
+from app.api.mock_exam import router as mock_exam_router
 from app.api.practice import router as practice_router
 from app.api.learning import router as learning_router
 from app.api.topic_practice import router as topic_practice_router
@@ -22,6 +23,7 @@ app.include_router(admin_exams_router)
 app.include_router(auth_student_router)
 app.include_router(content_router)
 app.include_router(media_router)
+app.include_router(mock_exam_router)
 app.include_router(practice_router)
 app.include_router(topic_practice_router)
 app.include_router(learning_router)
