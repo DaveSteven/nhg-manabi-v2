@@ -4,7 +4,7 @@ import { formatClock, timeTone, type TimeTone } from "./mockModel";
 /** Sticky exam status bar: brand · exam · where I am · progress · clock ·
  * answer sheet. The sheet button sits right of the clock on every layout. */
 export function ExamTopBar({ examName, examTitle, where, answered, total,
-  remaining, onOpenSheet, saveProblem }: {
+  remaining, onOpenSheet, onAbandon, saveProblem }: {
   examName: string;
   examTitle: string;
   where: string;
@@ -12,6 +12,7 @@ export function ExamTopBar({ examName, examTitle, where, answered, total,
   total: number;
   remaining: number | null;
   onOpenSheet(): void;
+  onAbandon(): void;
   saveProblem: boolean;
 }) {
   const tone: TimeTone = remaining === null ? "normal" : timeTone(remaining);
@@ -39,6 +40,7 @@ export function ExamTopBar({ examName, examTitle, where, answered, total,
         {remaining === null ? "--:--" : formatClock(remaining)}
       </span>
       <Button variant="secondary" size="sm" onClick={onOpenSheet}>答题卡</Button>
+      <Button variant="ghost" size="sm" onClick={onAbandon}>放弃考试</Button>
     </header>
     </div>
   );

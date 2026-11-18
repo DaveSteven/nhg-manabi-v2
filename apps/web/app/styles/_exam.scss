@@ -88,7 +88,6 @@
   .question-fieldset legend { padding-bottom: 8px; padding-right: 130px; transition: color var(--motion-fast); }
   .question-fieldset > div[lang] { margin-bottom: 10px; }
   /* light emphasis only: tinted surface + coloured number, no pink frame */
-  &.is-current { background: color-mix(in srgb, var(--color-primary-soft) 38%, var(--color-surface)); }
   &.is-current .question-fieldset legend { color: var(--color-primary); }
 }
 /* ADR-0021: one option per row by default; 2×2 only when every option is
@@ -242,8 +241,6 @@
       font-size: var(--text-aux); text-align: center;
     }
   }
-  /* the question being worked on: light sakura emphasis */
-  .panel-scroll li.is-active-question { background: var(--color-primary-soft); }
 }
 
 /* zoomable image material: the whole image is the button */
@@ -261,8 +258,8 @@
 
 /* image viewer sits BELOW the exam bar so the countdown is never covered */
 .image-viewer {
-  position: fixed; left: 0; right: 0; bottom: 0; top: var(--exam-bar-h, 0px);
-  z-index: 45; display: flex; flex-direction: column;
+  position: fixed; left: 0; right: 0; bottom: 0; top: 0;
+  z-index: 60; display: flex; flex-direction: column;
   background: rgba(43, 43, 51, 0.88);
   .image-viewer-bar {
     flex: none; display: flex; gap: var(--space-2); justify-content: center;

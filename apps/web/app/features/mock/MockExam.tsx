@@ -44,8 +44,8 @@ export function MockExamPage({ sessionId }: { sessionId: string }) {
     return (
       <div className="exam-status" role="status">
         <p>这场模拟考试已被放弃，已交的阶段答案保留，但不会生成成绩。</p>
-        <ButtonLink variant="primary" to={`/study/exams/${encodeURIComponent(state.exam_id)}/mock`}>
-          重新开始
+        <ButtonLink variant="primary" to={`/study/exams/${encodeURIComponent(state.exam_id)}`}>
+          返回试卷
         </ButtonLink>
       </div>
     );

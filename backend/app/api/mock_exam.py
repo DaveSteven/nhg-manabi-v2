@@ -38,6 +38,7 @@ Rules enforced here (the client only displays):
   release has Phases with a duration and every Unit is conversion-complete.
 """
 import json
+from datetime import timedelta
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -194,6 +195,13 @@ def _close_phase(conn, sess: dict, user_id: uuid.UUID, run: dict,
         _complete_session(conn, sess["id"], SCORING_METHOD)
 
 
+def _listening_unstarted(conn, sess: dict, phase_id: str) -> bool:
+    """ADR-0024: a continuous-listening Phase whose recording has not been
+    started (user still on the confirm page) has no running clock yet."""
+    audio = _phase_audio(conn, sess["id"], sess["release_id"], phase_id)
+    return audio is not None and audio["state"] == "idle"
+
+
 def _advance(conn, sess: dict, user_id: uuid.UUID) -> None:
     """Seal every Phase whose server time is up (chained from its expiry)."""
     if sess["state"] != "in_progress":
@@ -206,6 +214,8 @@ def _advance(conn, sess: dict, user_id: uuid.UUID) -> None:
             {"s": sess["id"]}).mappings().first()
         if run is None or not run["over"]:
             return
+        if _listening_unstarted(conn, sess, run["phase_id"]):
+            return          # clock has not started yet (ADR-0024)
         _close_phase(conn, sess, user_id, run, None, run["expires_at"])
         state = conn.execute(text(
             "SELECT state FROM study_sessions WHERE id = :s"),
@@ -257,10 +267,16 @@ def _state(conn, session_id: uuid.UUID) -> dict:
                  "started_at": None, "expires_at": None,
                  "remaining_seconds": None}
         if status == "active":
-            entry["started_at"] = run["started_at"].isoformat()
-            entry["expires_at"] = run["expires_at"].isoformat()
+            started, expires = run["started_at"], run["expires_at"]
+            if _listening_unstarted(conn, {"id": session_id,
+                                           "release_id": head["release_id"]},
+                                    p["phase_id"]):
+                # clock not started: report the full, untouched duration
+                started, expires = now, now + timedelta(seconds=p["duration_seconds"])
+            entry["started_at"] = started.isoformat()
+            entry["expires_at"] = expires.isoformat()
             entry["remaining_seconds"] = max(
-                0, int((run["expires_at"] - now).total_seconds()))
+                0, int((expires - now).total_seconds()))
         phases.append(entry)
     active_units = []
     if active_id is not None and head["state"] == "in_progress":
@@ -476,6 +492,28 @@ def get_current_mock(user_id: uuid.UUID = Depends(get_current_user_id)) -> dict:
         return _state(conn, sid)
 
 
+@router.post("/api/mock-exams/{session_id}/abandon")
+def abandon_mock_exam(session_id: uuid.UUID,
+                      user_id: uuid.UUID = Depends(get_current_user_id)) -> dict:
+    """Give the exam up (no score). Submitted phases keep their answers.
+    Idempotent for an already abandoned exam; a completed one cannot be."""
+    with get_engine().begin() as conn:
+        sess = _owned_advanced(conn, session_id, user_id)
+        cur = conn.execute(text(
+            "SELECT state FROM study_sessions WHERE id = :s"),
+            {"s": session_id}).scalar()
+        if cur == "completed":
+            raise HTTPException(
+                status_code=409,
+                detail={"code": "mock_completed",
+                        "message": "a completed exam cannot be abandoned"})
+        if cur == "in_progress":
+            conn.execute(text(
+                "UPDATE study_sessions SET state = 'abandoned', ended_at = now(),"
+                " version = version + 1 WHERE id = :s"), {"s": session_id})
+        return _state(conn, session_id)
+
+
 @router.get("/api/mock-exams/{session_id}")
 def get_mock_exam(session_id: uuid.UUID,
                   user_id: uuid.UUID = Depends(get_current_user_id)) -> dict:
@@ -593,10 +631,19 @@ def start_mock_phase_audio(session_id: uuid.UUID, phase_id: str,
         audio = _phase_audio(conn, session_id, sess["release_id"], phase_id)
         if audio is None:
             raise HTTPException(status_code=404, detail="no continuous audio")
-        conn.execute(text(
+        claimed = conn.execute(text(
             "INSERT INTO study_phase_audio_plays (session_id, phase_id, asset_id)"
             " VALUES (:s, :p, :a) ON CONFLICT DO NOTHING"),
-            {"s": session_id, "p": phase_id, "a": audio["asset_id"]})
+            {"s": session_id, "p": phase_id, "a": audio["asset_id"]}).rowcount
+        if claimed:
+            # ADR-0024: the Phase clock starts when listening is confirmed
+            conn.execute(text(
+                "UPDATE study_phase_runs SET started_at = now(),"
+                " expires_at = now() + make_interval(secs => ("
+                "  SELECT duration_seconds FROM release_exam_phases"
+                "  WHERE release_id = :r AND phase_id = :p))"
+                " WHERE session_id = :s AND phase_id = :p AND closed_at IS NULL"),
+                {"s": session_id, "p": phase_id, "r": sess["release_id"]})
         return _phase_audio(conn, session_id, sess["release_id"], phase_id)
 
 

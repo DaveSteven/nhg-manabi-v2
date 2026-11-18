@@ -277,6 +277,26 @@ describe("Exam Mode", () => {
     expect(document.querySelector(".exam-options")).not.toHaveClass("is-grid");
   });
 
+  it("the exam bar can abandon the exam after confirmation", async () => {
+    authStore.setSession("tok", USER);
+    setup();
+    let abandoned = false;
+    server.use(http.post("*/api/mock-exams/m-1/abandon", () => {
+      abandoned = true;
+      return HttpResponse.json(state({ state: "abandoned" }));
+    }));
+    const user = userEvent.setup();
+    renderExam();
+    await user.click(await screen.findByRole("button", { name: "放弃考试" }));
+    const dlg = await screen.findByRole("dialog", { name: "放弃考试" });
+    await user.click(within(dlg).getByRole("button", { name: "继续考试" }));
+    expect(abandoned).toBe(false);
+    await user.click(screen.getByRole("button", { name: "放弃考试" }));
+    await user.click(within(await screen.findByRole("dialog", { name: "放弃考试" }))
+      .getByRole("button", { name: "放弃考试" }));
+    await waitFor(() => expect(abandoned).toBe(true));
+  });
+
   it("Escape closes the sheet", async () => {
     authStore.setSession("tok", USER);
     setup();
@@ -383,25 +403,35 @@ describe("Mock intro", () => {
     expect(screen.queryByRole("button", { name: "开始模拟考试" })).not.toBeInTheDocument();
   });
 
-  it("a running mock is continued, or replaced only after explicit confirmation", async () => {
+  it("a running mock can be continued or abandoned (never restarted from here)", async () => {
     authStore.setSession("tok", USER);
-    const bodies: any[] = [];
+    let abandoned = false;
+    const started: unknown[] = [];
     server.use(
       http.get("*/api/exams/E-1/mock", () => HttpResponse.json(AVAIL)),
-      http.get("*/api/mock-exams/current", () => HttpResponse.json(state())),
+      http.get("*/api/mock-exams/current", () => abandoned
+        ? HttpResponse.json({ detail: "none" }, { status: 404 })
+        : HttpResponse.json(state())),
+      http.post("*/api/mock-exams/m-1/abandon", () => {
+        abandoned = true;
+        return HttpResponse.json(state({ state: "abandoned" }));
+      }),
       http.post("*/api/mock-exams", async ({ request }) => {
-        bodies.push(await request.json());
+        started.push(await request.json());
         return HttpResponse.json(state({ id: "m-2" }), { status: 201 });
       }));
     const user = userEvent.setup();
     renderIntro();
     expect(await screen.findByRole("link", { name: "继续模拟考试" }))
       .toHaveAttribute("href", "/mock/m-1");
-    await user.click(screen.getByRole("button", { name: "放弃进行中的考试并重新开始" }));
-    const dlg = await screen.findByRole("dialog", { name: "放弃进行中的考试" });
-    expect(bodies).toHaveLength(0);                                   // nothing sent yet
-    await user.click(within(dlg).getByRole("button", { name: "放弃并重新开始" }));
-    expect(await screen.findByText("exam page")).toBeInTheDocument();
-    expect(bodies).toEqual([{ exam_id: "E-1", replace_active: true }]);
+    expect(screen.queryByRole("button", { name: "开始模拟考试" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "放弃考试" }));
+    const dlg = await screen.findByRole("dialog", { name: "放弃考试" });
+    expect(abandoned).toBe(false);                                    // nothing sent yet
+    await user.click(within(dlg).getByRole("button", { name: "放弃考试" }));
+    // abandoning does NOT start a new exam; the start button simply returns
+    expect(await screen.findByRole("button", { name: "开始模拟考试" })).toBeInTheDocument();
+    expect(abandoned).toBe(true);
+    expect(started).toHaveLength(0);
   });
 });

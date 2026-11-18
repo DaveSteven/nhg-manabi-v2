@@ -13,6 +13,8 @@ import type { VmContentUnit } from "../content/viewModel";
 import { useDraftManager } from "../practice/useDraftManager";
 import { DraftConflictDialog } from "../practice/SubmitDialogs";
 import { clearSessionPendingRetries, loadPendingRetries } from "../practice/pendingRetries";
+import { useNavigate } from "react-router";
+import { AbandonExamDialog } from "./AbandonExamDialog";
 import { AnswerSheetDrawer } from "./AnswerSheetDrawer";
 import { ExamSubmitDialog } from "./ExamSubmitDialog";
 import { ExamTopBar } from "./ExamTopBar";
@@ -43,6 +45,8 @@ export function ExamPhaseBody({ sessionId, state, phase, content, drafts,
   isLastPhase: boolean;
 }) {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const [abandoning, setAbandoning] = useState(false);
   const groups = useMemo(() => buildGroups(content.units), [content.units]);
   const flat = useMemo(() => groups.flatMap((g) => g.questions), [groups]);
   const unitOf = useMemo(
@@ -145,9 +149,11 @@ export function ExamPhaseBody({ sessionId, state, phase, content, drafts,
   const onPhaseAudio = useCallback((_: string, next: LiveAudio) => setPhaseLive(next), []);
   const startPhaseAudio = useCallback(async () => {
     const s = await startMockPhaseAudio(sessionId, phase.phase_id);
+    // the server clock starts now (ADR-0024): re-read the phase's new expiry
+    void queryClient.invalidateQueries({ queryKey: ["mock", "state", sessionId] });
     return { material_id: s.asset_id, state: s.state, position_ms: s.position_ms,
              duration_ms: s.duration_ms };
-  }, [sessionId, phase.phase_id]);
+  }, [sessionId, phase.phase_id, queryClient]);
 
   const toggleFlag = useCallback((qid: string) => {
     setFlags((prev) => {
@@ -285,7 +291,9 @@ export function ExamPhaseBody({ sessionId, state, phase, content, drafts,
     <div className={`exam-shell${phaseAudio && phaseLive ? " has-listen-mini" : ""}`}>
       <ExamTopBar examName={`${state.level} 模拟考试`} examTitle={state.exam_title}
                   where={`${phase.title} · ${group.label}`}
-                  answered={answeredN} total={flat.length} remaining={remaining}
+                  answered={answeredN} total={flat.length}
+                  remaining={needsConfirm ? phase.duration_seconds : remaining}
+                  onAbandon={() => { setSheetOpen(false); setAbandoning(true); }}
                   saveProblem={saveProblem} onOpenSheet={() => setSheetOpen(true)} />
       {phaseAudio && phaseLive ? (
         // ONE player for the phase, mounted even under the confirm page so
@@ -350,6 +358,10 @@ export function ExamPhaseBody({ sessionId, state, phase, content, drafts,
                          onJump={jumpTo} actionLabel={actionLabel}
                          onAction={openConfirm} phaseTitle={phase.title} />
 
+      {abandoning ? (
+        <AbandonExamDialog sessionId={sessionId} onCancel={() => setAbandoning(false)}
+          onDone={() => navigate(`/study/exams/${encodeURIComponent(state.exam_id)}`, { replace: true })} />
+      ) : null}
       {confirming ? (
         <ExamSubmitDialog final={isLastPhase} answered={answeredN}
                           unanswered={flat.length - answeredN}

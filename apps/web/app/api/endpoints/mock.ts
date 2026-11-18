@@ -24,6 +24,11 @@ export function createMock(examId: string, replaceActive = false,
   }).then((p) => parseDto(MockStateSchema, "POST /api/mock-exams", p));
 }
 
+export function abandonMock(sessionId: string, signal?: AbortSignal): Promise<MockState> {
+  return apiFetch(`/api/mock-exams/${enc(sessionId)}/abandon`, { method: "POST", signal })
+    .then((p) => parseDto(MockStateSchema, "POST mock abandon", p));
+}
+
 /** 404 = no running mock (normal idle state, not an error banner). */
 export function getCurrentMock(signal?: AbortSignal): Promise<MockState> {
   return apiFetch("/api/mock-exams/current", { signal })

@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { Link, Navigate, useNavigate } from "react-router";
+import { Navigate, useNavigate } from "react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ApiError, describeLoadError } from "../../api/errors";
 import { createMock } from "../../api/endpoints/mock";
 import { Breadcrumb } from "../../components/Breadcrumb";
 import { Button, ButtonLink } from "../../components/Button";
 import { useAuth } from "../auth/authStore";
+import { AbandonExamDialog } from "./AbandonExamDialog";
 import { minutesLabel } from "./mockModel";
 import { useCurrentMock, useMockAvailability } from "./useMock";
 
@@ -25,15 +26,14 @@ export function MockIntro({ examId }: { examId: string }) {
   const queryClient = useQueryClient();
   const avail = useMockAvailability(examId);
   const current = useCurrentMock(!!auth.user);
-  const [replaceAsk, setReplaceAsk] = useState(false);
+  const [abandonAsk, setAbandonAsk] = useState(false);
 
-  const start = useMutation<Awaited<ReturnType<typeof createMock>>, ApiError, boolean>({
-    mutationFn: (replace) => createMock(examId, replace),
+  const start = useMutation<Awaited<ReturnType<typeof createMock>>, ApiError, void>({
+    mutationFn: () => createMock(examId, false),
     onSuccess: (s) => {
       void queryClient.invalidateQueries({ queryKey: ["mock", "current"] });
       navigate(`/mock/${encodeURIComponent(s.id)}`);
     },
-    onError: (e) => { if (e.code === "mock_in_progress") setReplaceAsk(true); },
   });
 
   if (!auth.user) return <Navigate to="/login" replace />;
@@ -102,50 +102,33 @@ export function MockIntro({ examId }: { examId: string }) {
                 你有一场进行中的模拟考试：{running.level} {running.exam_title}
                 {sameExam ? "。" : "（另一套试卷）。"}
               </p>
-              <ButtonLink variant="primary" to={`/mock/${encodeURIComponent(running.id)}`}>
-                继续模拟考试
-              </ButtonLink>
+              <div className="mock-actions">
+                <ButtonLink variant="primary" to={`/mock/${encodeURIComponent(running.id)}`}>
+                  继续模拟考试
+                </ButtonLink>
+                <Button variant="secondary" onClick={() => setAbandonAsk(true)}>放弃考试</Button>
+              </div>
             </div>
           ) : null}
 
           <div className="mock-actions">
-            <Button variant={running ? "secondary" : "primary"} size="lg"
-                    loading={start.isPending}
-                    onClick={() => (running ? setReplaceAsk(true) : start.mutate(false))}>
-              {running ? "放弃进行中的考试并重新开始" : "开始模拟考试"}
-            </Button>
+            {running ? null : (
+              <Button variant="primary" size="lg" loading={start.isPending}
+                      onClick={() => start.mutate()}>
+                开始模拟考试
+              </Button>
+            )}
             <ButtonLink variant="ghost" to={`/study/exams/${encodeURIComponent(examId)}`}>
               返回试卷
             </ButtonLink>
           </div>
-          {start.error && start.error.code !== "mock_in_progress" ? (
-            <p role="alert">无法开始：{start.error.message}</p>
-          ) : null}
+          {start.error ? <p role="alert">无法开始：{start.error.message}</p> : null}
         </>
       )}
 
-      {replaceAsk ? (
-        <div className="exam-dialog-layer">
-          <div role="dialog" aria-modal="true" aria-label="放弃进行中的考试"
-               className="dialog card exam-dialog">
-            <h2>放弃进行中的模拟考试？</h2>
-            <p>
-              已交的阶段答案保留，但这场考试不会生成成绩，计时中的阶段将作废。
-              {running && !sameExam ? "新考试将从第一个阶段重新开始。" : ""}
-            </p>
-            <div className="dialog-actions">
-              <Button variant="secondary" onClick={() => setReplaceAsk(false)}>取消</Button>
-              {running ? (
-                <Link className="btn btn-secondary btn-md"
-                      to={`/mock/${encodeURIComponent(running.id)}`}>继续原考试</Link>
-              ) : null}
-              <Button variant="danger" loading={start.isPending}
-                      onClick={() => { setReplaceAsk(false); start.mutate(true); }}>
-                放弃并重新开始
-              </Button>
-            </div>
-          </div>
-        </div>
+      {abandonAsk && running ? (
+        <AbandonExamDialog sessionId={running.id} onCancel={() => setAbandonAsk(false)}
+                           onDone={() => setAbandonAsk(false)} />
       ) : null}
     </section>
   );

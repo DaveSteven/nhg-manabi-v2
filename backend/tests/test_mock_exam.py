@@ -634,6 +634,44 @@ def test_listening_phase_plays_the_full_recording_once(pg_engine, published_rele
 
 
 @requires_db
+def test_listening_clock_starts_when_listening_is_confirmed(
+        pg_engine, published_release, full_audio, monkeypatch):
+    client = make_client(monkeypatch, pg_engine)
+    add_phases(pg_engine, published_release)
+    sid = start(client)["id"]
+    to_phase2(client, pg_engine, sid)
+    # confirm page: idle for ever, the clock never runs and cannot seal
+    shift(pg_engine, sid, 99999)
+    st = client.get(f"/api/mock-exams/{sid}", headers=auth(USER_A)).json()
+    assert st["state"] == "in_progress" and st["active_phase_id"] == "p2"
+    p2 = next(p for p in st["phases"] if p["phase_id"] == "p2")
+    assert p2["remaining_seconds"] == p2["duration_seconds"]
+    # confirming starts the clock from the full duration
+    assert start_phase_audio(client, sid).status_code == 200
+    st = client.get(f"/api/mock-exams/{sid}", headers=auth(USER_A)).json()
+    p2 = next(p for p in st["phases"] if p["phase_id"] == "p2")
+    assert p2["duration_seconds"] - 5 <= p2["remaining_seconds"] <= p2["duration_seconds"]
+    # now it expires normally
+    shift(pg_engine, sid, 7200)
+    st = client.get(f"/api/mock-exams/{sid}", headers=auth(USER_A)).json()
+    assert st["state"] == "completed"
+
+
+@requires_db
+def test_abandon_mock_exam(pg_engine, published_release, monkeypatch):
+    client = make_client(monkeypatch, pg_engine)
+    add_phases(pg_engine, published_release)
+    sid = start(client)["id"]
+    url = f"/api/mock-exams/{sid}/abandon"
+    assert client.post(url).status_code == 401
+    assert client.post(url, headers=auth(USER_B)).status_code == 404
+    r = client.post(url, headers=auth(USER_A))
+    assert r.status_code == 200 and r.json()["state"] == "abandoned"
+    assert client.post(url, headers=auth(USER_A)).json()["state"] == "abandoned"
+    assert client.get("/api/mock-exams/current", headers=auth(USER_A)).status_code == 404
+
+
+@requires_db
 def test_phase_audio_isolation_and_fallback(pg_engine, published_release,
                                             full_audio, monkeypatch):
     client = make_client(monkeypatch, pg_engine)
