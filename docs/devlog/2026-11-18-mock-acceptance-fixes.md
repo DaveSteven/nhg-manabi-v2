@@ -21,3 +21,4 @@
 ## 追加：答题卡显示题型、去掉题卡 is-current
 - 题卡不再有 `is-current` 类与样式（滚动高亮全部去除；答题卡抽屉自身的当前题标记、填空 Slot 联动描边保留）。
 - `/content` 的 `layer` 增加 `question_type_label`（`question_types.label_zh`），答题卡各大题分组标题右侧显示题型。后端 `test_mock_exam.py` 16 passed，web 318 passed，typecheck 通过；浏览器未复核。
+- 答题卡按官方科目（文字・語彙 / 文法 / 読解 / 聴解，取自 `release_sections.title`）增加分区标题与已答/总数，各大题仍在其下并显示题型。web 测试通过；浏览器未复核。

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { Button } from "../../components/Button";
 import type { ExamGroup } from "./mockModel";
 
@@ -80,8 +80,20 @@ export function AnswerSheetDrawer({ open, onClose, groups, currentGroupIdx,
           {groups.map((g, gi) => {
             const isCollapsed = collapsed.has(g.layerId);
             const done = g.questions.filter((q) => isAnswered(q.qid)).length;
+            const first = gi === 0 || groups[gi - 1]!.sectionTitle !== g.sectionTitle;
+            const sec = groups.filter((x) => x.sectionTitle === g.sectionTitle);
+            const secDone = sec.reduce((n, x) =>
+              n + x.questions.filter((q) => isAnswered(q.qid)).length, 0);
+            const secTotal = sec.reduce((n, x) => n + x.questions.length, 0);
             return (
-              <section key={g.layerId} className="sheet-group"
+              <Fragment key={g.layerId}>
+              {first ? (
+                <h3 className="sheet-section">
+                  <span>{g.sectionTitle}</span>
+                  <span className="sheet-section-count">{secDone}/{secTotal}</span>
+                </h3>
+              ) : null}
+              <section className="sheet-group"
                        ref={(el) => { groupEls.current[g.layerId] = el; }}>
                 <button type="button" className="sheet-group-head"
                         aria-expanded={!isCollapsed}
@@ -120,6 +132,7 @@ export function AnswerSheetDrawer({ open, onClose, groups, currentGroupIdx,
                   </ul>
                 ) : null}
               </section>
+              </Fragment>
             );
           })}
         </div>

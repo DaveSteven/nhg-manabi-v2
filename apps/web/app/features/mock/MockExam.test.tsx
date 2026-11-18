@@ -309,6 +309,8 @@ describe("Exam Mode", () => {
     await user.click(await screen.findByRole("button", { name: "答题卡" }));
     const sheet = await screen.findByRole("dialog", { name: "答题卡" });
     expect(within(sheet).getByText("汉字读音")).toBeInTheDocument();
+    // grouped under the official section heading with its answered count
+    expect(within(sheet).getByRole("heading", { name: /文字・語彙/ })).toHaveTextContent("0/1");
   });
 
   it("Escape closes the sheet", async () => {

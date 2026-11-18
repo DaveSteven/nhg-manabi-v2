@@ -74,6 +74,8 @@ export interface ExamGroup {
   label: string;
   /** 题型 (Chinese label of the layer's question type), when known. */
   typeLabel: string | null;
+  /** Official section (科目) the 大題 belongs to: 文字・語彙 / 文法 / 読解 / 聴解. */
+  sectionTitle: string;
   subject: string;
   units: ExamUnit[];
   questions: ExamQuestion[];
@@ -98,6 +100,7 @@ export function buildGroups(units: MockContentUnit[]): ExamGroup[] {
       g = { layerId: u.layer.layer_id,
             label: u.layer.label ?? `大题 ${u.layer.position}`,
             typeLabel: u.layer.question_type_label ?? null,
+            sectionTitle: u.layer.section_title,
             subject: u.layer.subject, units: [], questions: [], paged: false };
       groups.push(g);
     }
