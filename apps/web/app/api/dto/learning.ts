@@ -52,14 +52,14 @@ export const HistorySchema = z.strictObject({
   total: z.number().int(),
   items: z.array(z.strictObject({
     session_id: z.string(),
-    mode: z.enum(["practice", "quick_practice"]),
+    mode: z.enum(["practice", "quick_practice", "mock"]),
     state: z.enum(["completed", "ended_early"]),
     feedback_mode: z.enum(["immediate", "end"]),
     happened_at: z.string(),
     level: z.string().nullable(),
     exam_id: z.string().nullable(),
     source: z.strictObject({
-      kind: z.enum(["topic", "quick", "exam"]),
+      kind: z.enum(["topic", "quick", "exam", "mock"]),
       label: z.string().nullable(),
     }),
     correct: z.number().int(),
@@ -71,6 +71,7 @@ export const HistorySchema = z.strictObject({
   })),
 });
 export type History = z.infer<typeof HistorySchema>;
+export type HistoryKind = "all" | "quick" | "topic" | "mock";
 
 export type RecordFilter = "ever_wrong" | "still_wrong" | "recovered";
 

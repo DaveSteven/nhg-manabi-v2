@@ -33,7 +33,10 @@ Rules enforced here (the client only displays):
   `results` reveals per-question review.
 - Statistics: mock answers are formal records but are NOT fed into the
   practice `user_question_progress` cache (ADR-0019 M7: mock and practice
-  results stay separate). Mock sessions are not listed in 练习历史.
+  results stay separate). COMPLETED mocks are listed in 练习历史 and on the
+  exam's own mock record list (ADR-0027); abandoned ones never are
+  (ADR-0025). Per-unit review (feedback, transcript) opens only once the
+  whole exam is completed and is read-only.
 - Eligibility (M10): an exam is mockable only when its current published
   release has Phases with a duration and every Unit is conversion-complete.
 """
@@ -48,6 +51,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app.api.content import _load_unit_payload
 from app.api.practice import (DraftSave, FinalAnswer, _build_results,
+                              _build_unit_feedback, _build_unit_transcript,
                               _complete_session, _judge_and_store_unit,
                               _save_draft)
 from app.auth import get_current_user_id
@@ -882,9 +886,123 @@ def get_mock_results(session_id: uuid.UUID,
                 "total": int(r["total"]),
                 "answered_accuracy": round(c / (c + w), 4) if c + w else None}
 
+    with get_engine().connect() as conn:
+            extra = conn.execute(text(
+                "SELECT sa.question_id, su.id AS session_unit_id, p.phase_id,"
+                " qt.subject, qt.label_zh"
+                " FROM study_submitted_answers sa"
+                " JOIN study_session_units su ON su.id = sa.session_unit_id"
+                " JOIN release_phase_units pu ON pu.release_id = su.release_id"
+                "  AND pu.unit_id = su.unit_id"
+                " JOIN release_exam_phases p ON p.release_id = pu.release_id"
+                "  AND p.phase_id = pu.phase_id"
+                " JOIN release_questions q ON q.release_id = sa.release_id"
+                "  AND q.question_id = sa.question_id"
+                " JOIN question_types qt ON qt.id = q.question_type_id"
+                " WHERE su.session_id = :s"), {"s": session_id}).mappings().all()
+            head = conn.execute(text(
+                "SELECT r.exam_id, e.title, e.level, s.created_at,"
+                " (SELECT COALESCE(SUM(LEAST(EXTRACT(EPOCH FROM"
+                "   (pr.closed_at - pr.started_at)), p.duration_seconds)), 0)"
+                "  FROM study_phase_runs pr JOIN release_exam_phases p"
+                "   ON p.release_id = s.mock_release_id AND p.phase_id = pr.phase_id"
+                "  WHERE pr.session_id = s.id AND pr.closed_at IS NOT NULL)"
+                "  AS used_seconds"
+                " FROM study_sessions s JOIN exam_releases r ON r.id = s.mock_release_id"
+                " JOIN exam_catalogs e ON e.id = r.exam_id WHERE s.id = :s"),
+                {"s": session_id}).mappings().first()
+
+    meta = {e["question_id"]: e for e in extra}
+    for q in payload["questions"]:
+        e = meta[q["question_id"]]
+        q["session_unit_id"] = str(e["session_unit_id"])
+        q["phase_id"] = e["phase_id"]
+        q["subject"] = e["subject"]
+        q["question_type_label"] = e["label_zh"]
+    payload["exam_id"] = head["exam_id"]
+    payload["exam_title"] = head["title"]
+    payload["level"] = head["level"]
+    payload["started_at"] = head["created_at"].isoformat()
+    payload["duration_seconds"] = int(head["used_seconds"] or 0)
     payload["session_id"] = str(session_id)
     payload["release_id"] = str(sess["release_id"])
     payload["phases"] = [{"phase_id": r["phase_id"], "title": r["title"],
                           **fold(r)} for r in rows]
     payload["subjects"] = [{"subject": r["subject"], **fold(r)} for r in subj]
     return payload
+
+
+# ------------------------------------------------------------------ review ----
+
+def _completed_unit(conn, session_id, session_unit_id, user_id) -> dict:
+    """Read-only review gate: own, COMPLETED mock only (after `_advance`, so a
+    run-out clock completes it first). Anything earlier is 409; the unit must
+    belong to the session. Nothing here writes."""
+    sess = _owned_advanced(conn, session_id, user_id)
+    if sess["state"] != "completed":
+        raise HTTPException(
+            status_code=409,
+            detail={"code": "mock_not_finished",
+                    "message": "review opens after the last phase is closed"})
+    unit = conn.execute(text(
+        "SELECT id, release_id, unit_id FROM study_session_units"
+        " WHERE session_id = :s AND id = :u"),
+        {"s": session_id, "u": session_unit_id}).mappings().first()
+    if unit is None:
+        raise HTTPException(status_code=404, detail="session unit not found")
+    return dict(unit)
+
+
+@router.get("/api/mock-exams/{session_id}/units/{session_unit_id}/feedback")
+def get_mock_unit_feedback(
+        session_id: uuid.UUID, session_unit_id: uuid.UUID,
+        user_id: uuid.UUID = Depends(get_current_user_id)) -> dict:
+    """Correct answers + explanations of one unit, completed mock only."""
+    with get_engine().begin() as conn:
+        unit = _completed_unit(conn, session_id, session_unit_id, user_id)
+        payload = _build_unit_feedback(conn, unit["release_id"],
+                                       unit["unit_id"], session_unit_id)
+    payload["feedback_mode"] = "end"
+    return payload
+
+
+@router.get("/api/mock-exams/{session_id}/units/{session_unit_id}/transcript")
+def get_mock_unit_transcript(
+        session_id: uuid.UUID, session_unit_id: uuid.UUID,
+        user_id: uuid.UUID = Depends(get_current_user_id)) -> dict:
+    """Listening transcript of one unit, completed mock only (same reveal
+    rule as results: never while any phase can still be answered)."""
+    with get_engine().begin() as conn:
+        unit = _completed_unit(conn, session_id, session_unit_id, user_id)
+        body = _build_unit_transcript(conn, unit["release_id"], unit["unit_id"])
+    return {"session_unit_id": str(session_unit_id), "unit_id": unit["unit_id"],
+            "release_id": str(unit["release_id"]), "feedback_mode": "end",
+            **body}
+
+
+@router.get("/api/exams/{exam_id}/mock-results")
+def list_exam_mock_results(
+        exam_id: str,
+        user_id: uuid.UUID = Depends(get_current_user_id)) -> dict:
+    """The caller's own COMPLETED mocks of this exam, newest first. Every
+    attempt is its own record (a new exam never overwrites an old one)."""
+    with get_engine().connect() as conn:
+        rows = conn.execute(text(
+            "SELECT s.id, res.finished_at, res.correct_count, res.wrong_count,"
+            " res.skipped_count, res.total_count"
+            " FROM study_sessions s"
+            " JOIN exam_releases r ON r.id = s.mock_release_id"
+            " JOIN study_results res ON res.session_id = s.id"
+            " WHERE s.user_id = :u AND s.mode = 'mock' AND s.state = 'completed'"
+            "  AND r.exam_id = :e ORDER BY res.finished_at DESC, s.id"),
+            {"u": user_id, "e": exam_id}).mappings().all()
+    items = []
+    for r in rows:
+        c, w = int(r["correct_count"]), int(r["wrong_count"])
+        items.append({
+            "session_id": str(r["id"]),
+            "finished_at": r["finished_at"].isoformat(),
+            "correct": c, "wrong": w, "skipped": int(r["skipped_count"]),
+            "total": int(r["total_count"]),
+            "answered_accuracy": round(c / (c + w), 4) if c + w else None})
+    return {"exam_id": exam_id, "items": items}

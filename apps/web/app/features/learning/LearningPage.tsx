@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, Navigate, useNavigate, useSearchParams } from "react-router";
-import type { RecordFilter } from "../../api/dto/learning";
+import type { HistoryKind, RecordFilter } from "../../api/dto/learning";
 import { describeLoadError } from "../../api/errors";
 import { useAuth } from "../auth/authStore";
 import { useLevel } from "../auth/useLevel";
@@ -167,7 +167,19 @@ function OverviewTab({ level }: { level: ReturnType<typeof useLevel>["level"] })
 
 const RESULT_LABEL = { wrong: "最近答错", correct: "最近答对", none: "—" } as const;
 const RESULT_PILL = { wrong: "pill-danger", correct: "pill-success", none: "pill-muted" } as const;
-const SOURCE_LABEL = { topic: "专项练习", quick: "快速练习", exam: "试卷练习" } as const;
+const SOURCE_LABEL = { topic: "专项练习", quick: "快速练习", exam: "试卷练习",
+                       mock: "模拟考试" } as const;
+const HISTORY_FILTERS: { key: HistoryKind; label: string }[] = [
+  { key: "all", label: "全部" }, { key: "quick", label: "快速练习" },
+  { key: "topic", label: "专项练习" }, { key: "mock", label: "模拟考试" },
+];
+
+/** Where a finished record's result lives (same history id for every entry). */
+function resultPath(h: { mode: string; session_id: string }): string {
+  const id = encodeURIComponent(h.session_id);
+  return h.mode === "mock" ? `/study/mock/${id}/results`
+                           : `/study/practice/${id}/results`;
+}
 
 /** After a page change the list is replaced; bring its top back into view. */
 function scrollToTop() {
@@ -175,20 +187,42 @@ function scrollToTop() {
 }
 
 function HistoryTab() {
+  const [kind, setKind] = useState<HistoryKind>("all");
   const [page, setPage] = useState(0);
-  const q = useHistory(page, PAGE_SIZE, true);
+  const q = useHistory(kind, page, PAGE_SIZE, true);
+  const filters = (
+    <div className="learning-filters" role="radiogroup" aria-label="历史筛选">
+      {HISTORY_FILTERS.map((f) => (
+        <label key={f.key}
+               className={`learning-chip${f.key === kind ? " is-selected" : ""}`}>
+          <input type="radio" name="history-filter" checked={f.key === kind}
+                 onChange={() => { setKind(f.key); setPage(0); }} />
+          {f.label}
+        </label>
+      ))}
+    </div>
+  );
   if (q.isPending) return <p role="status">加载中…</p>;
   if (q.error) return <p role="alert">{describeLoadError(q.error, "练习历史")}</p>;
   if (q.data.total === 0) {
     return (
-      <div className="card learning-empty">
-        <p>还没有已结束的练习记录。</p>
-        <ButtonLink variant="primary" to="/study/practice">去专项练习</ButtonLink>
-      </div>
+      <>
+        {filters}
+        <div className="card learning-empty">
+          <p>{kind === "all" ? "还没有已结束的练习记录。"
+            : kind === "mock" ? "还没有完成的模拟考试。"
+            : "这一类还没有记录。"}</p>
+          <ButtonLink variant="primary"
+                      to={kind === "mock" ? "/study/exams" : "/study/practice"}>
+            {kind === "mock" ? "去历年试卷" : "去专项练习"}
+          </ButtonLink>
+        </div>
+      </>
     );
   }
   return (
     <>
+      {filters}
       <ul className="learning-list card">
         {q.data.items.map((h) => {
           const body = (
@@ -218,7 +252,7 @@ function HistoryTab() {
             <li key={h.session_id}>
               {h.has_result ? (
                 <Link className="history-row is-link"
-                      to={`/study/practice/${encodeURIComponent(h.session_id)}/results`}>
+                      to={resultPath(h)}>
                   {body}
                 </Link>
               ) : <div className="history-row">{body}</div>}

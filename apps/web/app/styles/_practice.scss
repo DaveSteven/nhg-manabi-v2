@@ -408,3 +408,17 @@
 }
 
 .review-actions { display: flex; gap: var(--space-3); flex-wrap: wrap; }
+
+/* ---- 模考成绩页：按科目分组的题号导航 -------------------------------- */
+.mock-review-nav {
+  display: grid;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+.mock-review-group { display: grid; gap: var(--space-2); }
+.mock-review-group-title {
+  font-size: var(--text-aux);
+  color: var(--color-text-secondary);
+  font-weight: 600;
+}
+.mock-review-group .unit-nav { margin-bottom: 0; }

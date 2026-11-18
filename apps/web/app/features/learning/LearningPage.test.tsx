@@ -151,7 +151,8 @@ describe("LearningView", () => {
           total: 2, has_result: false }] })));
     renderPage("/study/learning?tab=history");
     expect(await screen.findByText("文法填空")).toBeInTheDocument();
-    expect(screen.getByText("专项练习")).toBeInTheDocument();
+    const chip = document.querySelector(".source-chip.source-topic");
+    expect(chip).toHaveTextContent("专项练习");
     expect(screen.getByText(/提前结束/)).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "查看结果" })).not.toBeInTheDocument();
     // the whole row is the link; ended-early rows have no result page
@@ -160,6 +161,34 @@ describe("LearningView", () => {
     expect(links[0]).toHaveAttribute("href", "/study/practice/s-1/results");
     expect(links[0]).toHaveTextContent("3 题");
     expect(links[0]).toHaveTextContent("50%");
+  });
+
+  it("history: mock records open the mock result page; the filter asks the server", async () => {
+    authStore.setSession("tok", USER);
+    const kinds: (string | null)[] = [];
+    server.use(http.get("*/api/me/learning/history", ({ request }) => {
+      const kind = new URL(request.url).searchParams.get("kind");
+      kinds.push(kind);
+      const mock = { session_id: "m-1", mode: "mock", state: "completed",
+        feedback_mode: "end", happened_at: "2026-11-17T10:00:00+00:00",
+        level: "N2", exam_id: "e1", source: { kind: "mock", label: "2018年12月 N2" },
+        correct: 60, wrong: 30, skipped: 10, total: 100,
+        answered_accuracy: 0.6667, has_result: true };
+      return HttpResponse.json(kind === "quick" || kind === "topic"
+        ? { total: 0, items: [] } : { total: 1, items: [mock] });
+    }));
+    renderPage("/study/learning?tab=history");
+    const row = await screen.findByRole("link", { name: /2018年12月 N2/ });
+    expect(row).toHaveAttribute("href", "/study/mock/m-1/results");
+    expect(row).toHaveTextContent("模拟考试");
+    const filters = screen.getByRole("radiogroup", { name: "历史筛选" });
+    expect(within(filters).getAllByRole("radio")).toHaveLength(4);
+    await userEvent.click(within(filters).getByLabelText("快速练习"));
+    expect(await screen.findByText("这一类还没有记录。")).toBeInTheDocument();
+    expect(kinds).toEqual(["all", "quick"]);
+    await userEvent.click(within(filters).getByLabelText("模拟考试"));
+    expect(await screen.findByRole("link", { name: /2018年12月 N2/ })).toBeInTheDocument();
+    expect(kinds.at(-1)).toBe("mock");
   });
 
   it("records: filters follow strategy B and re-practice starts a quick session", async () => {

@@ -1,5 +1,5 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import type { History, Overview, QuestionRecords,
+import type { History, HistoryKind, Overview, QuestionRecords,
               RecordFilter } from "../../api/dto/learning";
 import type { JlptLevel } from "../../api/endpoints/auth";
 import { ApiError } from "../../api/errors";
@@ -17,10 +17,11 @@ export function useOverview(level: JlptLevel | null, enabled: boolean) {
   });
 }
 
-export function useHistory(page: number, size: number, enabled: boolean) {
+export function useHistory(kind: HistoryKind, page: number, size: number,
+                           enabled: boolean) {
   return useQuery<History, ApiError>({
-    queryKey: ["learning", "history", page, size],
-    queryFn: ({ signal }) => getHistory(size, page * size, signal),
+    queryKey: ["learning", "history", kind, page, size],
+    queryFn: ({ signal }) => getHistory(kind, size, page * size, signal),
     placeholderData: keepPreviousData, enabled, ...live,
   });
 }

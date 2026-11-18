@@ -1,8 +1,11 @@
 import { apiFetch } from "../client";
 import { parseDto } from "../dto/exam";
-import { DraftSaveResultSchema, DraftsListSchema,
-         type DraftSaveResult, type DraftsList } from "../dto/practice";
-import { AudioStatusSchema, MockAvailabilitySchema, MockContentSchema, MockResultsSchema,
+import { DraftSaveResultSchema, DraftsListSchema, FeedbackPayloadSchema,
+         TranscriptPayloadSchema,
+         type DraftSaveResult, type DraftsList, type FeedbackPayload,
+         type TranscriptPayload } from "../dto/practice";
+import { AudioStatusSchema, ExamMockResultsSchema, type ExamMockResults,
+          MockAvailabilitySchema, MockContentSchema, MockResultsSchema,
          PhaseAudioSchema, type PhaseAudio,
          MockStateSchema, type MockAvailability, type MockContent,
          type AudioStatus, type MockResults, type MockState } from "../dto/mock";
@@ -101,4 +104,28 @@ export function startMockAudio(sessionId: string, sessionUnitId: string,
     `/api/mock-exams/${enc(sessionId)}/units/${enc(sessionUnitId)}/audio/${enc(materialId)}/start`,
     { method: "POST", signal })
     .then((p) => parseDto(AudioStatusSchema, "POST mock audio start", p));
+}
+
+/** Completed mock only (409 `mock_not_finished` before): per-unit review. */
+export function getMockUnitFeedback(sessionId: string, sessionUnitId: string,
+                                    signal?: AbortSignal): Promise<FeedbackPayload> {
+  return apiFetch(
+    `/api/mock-exams/${enc(sessionId)}/units/${enc(sessionUnitId)}/feedback`,
+    { signal })
+    .then((p) => parseDto(FeedbackPayloadSchema, "GET mock feedback", p));
+}
+
+export function getMockUnitTranscript(sessionId: string, sessionUnitId: string,
+                                      signal?: AbortSignal): Promise<TranscriptPayload> {
+  return apiFetch(
+    `/api/mock-exams/${enc(sessionId)}/units/${enc(sessionUnitId)}/transcript`,
+    { signal })
+    .then((p) => parseDto(TranscriptPayloadSchema, "GET mock transcript", p));
+}
+
+/** The caller's own completed mocks of one exam, newest first. */
+export function getExamMockResults(examId: string,
+                                   signal?: AbortSignal): Promise<ExamMockResults> {
+  return apiFetch(`/api/exams/${enc(examId)}/mock-results`, { signal })
+    .then((p) => parseDto(ExamMockResultsSchema, `GET exam ${examId} mock-results`, p));
 }

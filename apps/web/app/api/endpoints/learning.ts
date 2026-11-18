@@ -1,7 +1,7 @@
 import { apiFetch } from "../client";
 import { parseDto } from "../dto/exam";
 import { HistorySchema, OverviewSchema, QuestionRecordsSchema,
-         type History, type Overview, type QuestionRecords,
+         type History, type HistoryKind, type Overview, type QuestionRecords,
          type RecordFilter } from "../dto/learning";
 import type { JlptLevel } from "./auth";
 
@@ -12,9 +12,10 @@ export function getOverview(level: JlptLevel | null,
     .then((p) => parseDto(OverviewSchema, "GET me/learning/overview", p));
 }
 
-export function getHistory(limit: number, offset: number,
+export function getHistory(kind: HistoryKind, limit: number, offset: number,
                            signal?: AbortSignal): Promise<History> {
-  return apiFetch(`/api/me/learning/history?limit=${limit}&offset=${offset}`,
+  return apiFetch(
+    `/api/me/learning/history?kind=${kind}&limit=${limit}&offset=${offset}`,
     { signal })
     .then((p) => parseDto(HistorySchema, "GET me/learning/history", p));
 }

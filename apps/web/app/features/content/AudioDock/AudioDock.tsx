@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getUnitTranscript } from "../../../api/endpoints/sessions";
+import { getMockUnitTranscript } from "../../../api/endpoints/mock";
 import type { TranscriptCue } from "../../../api/dto/practice";
 import { AudioInfo } from "./AudioInfo";
 import { AudioProgress } from "./AudioProgress";
@@ -16,6 +17,8 @@ export interface TranscriptRef {
   /** The reveal gate (audio-player.md §8) evaluated by the practice page
    * from server state: immediate → unit submitted; end → session ended. */
   allowed: boolean;
+  /** Which backend serves the cues; completed strict mocks use their own. */
+  source?: "practice" | "mock";
 }
 
 /**
@@ -56,9 +59,10 @@ export function AudioDock({ src, title = "音频", subtitle = null, disabledReas
     setView(null);
   }, [transcript?.sessionUnitId]);
 
-  const loadTranscript = useCallback((sessionId: string, sessionUnitId: string, seq: number) => {
+  const loadTranscript = useCallback((sessionId: string, sessionUnitId: string, seq: number,
+                                      source: "practice" | "mock" = "practice") => {
     setView({ kind: "loading" });
-    getUnitTranscript(sessionId, sessionUnitId)
+    (source === "mock" ? getMockUnitTranscript : getUnitTranscript)(sessionId, sessionUnitId)
       .then((payload) => {
         if (loadSeq.current !== seq) return;
         const cues: TranscriptCue[] = payload.materials.flatMap((m) => m.cues);
@@ -85,7 +89,7 @@ export function AudioDock({ src, title = "音频", subtitle = null, disabledReas
     setExpanded(true);
     if (view === null && transcript) {
       const seq = ++loadSeq.current;
-      loadTranscript(transcript.sessionId, transcript.sessionUnitId, seq);
+      loadTranscript(transcript.sessionId, transcript.sessionUnitId, seq, transcript.source);
     }
   }, [expanded, view, transcript, loadTranscript]);
 
@@ -106,7 +110,8 @@ export function AudioDock({ src, title = "音频", subtitle = null, disabledReas
                            if (transcript) {
                              const seq = ++loadSeq.current;
                              loadTranscript(transcript.sessionId,
-                                            transcript.sessionUnitId, seq);
+                                            transcript.sessionUnitId, seq,
+                                            transcript.source);
                            }
                          }} />
       ) : null}

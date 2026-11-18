@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { PublicUnitSchema } from "./unit";
+import { ResultQuestionSchema } from "./practice";
 
 /** GET /api/exams/{id}/mock — public: can this paper be taken as a strict
  * mock? Phases come from the real release; nothing is hard-coded here. */
@@ -113,8 +114,22 @@ const Tally = {
   answered_accuracy: z.number().nullable(),
 };
 
+export const MockResultQuestionSchema = ResultQuestionSchema.extend({
+  session_unit_id: z.string(),
+  phase_id: z.string(),
+  subject: z.enum(["vocabulary", "grammar", "reading", "listening"]),
+  question_type_label: z.string(),
+});
+export type MockResultQuestion = z.infer<typeof MockResultQuestionSchema>;
+
 export const MockResultsSchema = z.object({
   session_id: z.string(),
+  release_id: z.string(),
+  exam_id: z.string(),
+  exam_title: z.string(),
+  level: z.string(),
+  started_at: z.string(),
+  duration_seconds: z.number().int(),
   correct_count: z.number().int(),
   wrong_count: z.number().int(),
   skipped_count: z.number().int(),
@@ -123,5 +138,18 @@ export const MockResultsSchema = z.object({
   finished_at: z.string(),
   phases: z.array(z.object({ phase_id: z.string(), title: z.string(), ...Tally })),
   subjects: z.array(z.object({ subject: z.string(), ...Tally })),
+  questions: z.array(MockResultQuestionSchema),
 });
 export type MockResults = z.infer<typeof MockResultsSchema>;
+
+export const ExamMockResultsSchema = z.strictObject({
+  exam_id: z.string(),
+  items: z.array(z.strictObject({
+    session_id: z.string(),
+    finished_at: z.string(),
+    correct: z.number().int(), wrong: z.number().int(),
+    skipped: z.number().int(), total: z.number().int(),
+    answered_accuracy: z.number().nullable(),
+  })),
+});
+export type ExamMockResults = z.infer<typeof ExamMockResultsSchema>;

@@ -108,6 +108,7 @@
   font-weight: 600;
   &.source-topic { background: var(--accent-sakura-soft);   color: var(--accent-sakura); }
   &.source-quick { background: var(--accent-lavender-soft); color: var(--accent-lavender); }
+  &.source-mock { background: var(--color-primary-soft); color: var(--color-primary-hover); }
   &.source-exam  { background: var(--accent-apricot-soft);  color: var(--accent-apricot); }
 }
 
@@ -224,3 +225,5 @@ li + li > .history-row { border-top: 1px solid var(--color-border); }
   &[aria-current="page"] { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
 }
 @media (max-width: 560px) { .pagination { justify-content: center; } }
+
+.mock-records { margin-top: var(--space-6); }

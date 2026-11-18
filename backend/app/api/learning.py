@@ -145,6 +145,22 @@ def learning_overview(
     }
 
 
+HistoryKind = Literal["all", "quick", "topic", "mock"]
+
+# Finished records only. Practice: completed / ended early. Mock (ADR-0027):
+# COMPLETED only — abandoned mocks are never history (ADR-0025).
+_HISTORY_WHERE = (
+    " WHERE s.user_id = :u AND ("
+    "  (s.mode IN ('practice', 'quick_practice')"
+    "   AND s.state IN ('completed', 'ended_early'))"
+    "  OR (s.mode = 'mock' AND s.state = 'completed'))"
+    " AND (:kind = 'all'"
+    "  OR (:kind = 'mock' AND s.mode = 'mock')"
+    "  OR (:kind = 'quick' AND s.mode <> 'mock'"
+    "      AND s.config -> 'topic' IS NULL)"
+    "  OR (:kind = 'topic' AND s.mode <> 'mock'"
+    "      AND s.config -> 'topic' IS NOT NULL))")
+
 _HISTORY_SQL = (
     "SELECT s.id, s.mode, s.state, s.feedback_mode, s.config,"
     " coalesce(res.finished_at, s.ended_at, s.created_at) AS happened_at,"
@@ -171,26 +187,30 @@ _HISTORY_SQL = (
     "  ON true"
     " LEFT JOIN question_types tqt"
     "  ON tqt.id = s.config -> 'topic' ->> 'question_type_id'"
-    " WHERE s.user_id = :u AND s.mode IN ('practice', 'quick_practice')"
-    "   AND s.state IN ('completed', 'ended_early')"
+    f"{_HISTORY_WHERE}"
     " ORDER BY happened_at DESC, s.id"
     " LIMIT :limit OFFSET :offset")
 
 
 @router.get("/api/me/learning/history")
 def learning_history(
+    kind: HistoryKind = "all",
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
     user_id: uuid.UUID = Depends(get_current_user_id),
 ) -> dict:
     """Finished practice (completed / ended early) that has at least one
-    formal answer; replaced (abandoned) or empty sessions are not history."""
+    formal answer, plus COMPLETED strict mocks (ADR-0027); replaced
+    (abandoned) or empty sessions are not history. `kind` filters."""
     with get_engine().connect() as conn:
         rows = conn.execute(text(_HISTORY_SQL), {
-            "u": user_id, "limit": limit, "offset": offset}).mappings().all()
+            "u": user_id, "kind": kind, "limit": limit,
+            "offset": offset}).mappings().all()
     items = []
     for r in rows:
-        if r["topic_label"] is not None:
+        if r["mode"] == "mock":
+            source = {"kind": "mock", "label": r["exam_title"]}
+        elif r["topic_label"] is not None:
             source = {"kind": "topic", "label": r["topic_label"]}
         elif r["mode"] == "quick_practice":
             source = {"kind": "quick", "label": r["exam_title"]}
@@ -205,20 +225,20 @@ def learning_history(
             "skipped": int(r["skipped"]), "total": int(r["total"]),
             "answered_accuracy": _accuracy(int(r["correct"]), int(r["wrong"])),
             "has_result": r["state"] == "completed"})
-    total = int(rows[0]["full_count"]) if rows else _history_total(user_id)
+    total = int(rows[0]["full_count"]) if rows else _history_total(user_id, kind)
     return {"total": total, "items": items}
 
 
-def _history_total(user_id: uuid.UUID) -> int:
+def _history_total(user_id: uuid.UUID, kind: str) -> int:
     """Total when the requested page is past the end (rows empty)."""
     with get_engine().connect() as conn:
         return int(conn.execute(text(
-            "SELECT count(*) FROM study_sessions s WHERE s.user_id = :u"
-            " AND s.mode IN ('practice', 'quick_practice')"
-            " AND s.state IN ('completed', 'ended_early')"
+            "SELECT count(*) FROM study_sessions s"
+            f"{_HISTORY_WHERE}"
             " AND EXISTS (SELECT 1 FROM study_submitted_answers sa"
             "  JOIN study_session_units su ON su.id = sa.session_unit_id"
-            "  WHERE su.session_id = s.id)"), {"u": user_id}).scalar() or 0)
+            "  WHERE su.session_id = s.id)"),
+            {"u": user_id, "kind": kind}).scalar() or 0)
 
 
 _FILTER_SQL = {

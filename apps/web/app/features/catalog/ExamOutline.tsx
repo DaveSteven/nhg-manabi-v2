@@ -5,6 +5,7 @@ import type { ExamOutline, OutlineLayer, OutlineUnit } from "../../api/dto/exam"
 import { Breadcrumb } from "../../components/Breadcrumb";
 import { ButtonLink } from "../../components/Button";
 import { useMockAvailability } from "../mock/useMock";
+import { MockRecords } from "../mock/MockRecords";
 import { decorateSections, examTitle, subjectLabel } from "./viewModels";
 import { getExamPracticeStatus } from "../../api/endpoints/sessions";
 import { useQuickPracticeStart } from "../practice/useStartPractice";
@@ -88,6 +89,8 @@ export function ExamOutlineView({ outline }: { outline: ExamOutline }) {
           ))}
         </div>
       ) : null}
+
+      <MockRecords examId={outline.exam_id} />
 
       {start.error ? (
         <p role="alert">

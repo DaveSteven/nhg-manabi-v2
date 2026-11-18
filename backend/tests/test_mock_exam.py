@@ -872,3 +872,130 @@ def test_per_unit_start_refuses_unplayable_clip_without_burning_it(
     with pg_engine.connect() as conn:
         assert conn.execute(sa.text(
             "SELECT count(*) FROM study_audio_plays")).scalar() == 0
+
+
+# ------------------------------------------------- result review + history ----
+
+def finish_mock(client, pg_engine, user=USER_A):
+    """Q1 right, Q2 blank, QS wrong → (1,1,1)."""
+    st = start(client, user)
+    sid = st["id"]
+    su1 = unit_ids(st)[CLOZE_UNIT]
+    nxt = submit_phase(client, sid, "p1", [(su1, Q1, Q1 + "-o2")], user).json()
+    su2 = unit_ids(nxt)[SINGLE_UNIT]
+    done = submit_phase(client, sid, "p2", [(su2, QS, QS + "-o1")], user).json()
+    assert done["state"] == "completed"
+    return sid, su1, su2
+
+
+@requires_db
+def test_results_carry_header_and_per_question_review_keys(
+        pg_engine, published_release, monkeypatch):
+    client = make_client(monkeypatch, pg_engine)
+    add_phases(pg_engine, published_release)
+    sid, su1, su2 = finish_mock(client, pg_engine)
+    res = client.get(f"/api/mock-exams/{sid}/results", headers=auth(USER_A)).json()
+    assert res["exam_id"] == EXAM_ID and res["level"] and res["exam_title"]
+    assert res["started_at"] and res["duration_seconds"] >= 0
+    by_q = {q["question_id"]: q for q in res["questions"]}
+    assert by_q[Q1]["session_unit_id"] == su1 and by_q[Q1]["phase_id"] == "p1"
+    assert by_q[QS]["session_unit_id"] == su2 and by_q[QS]["phase_id"] == "p2"
+    assert by_q[Q1]["subject"] == "grammar" and by_q[QS]["subject"] == "vocabulary"
+    assert isinstance(by_q[Q1]["question_type_label"], str)
+    assert by_q[Q2]["skipped"] is True and by_q[Q2]["is_correct"] is None
+
+
+@requires_db
+def test_review_feedback_and_transcript_open_only_after_completion(
+        pg_engine, published_release, monkeypatch):
+    client = make_client(monkeypatch, pg_engine)
+    add_phases(pg_engine, published_release)
+    st = start(client)
+    sid = st["id"]
+    su1 = unit_ids(st)[CLOZE_UNIT]
+    for tail in ("feedback", "transcript"):
+        r = client.get(f"/api/mock-exams/{sid}/units/{su1}/{tail}",
+                       headers=auth(USER_A))
+        assert r.status_code == 409
+        assert r.json()["detail"]["code"] == "mock_not_finished"
+    nxt = submit_phase(client, sid, "p1", [(su1, Q1, Q1 + "-o2")]).json()
+    # still running (phase 2 open): the closed phase 1 stays sealed
+    assert client.get(f"/api/mock-exams/{sid}/units/{su1}/feedback",
+                      headers=auth(USER_A)).status_code == 409
+    su2 = unit_ids(nxt)[SINGLE_UNIT]
+    submit_phase(client, sid, "p2", [(su2, QS, QS + "-o1")])
+    fb = client.get(f"/api/mock-exams/{sid}/units/{su1}/feedback",
+                    headers=auth(USER_A))
+    assert fb.status_code == 200
+    q = {x["question_id"]: x for x in fb.json()["questions"]}
+    assert q[Q1]["is_correct"] is True and q[Q1]["correct_option_id"] == Q1 + "-o2"
+    assert q[Q2]["skipped"] is True and q[Q2]["correct_option_id"] == Q2 + "-o1"
+    tr = client.get(f"/api/mock-exams/{sid}/units/{su1}/transcript",
+                    headers=auth(USER_A))
+    assert tr.status_code == 200 and tr.json()["materials"] == []
+    # other users and foreign units get nothing
+    assert client.get(f"/api/mock-exams/{sid}/units/{su1}/feedback",
+                      headers=auth(USER_B)).status_code == 404
+    bogus = "00000000-0000-0000-0000-000000000000"
+    assert client.get(f"/api/mock-exams/{sid}/units/{bogus}/feedback",
+                      headers=auth(USER_A)).status_code == 404
+
+
+@requires_db
+def test_abandoned_mock_has_no_review(pg_engine, published_release, monkeypatch):
+    client = make_client(monkeypatch, pg_engine)
+    add_phases(pg_engine, published_release)
+    st = start(client)
+    su1 = unit_ids(st)[CLOZE_UNIT]
+    client.post(f"/api/mock-exams/{st['id']}/abandon", headers=auth(USER_A))
+    assert client.get(f"/api/mock-exams/{st['id']}/units/{su1}/feedback",
+                      headers=auth(USER_A)).status_code == 409
+    assert client.get(f"/api/exams/{EXAM_ID}/mock-results",
+                      headers=auth(USER_A)).json()["items"] == []
+
+
+@requires_db
+def test_exam_mock_results_list_is_own_completed_and_not_overwritten(
+        pg_engine, published_release, monkeypatch):
+    client = make_client(monkeypatch, pg_engine)
+    add_phases(pg_engine, published_release)
+    assert client.get(f"/api/exams/{EXAM_ID}/mock-results").status_code == 401
+    first, _, _ = finish_mock(client, pg_engine)
+    second, _, _ = finish_mock(client, pg_engine)
+    other, _, _ = finish_mock(client, pg_engine, USER_B)
+    items = client.get(f"/api/exams/{EXAM_ID}/mock-results",
+                       headers=auth(USER_A)).json()["items"]
+    assert {i["session_id"] for i in items} == {first, second}
+    assert other not in {i["session_id"] for i in items}
+    assert (items[0]["correct"], items[0]["wrong"], items[0]["skipped"],
+            items[0]["total"]) == (1, 1, 1, 3)
+    assert items[0]["answered_accuracy"] == 0.5
+    assert client.get("/api/exams/NOPE/mock-results",
+                      headers=auth(USER_A)).json()["items"] == []
+
+
+@requires_db
+def test_learning_history_lists_completed_mocks_with_kind_filter(
+        pg_engine, published_release, monkeypatch):
+    client = make_client(monkeypatch, pg_engine)
+    add_phases(pg_engine, published_release)
+    done, _, _ = finish_mock(client, pg_engine)
+    st = start(client)               # running mock: not history
+    client.post(f"/api/mock-exams/{st['id']}/abandon", headers=auth(USER_A))
+    h = client.get("/api/me/learning/history", headers=auth(USER_A)).json()
+    assert h["total"] == 1 and h["items"][0]["session_id"] == done
+    it = h["items"][0]
+    assert it["mode"] == "mock" and it["source"]["kind"] == "mock"
+    assert it["has_result"] is True and it["total"] == 3
+    assert (it["correct"], it["wrong"], it["skipped"]) == (1, 1, 1)
+    for kind, n in (("mock", 1), ("quick", 0), ("topic", 0), ("all", 1)):
+        r = client.get("/api/me/learning/history", params={"kind": kind},
+                       headers=auth(USER_A)).json()
+        assert r["total"] == n, kind
+    assert client.get("/api/me/learning/history", params={"kind": "bad"},
+                      headers=auth(USER_A)).status_code == 422
+    # page past the end still reports the right total
+    r = client.get("/api/me/learning/history",
+                   params={"kind": "mock", "offset": 50},
+                   headers=auth(USER_A)).json()
+    assert r["items"] == [] and r["total"] == 1
