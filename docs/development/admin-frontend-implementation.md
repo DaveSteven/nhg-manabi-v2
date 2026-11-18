@@ -1,6 +1,6 @@
 # JLPT GO 2.0 · 管理端前端实施计划
 
-**状态：** Planned，技术基线已由 ADR-0008 确认  
+**状态：** Planned；界面框架已由 ADR-0028 改为 Ant Design（下文关于 shadcn/Tailwind/Radix/React Hook Form 的描述为历史计划，不再适用）  
 **应用：** `apps/admin`  
 **上游：** `https://github.com/satnaing/shadcn-admin`  
 **边界：** 独立 SPA；不属于当前 M2.2 学生端交付

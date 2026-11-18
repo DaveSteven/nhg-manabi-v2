@@ -1,5 +1,4 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, waitFor } from '@testing-library/react'
+import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Dashboard as Data } from '@/lib/api'
@@ -14,10 +13,8 @@ vi.mock('recharts', () => ({
   LineChart: () => <div data-testid='line-chart' />,
   Line: () => null, Legend: () => null, XAxis: () => null, YAxis: () => null, Tooltip: () => null, CartesianGrid: () => null,
 }))
-vi.mock('@/components/layout/header', () => ({ Header: () => null }))
-vi.mock('@/components/profile-dropdown', () => ({ ProfileDropdown: () => null }))
-vi.mock('@/components/theme-switch', () => ({ ThemeSwitch: () => null }))
 
+import { renderApp } from '@/test-utils/render'
 import { Dashboard } from './index'
 import { pct } from './format'
 
@@ -33,8 +30,7 @@ const data = (over: Partial<Data> = {}): Data => ({
 })
 
 function renderIt() {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-  return render(<QueryClientProvider client={qc}><Dashboard /></QueryClientProvider>)
+  return renderApp(<Dashboard />)
 }
 
 describe('Dashboard', () => {
@@ -67,7 +63,7 @@ describe('Dashboard', () => {
   it('switches the range and refetches', async () => {
     renderIt()
     await screen.findByText('1,500')
-    await userEvent.click(screen.getByRole('button', { name: '近 30 天' }))
+    await userEvent.click(screen.getByText('近 30 天'))
     await waitFor(() => expect(getDashboard).toHaveBeenLastCalledWith(30))
   })
 

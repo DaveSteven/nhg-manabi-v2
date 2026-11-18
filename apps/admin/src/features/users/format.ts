@@ -13,13 +13,13 @@ export function formatJst(iso: string | null | undefined): string {
 /** `YYYY-MM-DD` calendar dates from the server are already Tokyo days. */
 export const formatDay = (day: string | null | undefined) => day || '—'
 
-export const ACTIVITY_VARIANT: Record<Activity, 'default' | 'secondary' | 'outline'> = {
-  active: 'default',
-  inactive: 'secondary',
-  dormant: 'outline',
-  not_started: 'outline',
+/** antd Tag colour per activity class. */
+export const ACTIVITY_COLOR: Record<Activity, string> = {
+  active: 'green',
+  inactive: 'blue',
+  dormant: 'default',
+  not_started: 'orange',
 }
-
 
 /** `YYYY-MM-DD` of an instant in Japan time. */
 export function formatJstDay(iso: string | null | undefined): string {

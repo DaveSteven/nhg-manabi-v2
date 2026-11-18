@@ -1,28 +1,21 @@
+import { Avatar, Tag } from 'antd'
 import { ACCOUNT_LABEL, ACTIVITY_LABEL, type AccountState, type Activity } from '@/lib/api'
-import { Badge } from '@/components/ui/badge'
-import { ACTIVITY_VARIANT } from './format'
+import { ACTIVITY_COLOR } from './format'
 
 export function ActivityBadge({ activity }: { activity: Activity }) {
-  return <Badge variant={ACTIVITY_VARIANT[activity]}>{ACTIVITY_LABEL[activity]}</Badge>
+  return <Tag color={ACTIVITY_COLOR[activity]}>{ACTIVITY_LABEL[activity]}</Tag>
 }
 
 /** Only abnormal account states are flagged; normal accounts stay quiet. */
 export function AccountBadge({ state }: { state: AccountState }) {
   if (state === 'normal') return null
-  return (
-    <Badge variant={state === 'disabled' ? 'destructive' : 'outline'}>
-      {ACCOUNT_LABEL[state]}
-    </Badge>
-  )
+  return <Tag color={state === 'disabled' ? 'red' : 'gold'}>{ACCOUNT_LABEL[state]}</Tag>
 }
 
-export function UserAvatar({ name, email }: { name: string; email: string }) {
+export function UserAvatar({ name, email, size = 32 }: { name: string; email: string; size?: number }) {
   return (
-    <span
-      aria-hidden='true'
-      className='flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-medium'
-    >
+    <Avatar size={size} aria-hidden='true'>
       {(name.trim() || email).slice(0, 1).toUpperCase()}
-    </span>
+    </Avatar>
   )
 }

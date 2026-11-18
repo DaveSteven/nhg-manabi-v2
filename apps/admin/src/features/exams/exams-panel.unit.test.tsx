@@ -1,17 +1,14 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { AxiosError } from 'axios'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AdminExam } from '@/lib/api'
 
-const { toast, listAdminExams, withdrawRelease, restoreRelease } = vi.hoisted(() => ({
-  toast: { success: vi.fn(), error: vi.fn() },
+const { listAdminExams, withdrawRelease, restoreRelease } = vi.hoisted(() => ({
   listAdminExams: vi.fn(),
   withdrawRelease: vi.fn(),
   restoreRelease: vi.fn(),
 }))
-vi.mock('sonner', () => ({ toast }))
 vi.mock('@/lib/api', async (orig) => ({
   ...(await orig<typeof import('@/lib/api')>()),
   listAdminExams: () => listAdminExams(),
@@ -19,6 +16,7 @@ vi.mock('@/lib/api', async (orig) => ({
   restoreRelease: (...a: unknown[]) => restoreRelease(...a),
 }))
 
+import { pickOption, renderApp } from '@/test-utils/render'
 import { ExamsPanel } from './index'
 
 const exam = (over: Partial<AdminExam> & { exam_id: string }): AdminExam => ({
@@ -30,8 +28,7 @@ const exam = (over: Partial<AdminExam> & { exam_id: string }): AdminExam => ({
 })
 
 function renderPanel() {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-  return render(<QueryClientProvider client={qc}><ExamsPanel /></QueryClientProvider>)
+  return renderApp(<ExamsPanel />)
 }
 
 describe('ExamsPanel', () => {
@@ -59,12 +56,11 @@ describe('ExamsPanel', () => {
   it('filters by level and by status', async () => {
     renderPanel()
     await screen.findByTestId('row-A-N2')
-    const u = userEvent.setup()
-    await u.selectOptions(screen.getByLabelText('按级别筛选'), 'N1')
-    expect(screen.queryByTestId('row-A-N2')).toBeNull()
+    await pickOption('按级别筛选', 'N1')
+    await waitFor(() => expect(screen.queryByTestId('row-A-N2')).toBeNull())
     expect(screen.getByTestId('row-B-N1')).not.toBeNull()
-    await u.selectOptions(screen.getByLabelText('按级别筛选'), '')
-    await u.selectOptions(screen.getByLabelText('按状态筛选'), 'withdrawn')
+    await pickOption('按级别筛选', '全部级别')
+    await pickOption('按状态筛选', '已下架')
     expect(screen.queryByTestId('row-B-N1')).toBeNull()
     expect(screen.getByTestId('row-C-N3')).not.toBeNull()
   })
@@ -79,7 +75,7 @@ describe('ExamsPanel', () => {
     await u.type(await screen.findByLabelText('下架原因'), '答案键错误')
     await u.click(screen.getByRole('button', { name: '确认下架' }))
     await waitFor(() => expect(withdrawRelease).toHaveBeenCalledWith('rel-A-N2', '答案键错误'))
-    await waitFor(() => expect(toast.success).toHaveBeenCalled())
+    expect(await screen.findByText('已下架，学生端不再显示。')).not.toBeNull()
     await waitFor(() => expect(listAdminExams).toHaveBeenCalledTimes(2))   // invalidated
   })
 
@@ -99,7 +95,7 @@ describe('ExamsPanel', () => {
     await screen.findByTestId('row-C-N3')
     expect(screen.queryByRole('button', { name: '恢复上架 2018年12月 N2' })).toBeNull()
     await u.click(screen.getByRole('button', { name: '恢复上架 2020年12月 N3' }))
-    const dialog = await screen.findByRole('alertdialog')
+    const dialog = await screen.findByRole('dialog')
     await u.click(within(dialog).getByRole('button', { name: '恢复上架' }))
     await waitFor(() => expect(restoreRelease).toHaveBeenCalledWith('rel-C-N3'))
   })
@@ -112,8 +108,7 @@ describe('ExamsPanel', () => {
     await screen.findByTestId('row-A-N2')
     await u.click(screen.getByRole('button', { name: '下架 2018年12月 N2' }))
     await u.click(await screen.findByRole('button', { name: '确认下架' }))
-    await waitFor(() => expect(toast.error).toHaveBeenCalledWith(
-      expect.stringContaining('不是已发布状态')))
+    expect(await screen.findByText(/不是已发布状态/)).not.toBeNull()
   })
 
   it('shows an error state when the list cannot be loaded', async () => {

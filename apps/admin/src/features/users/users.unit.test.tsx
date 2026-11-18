@@ -1,5 +1,4 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, waitFor } from '@testing-library/react'
+import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { UserDetail, UserList } from '@/lib/api'
@@ -23,10 +22,8 @@ vi.mock('recharts', () => ({
   LineChart: () => <div data-testid='line-chart' />,
   Line: () => null, XAxis: () => null, YAxis: () => null, Tooltip: () => null, CartesianGrid: () => null,
 }))
-vi.mock('@/components/layout/header', () => ({ Header: () => null }))
-vi.mock('@/components/profile-dropdown', () => ({ ProfileDropdown: () => null }))
-vi.mock('@/components/theme-switch', () => ({ ThemeSwitch: () => null }))
 
+import { pickOption, renderApp } from '@/test-utils/render'
 import { UserDetailPage } from './detail'
 import { UsersPanel } from './index'
 
@@ -53,10 +50,7 @@ const detail = (over: Partial<UserDetail> = {}): UserDetail => ({
   audit: [], timezone: 'Asia/Tokyo', ...over,
 })
 
-function wrap(ui: React.ReactElement) {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-  return render(<QueryClientProvider client={qc}>{ui}</QueryClientProvider>)
-}
+const wrap = renderApp
 
 describe('UsersPanel', () => {
   beforeEach(() => { vi.clearAllMocks(); listAdminUsers.mockResolvedValue(list()) })
@@ -84,7 +78,7 @@ describe('UsersPanel', () => {
     wrap(<UsersPanel />)
     await screen.findByText('Alice')
     listAdminUsers.mockResolvedValue({ ...list([]), total: 0 })
-    await userEvent.selectOptions(screen.getByLabelText('按活跃状态筛选'), 'dormant')
+    await pickOption('按活跃状态筛选', '长期沉默')
     await waitFor(() => expect(listAdminUsers).toHaveBeenLastCalledWith(
       expect.objectContaining({ activity: 'dormant', page: 1 })))
     expect(await screen.findByText('没有符合条件的用户。')).toBeTruthy()

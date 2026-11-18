@@ -21,7 +21,7 @@
 | P-015 | 审核事件按 DB 插入顺序（sequence）定最终状态；阻断结论必须落可追踪 `content_issues`；Agent pass 不自动清除争议；结论严格绑定内容哈希；数据质量异常入库存档 | 已确认（ADR-0005） | 见 ADR-0005；blocking 未解决记录拒绝发布 |
 | P-016 | M2 作答域 `user_id` 由服务端认证上下文解析；默认 fail-closed；`dev_test` 测试身份机制在生产环境硬禁用；暂不建 users 表 | 已确认（ADR-0006） | 见 ADR-0006；正式认证接入时只替换 `get_current_user_id` |
 | P-017 | 用户端前端采用 React Router Framework Mode + SSG（品牌/内容页）+ SPA（学习系统）；第一阶段禁用运行时 SSR，不引入 Next.js 或 Node SSR 服务 | 已确认（ADR-0007） | 见 ADR-0007；影响 apps/web 与前端/部署配置；迁移全站 SSR 或 Next.js 须新 ADR |
-| P-018 | 独立管理端 `apps/admin` 采用 `satnaing/shadcn-admin` 作为工程/UI 基础，保留上游默认主题，不套用学生端「樱与墨」配色 | 已确认（ADR-0008） | 固定并审查上游 commit/tag；移除 Clerk/示例数据；FastAPI 权限与发布规则仍是事实源 |
+| P-018 | 独立管理端 `apps/admin` 界面框架为 Ant Design 6（2026-11-18 起，ADR-0028 取代 ADR-0008 的 shadcn-admin 选择），不套用学生端「樱与墨」配色；路由/Query/API/权限约定不变 | 已确认（ADR-0028，原 ADR-0008） | 不采用 antd-admin 的 Mock/模拟权限；FastAPI 权限与发布规则仍是事实源 |
 | P-019 | 管理员使用独立的 `admin_users`/`admin_sessions` 表，角色 viewer ⊂ reviewer ⊂ publisher；无 dev 旁路，命令行创建；审核人由服务端注入 | 已确认（ADR-0009） | 学生与管理员身份隔离；QA Agent 无管理账号；MFA/SSO/口令找回不在范围 |
 | P-020 | 入库默认发布（`PUBLISH_POLICY=auto`，可回退 `gated`）；暂不做审核流程；管理员仅 `super_admin` | 已确认（ADR-0010） | 未校验答案会直接展示并判题；版权门槛暂停；auto 不把任何内容标成已验证，只在决策备注里如实记录未验证项；部署仍需另行授权 |
 | P-021 | 学生账户：邮箱登录（无用户名）、完整邮件验证/找回流程（Resend）、30 天不透明 Bearer 会话存 localStorage、scrypt 口令（与管理端同实现）、等级偏好 `users.current_level` + 本地双轨；不迁移 v1 旧用户 | 已确认（ADR-0011） | 未激活/停用不可登录；登录锁 5 次/15 分钟；IP 级限流随部署硬化另行处理；`dev_test` 仍生产硬禁用 |
@@ -51,7 +51,7 @@
 - `ADR-0005-review-event-ordering-and-issues.md`
 - `ADR-0006-minimal-user-identity-boundary.md`
 - `ADR-0007-hybrid-rendering-strategy.md`
-- `ADR-0008-shadcn-admin-foundation.md`
+- `ADR-0008-shadcn-admin-foundation.md`（界面框架部分已被 ADR-0028 取代）
 - `ADR-0009-admin-identity-table.md`
 - `ADR-0010-auto-publish-and-super-admin.md`
 - `ADR-0012-local-docker-deployment.md`
@@ -70,3 +70,4 @@
 - `ADR-0026-topic-result-review-merged.md`（专项练习结果页与解析页合并）
 - `ADR-0027-mock-result-review-and-history.md`（模考成绩逐题回顾与历史整合）
 - `ADR-0025-abandoned-mock-not-recorded.md`（放弃的模考不保留可见记录；practice 接口隔离模考）
+- `ADR-0028-admin-ui-antd.md`（管理端界面框架改为 Ant Design）

@@ -2,7 +2,7 @@ import { createFileRoute, redirect } from '@tanstack/react-router'
 import { AxiosError } from 'axios'
 import { adminMe } from '@/lib/api'
 import { useAuthStore } from '@/stores/auth-store'
-import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
+import { AuthenticatedLayout } from '@/components/authenticated-layout'
 
 /**
  * Route guard. NOT a security boundary (the FastAPI admin endpoints enforce

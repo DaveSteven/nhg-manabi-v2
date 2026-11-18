@@ -1,6 +1,6 @@
 # apps/admin · JLPT GO 管理端
 
-独立 React SPA（Vite + shadcn-admin，来源与改动见 `THIRD_PARTY.md`，决策见 ADR-0008/0009/0010）。FastAPI 是身份与权限的唯一事实源，前端路由守卫只改善体验。
+独立 React SPA（Vite + Ant Design 6，ADR-0028；身份与发布见 ADR-0009/0010，工程来源见 `THIRD_PARTY.md`）。FastAPI 是身份与权限的唯一事实源，前端路由守卫只改善体验。
 
 ## 运行
 
@@ -34,4 +34,4 @@ pnpm -F admin build
 
 ## 现状
 
-目前只有登录、退出、受保护的壳层和首页。审核流程暂不做（ADR-0010）。
+登录/退出、运营 Dashboard、试卷管理（下架/恢复）、用户管理（列表/详情/禁用启用）。审核流程暂不做（ADR-0010）。

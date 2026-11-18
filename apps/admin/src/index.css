@@ -1,0 +1,14 @@
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+}
+
+/* Tabular numerals keep number columns aligned. */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}

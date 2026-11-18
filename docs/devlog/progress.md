@@ -2,6 +2,10 @@
 
 最后更新：2026-11-18
 
+## 管理端迁移到 Ant Design（2026-11-18）
+
+- `apps/admin` 界面层由 shadcn-admin 换为 Ant Design 6（ADR-0028），登录、Dashboard、试卷管理、用户管理（列表/详情/禁用启用）全部迁移，API 与后端不变，见 [日志](2026-11-18-admin-antd-migration.md)。tsc、eslint、admin 49 单测、build 通过；浏览器仅目检登录页与带伪造数据的三页布局，未用真实口令走查，深色/移动端/Docker 构建未验证。
+
 ## 管理端用户管理 P0–P2（2026-11-18）
 
 - 管理端新增「用户管理」：列表（搜索/等级/活跃与账号状态筛选/排序/分页，活跃口径与 Dashboard 一致）、详情（30 天趋势、功能与科目分布、最近练习）、账号启用/禁用（二次确认、撤销会话、审计表迁移 0018），见 [日志](2026-11-18-admin-users.md) 与 [口径](../development/admin-users.md)。后端 287 passed + 2 skipped，admin 43 单测、tsc、build 通过；浏览器未验收，只读结果详情跳转未做。

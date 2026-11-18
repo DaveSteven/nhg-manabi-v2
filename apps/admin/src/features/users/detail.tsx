@@ -1,210 +1,228 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
+import {
+  Alert,
+  App,
+  Button,
+  Card,
+  Col,
+  Descriptions,
+  Empty,
+  Flex,
+  Input,
+  Modal,
+  Row,
+  Skeleton,
+  Space,
+  Statistic,
+  Table,
+  Timeline,
+  Typography,
+  theme,
+} from 'antd'
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { toast } from 'sonner'
 import { type UserDetail, describeUserActionError, getAdminUser, setUserDisabled } from '@/lib/api'
-import { ConfirmDialog } from '@/components/confirm-dialog'
-import { Header } from '@/components/layout/header'
-import { Main } from '@/components/layout/main'
-import { ProfileDropdown } from '@/components/profile-dropdown'
-import { ThemeSwitch } from '@/components/theme-switch'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Textarea } from '@/components/ui/textarea'
 import { pct } from '@/features/dashboard/format'
 import { formatDay, formatJst } from './format'
 import { AccountBadge, ActivityBadge, UserAvatar } from './user-badges'
 
-const nf = new Intl.NumberFormat('zh-CN')
 const KIND_LABEL: Record<string, string> = {
-  quick: '快速练习', topic: '专项练习', mock: '模拟考试', exam: '试卷练习',
+  quick: '快速练习',
+  topic: '专项练习',
+  mock: '模拟考试',
+  exam: '试卷练习',
 }
 const ACTION_LABEL: Record<string, string> = { user_disable: '禁用账号', user_enable: '启用账号' }
+
+type Recent = UserDetail['recent'][number]
+type Feature = UserDetail['features'][number]
 
 function Stat({ label, value, hint }: { label: string; value: number; hint?: string }) {
   return (
     <Card>
-      <CardHeader className='pb-1'>
-        <CardTitle className='text-sm font-medium text-muted-foreground'>{label}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className='text-2xl font-bold tabular-nums'>{nf.format(value)}</div>
-        {hint && <p className='mt-1 text-xs text-muted-foreground'>{hint}</p>}
-      </CardContent>
+      <Statistic title={label} value={value} />
+      {hint && (
+        <Typography.Text type='secondary' style={{ fontSize: 12 }}>
+          {hint}
+        </Typography.Text>
+      )}
     </Card>
   )
 }
 
-function Info({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <dt className='text-xs text-muted-foreground'>{label}</dt>
-      <dd className='break-all text-sm'>{children}</dd>
-    </div>
-  )
-}
-
 export function UserDetailView({ data, onToggle }: { data: UserDetail; onToggle: () => void }) {
+  const { token } = theme.useToken()
   const u = data.user
   const s = data.stats
   const hasTrend = data.daily_30.some((d) => d.answers > 0)
   const disabled = u.account_state === 'disabled'
   return (
-    <div className='space-y-4'>
+    <Flex vertical gap={16}>
       <Card>
-        <CardContent className='flex flex-wrap items-start justify-between gap-4 pt-6'>
-          <div className='flex items-center gap-3'>
-            <UserAvatar name={u.display_name} email={u.email} />
+        <Flex justify='space-between' align='flex-start' wrap gap={16} style={{ marginBottom: 16 }}>
+          <Flex align='center' gap={12}>
+            <UserAvatar name={u.display_name} email={u.email} size={48} />
             <div>
-              <div className='flex flex-wrap items-center gap-2'>
-                <span className='text-lg font-semibold'>{u.display_name}</span>
+              <Space wrap>
+                <Typography.Text strong style={{ fontSize: 18 }}>
+                  {u.display_name}
+                </Typography.Text>
                 <ActivityBadge activity={u.activity} />
                 <AccountBadge state={u.account_state} />
+              </Space>
+              <div>
+                <Typography.Text type='secondary'>{u.email}</Typography.Text>
               </div>
-              <div className='text-sm text-muted-foreground'>{u.email}</div>
             </div>
-          </div>
-          <Button variant={disabled ? 'default' : 'destructive'} onClick={onToggle}>
+          </Flex>
+          <Button type='primary' danger={!disabled} onClick={onToggle}>
             {disabled ? '启用账号' : '禁用账号'}
           </Button>
-        </CardContent>
-        <CardContent>
-          <dl className='grid gap-3 sm:grid-cols-2 lg:grid-cols-4'>
-            <Info label='用户 ID'>{u.id}</Info>
-            <Info label='目标 JLPT 等级'>{u.current_level}</Info>
-            <Info label='注册时间'>{formatJst(u.created_at)}</Info>
-            <Info label='邮箱验证时间'>{formatJst(u.activated_at)}</Info>
-            <Info label='最近访问'>{formatDay(u.last_visit_date)}</Info>
-            <Info label='最近学习'>{formatJst(u.last_learn_at)}</Info>
-            <Info label='账号状态'>
-              {disabled ? `已禁用（${formatJst(u.disabled_at)}）` : u.account_state === 'unverified' ? '未验证邮箱' : '正常'}
-            </Info>
-          </dl>
-        </CardContent>
+        </Flex>
+        <Descriptions
+          size='small'
+          column={{ xs: 1, sm: 2, lg: 4 }}
+          layout='vertical'
+          items={[
+            { key: 'id', label: '用户 ID', children: <span style={{ wordBreak: 'break-all' }}>{u.id}</span> },
+            { key: 'lv', label: '目标 JLPT 等级', children: u.current_level },
+            { key: 'c', label: '注册时间', children: formatJst(u.created_at) },
+            { key: 'a', label: '邮箱验证时间', children: formatJst(u.activated_at) },
+            { key: 'v', label: '最近访问', children: formatDay(u.last_visit_date) },
+            { key: 'l', label: '最近学习', children: formatJst(u.last_learn_at) },
+            {
+              key: 's',
+              label: '账号状态',
+              children: disabled
+                ? `已禁用（${formatJst(u.disabled_at)}）`
+                : u.account_state === 'unverified'
+                  ? '未验证邮箱'
+                  : '正常',
+            },
+          ]}
+        />
       </Card>
 
-      <div className='grid gap-4 sm:grid-cols-2 xl:grid-cols-4'>
-        <Stat label='累计正式作答题次' value={s.total_answers} />
-        <Stat label='累计完成练习次数' value={s.completed_sessions} />
-        <Stat label='近 30 天活跃天数' value={s.active_days_30} hint='有正式作答的天数' />
-        <Stat label='近 30 天作答题次' value={s.answers_30} />
-      </div>
+      <Row gutter={[16, 16]}>
+        <Col xs={24} sm={12} xl={6}>
+          <Stat label='累计正式作答题次' value={s.total_answers} />
+        </Col>
+        <Col xs={24} sm={12} xl={6}>
+          <Stat label='累计完成练习次数' value={s.completed_sessions} />
+        </Col>
+        <Col xs={24} sm={12} xl={6}>
+          <Stat label='近 30 天活跃天数' value={s.active_days_30} hint='有正式作答的天数' />
+        </Col>
+        <Col xs={24} sm={12} xl={6}>
+          <Stat label='近 30 天作答题次' value={s.answers_30} />
+        </Col>
+      </Row>
 
-      <Card>
-        <CardHeader><CardTitle className='text-base'>近 30 天每日学习量</CardTitle></CardHeader>
-        <CardContent>
-          {hasTrend ? (
-            <div className='h-56' data-testid='daily-chart'>
-              <ResponsiveContainer width='100%' height='100%'>
-                <LineChart data={data.daily_30}>
-                  <CartesianGrid strokeDasharray='3 3' vertical={false} />
-                  <XAxis dataKey='date' tickFormatter={(d: string) => d.slice(5)} fontSize={12} />
-                  <YAxis allowDecimals={false} width={32} fontSize={12} />
-                  <Tooltip formatter={(v) => [`${v} 题`, '作答']} labelFormatter={(l) => `${l}（日本时间）`} />
-                  <Line type='monotone' dataKey='answers' stroke='#2563eb' strokeWidth={2} dot={false} />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          ) : (
-            <p className='py-8 text-center text-sm text-muted-foreground'>近 30 天没有正式作答。</p>
-          )}
-        </CardContent>
+      <Card title='近 30 天每日学习量'>
+        {hasTrend ? (
+          <div style={{ height: 224 }} data-testid='daily-chart'>
+            <ResponsiveContainer width='100%' height='100%'>
+              <LineChart data={data.daily_30}>
+                <CartesianGrid strokeDasharray='3 3' vertical={false} stroke={token.colorBorderSecondary} />
+                <XAxis dataKey='date' tickFormatter={(d: string) => d.slice(5)} fontSize={12} />
+                <YAxis allowDecimals={false} width={32} fontSize={12} />
+                <Tooltip formatter={(v) => [`${v} 题`, '作答']} labelFormatter={(l) => `${l}（日本时间）`} />
+                <Line type='monotone' dataKey='answers' stroke={token.colorPrimary} strokeWidth={2} dot={false} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        ) : (
+          <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description='近 30 天没有正式作答。' />
+        )}
       </Card>
 
-      <div className='grid gap-4 lg:grid-cols-2'>
-        <Card>
-          <CardHeader><CardTitle className='text-base'>学习功能使用（累计）</CardTitle></CardHeader>
-          <CardContent>
-            <table className='w-full text-sm'>
-              <thead className='text-left text-xs text-muted-foreground'>
-                <tr><th className='pb-2 font-normal'>功能</th>
-                  <th className='pb-2 text-right font-normal'>使用次数</th>
-                  <th className='pb-2 text-right font-normal'>完成次数</th></tr>
-              </thead>
-              <tbody className='tabular-nums'>
-                {data.features.map((f) => (
-                  <tr key={f.key} className='border-t'>
-                    <td className='py-2'>{f.label}</td>
-                    <td className='py-2 text-right'>{f.starts}</td>
-                    <td className='py-2 text-right'>{f.completions}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader><CardTitle className='text-base'>主要练习科目（正式作答题次）</CardTitle></CardHeader>
-          <CardContent>
-            <ul className='space-y-2 text-sm'>
-              {data.subjects.map((x) => (
-                <li key={x.subject} className='flex justify-between'>
-                  <span>{x.label}</span><span className='tabular-nums'>{nf.format(x.answers)}</span>
-                </li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
-      </div>
+      <Row gutter={[16, 16]}>
+        <Col xs={24} lg={12}>
+          <Card title='学习功能使用（累计）' styles={{ body: { paddingTop: 0 } }}>
+            <Table<Feature>
+              size='small'
+              rowKey='key'
+              pagination={false}
+              dataSource={data.features}
+              columns={[
+                { title: '功能', dataIndex: 'label' },
+                { title: '使用次数', dataIndex: 'starts', align: 'right', className: 'tabular' },
+                { title: '完成次数', dataIndex: 'completions', align: 'right', className: 'tabular' },
+              ]}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} lg={12}>
+          <Card title='主要练习科目（正式作答题次）' styles={{ body: { paddingTop: 0 } }}>
+            <Table
+              size='small'
+              rowKey='subject'
+              pagination={false}
+              showHeader={false}
+              dataSource={data.subjects}
+              columns={[
+                { dataIndex: 'label' },
+                {
+                  dataIndex: 'answers',
+                  align: 'right',
+                  className: 'tabular',
+                  render: (v: number) => new Intl.NumberFormat('zh-CN').format(v),
+                },
+              ]}
+            />
+          </Card>
+        </Col>
+      </Row>
 
-      <Card>
-        <CardHeader><CardTitle className='text-base'>最近练习记录</CardTitle></CardHeader>
-        <CardContent>
-          {data.recent.length === 0 ? (
-            <p className='py-6 text-center text-sm text-muted-foreground'>暂无练习记录。</p>
-          ) : (
-            <table className='w-full text-sm'>
-              <thead className='text-left text-xs text-muted-foreground'>
-                <tr><th className='pb-2 font-normal'>类型</th><th className='pb-2 font-normal'>名称</th>
-                  <th className='pb-2 font-normal'>完成时间</th>
-                  <th className='pb-2 text-right font-normal'>作答题数</th>
-                  <th className='pb-2 text-right font-normal'>正确率</th></tr>
-              </thead>
-              <tbody className='tabular-nums'>
-                {data.recent.map((r) => (
-                  <tr key={r.session_id} className='border-t'>
-                    <td className='py-2'>{KIND_LABEL[r.source.kind] ?? r.source.kind}</td>
-                    <td className='py-2'>{r.source.label ?? '—'}</td>
-                    <td className='py-2 whitespace-nowrap'>{formatJst(r.happened_at)}</td>
-                    <td className='py-2 text-right'>{r.correct + r.wrong}</td>
-                    <td className='py-2 text-right'>{pct(r.answered_accuracy)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-          <p className='mt-2 text-xs text-muted-foreground'>
-            作答题数与正确率只计有实际选择的正式答案；管理端只读，不可修改成绩。
-          </p>
-        </CardContent>
+      <Card title='最近练习记录'>
+        <Table<Recent>
+          size='small'
+          rowKey='session_id'
+          pagination={false}
+          dataSource={data.recent}
+          locale={{ emptyText: '暂无练习记录。' }}
+          columns={[
+            { title: '类型', render: (_, r) => KIND_LABEL[r.source.kind] ?? r.source.kind },
+            { title: '名称', render: (_, r) => r.source.label ?? '—' },
+            { title: '完成时间', render: (_, r) => formatJst(r.happened_at) },
+            { title: '作答题数', align: 'right', className: 'tabular', render: (_, r) => r.correct + r.wrong },
+            { title: '正确率', align: 'right', className: 'tabular', render: (_, r) => pct(r.answered_accuracy) },
+          ]}
+        />
+        <Typography.Paragraph type='secondary' style={{ fontSize: 12, marginTop: 8, marginBottom: 0 }}>
+          作答题数与正确率只计有实际选择的正式答案；管理端只读，不可修改成绩。
+        </Typography.Paragraph>
       </Card>
 
-      <Card>
-        <CardHeader><CardTitle className='text-base'>账号操作记录</CardTitle></CardHeader>
-        <CardContent>
-          {data.audit.length === 0 ? (
-            <p className='text-sm text-muted-foreground'>暂无操作记录。</p>
-          ) : (
-            <ul className='space-y-2 text-sm'>
-              {data.audit.map((a, i) => (
-                <li key={i}>
-                  <span className='font-medium'>{ACTION_LABEL[a.action] ?? a.action}</span>
-                  <span className='ml-2 text-muted-foreground'>
-                    {a.admin_username} · {formatJst(a.created_at)}{a.reason ? ` · ${a.reason}` : ''}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </CardContent>
+      <Card title='账号操作记录'>
+        {data.audit.length === 0 ? (
+          <Typography.Text type='secondary'>暂无操作记录。</Typography.Text>
+        ) : (
+          <Timeline
+            items={data.audit.map((a, i) => ({
+              key: i,
+              color: a.action === 'user_disable' ? 'red' : 'green',
+              content: (
+                <>
+                  <Typography.Text strong>{ACTION_LABEL[a.action] ?? a.action}</Typography.Text>
+                  <Typography.Text type='secondary' style={{ marginLeft: 8 }}>
+                    {a.admin_username} · {formatJst(a.created_at)}
+                    {a.reason ? ` · ${a.reason}` : ''}
+                  </Typography.Text>
+                </>
+              ),
+            }))}
+          />
+        )}
       </Card>
-    </div>
+    </Flex>
   )
 }
 
 export function UserDetailPage({ userId }: { userId: string }) {
   const qc = useQueryClient()
+  const { message } = App.useApp()
   const query = useQuery({ queryKey: ['admin-user', userId], queryFn: () => getAdminUser(userId) })
   const [open, setOpen] = useState(false)
   const [reason, setReason] = useState('')
@@ -212,11 +230,11 @@ export function UserDetailPage({ userId }: { userId: string }) {
   const action = useMutation({
     mutationFn: (disable: boolean) => setUserDisabled(userId, disable, reason),
     onSuccess: (_d, disable) => {
-      toast.success(disable ? '账号已禁用，已退出其所有登录。' : '账号已启用。')
+      message.success(disable ? '账号已禁用，已退出其所有登录。' : '账号已启用。')
       setOpen(false)
       setReason('')
     },
-    onError: (e) => toast.error(describeUserActionError(e)),
+    onError: (e) => message.error(describeUserActionError(e)),
     onSettled: () => {
       qc.invalidateQueries({ queryKey: ['admin-user', userId] })
       qc.invalidateQueries({ queryKey: ['admin-users'] })
@@ -224,43 +242,56 @@ export function UserDetailPage({ userId }: { userId: string }) {
   })
   return (
     <>
-      <Header>
-        <div className='ms-auto flex items-center space-x-4'>
-          <ThemeSwitch />
-          <ProfileDropdown />
-        </div>
-      </Header>
-      <Main>
-        <div className='mb-4'>
-          <Link to='/users' className='text-sm text-muted-foreground hover:underline'>← 用户管理</Link>
-          <h1 className='text-2xl font-bold tracking-tight'>用户详情</h1>
-          <p className='text-xs text-muted-foreground'>时间为日本时间；活跃口径与 Dashboard 一致。</p>
-        </div>
-        {query.isPending && <p className='text-sm text-muted-foreground'>加载中…</p>}
-        {query.isError && (
-          <p role='alert' className='text-sm text-destructive'>
-            无法加载该用户（可能不存在或服务不可用）。
-            <Button variant='link' size='sm' onClick={() => query.refetch()}>重试</Button>
-          </p>
-        )}
-        {query.data && <UserDetailView data={query.data} onToggle={() => setOpen(true)} />}
-        <ConfirmDialog
-          open={open}
-          onOpenChange={(o) => !o && setOpen(false)}
-          title={disabled ? '启用该账号？' : '禁用该账号？'}
-          desc={disabled
-            ? '启用后用户可以重新登录，学习记录不受影响。'
-            : '禁用后该用户会立即退出所有登录且无法再登录；学习记录全部保留，可随时启用。'}
-          confirmText={disabled ? '确认启用' : '确认禁用'}
-          cancelBtnText='取消'
-          destructive={!disabled}
-          isLoading={action.isPending}
-          handleConfirm={() => action.mutate(!disabled)}
-        >
-          <Textarea aria-label='操作原因' placeholder='原因（选填，会记录在操作日志里）'
-            value={reason} maxLength={500} onChange={(e) => setReason(e.target.value)} />
-        </ConfirmDialog>
-      </Main>
+      <div style={{ marginBottom: 16 }}>
+        <Link to='/users'>← 用户管理</Link>
+        <Typography.Title level={3} style={{ margin: 0 }}>
+          用户详情
+        </Typography.Title>
+        <Typography.Text type='secondary' style={{ fontSize: 12 }}>
+          时间为日本时间；活跃口径与 Dashboard 一致。
+        </Typography.Text>
+      </div>
+      {query.isPending && <Skeleton active paragraph={{ rows: 8 }} />}
+      {query.isError && (
+        <Alert
+          type='error'
+          showIcon
+          role='alert'
+          message='无法加载该用户（可能不存在或服务不可用）。'
+          action={
+            <Button size='small' onClick={() => query.refetch()}>
+              重试
+            </Button>
+          }
+        />
+      )}
+      {query.data && <UserDetailView data={query.data} onToggle={() => setOpen(true)} />}
+      <Modal
+        open={open}
+        title={disabled ? '启用该账号？' : '禁用该账号？'}
+        okText={disabled ? '确认启用' : '确认禁用'}
+        cancelText='取消'
+        okButtonProps={{ danger: !disabled }}
+        confirmLoading={action.isPending}
+        onCancel={() => setOpen(false)}
+        onOk={() => action.mutate(!disabled)}
+        destroyOnHidden
+      >
+        <Space direction='vertical' style={{ width: '100%' }}>
+          <Typography.Paragraph type='secondary'>
+            {disabled
+              ? '启用后用户可以重新登录，学习记录不受影响。'
+              : '禁用后该用户会立即退出所有登录且无法再登录；学习记录全部保留，可随时启用。'}
+          </Typography.Paragraph>
+          <Input.TextArea
+            aria-label='操作原因'
+            placeholder='原因（选填，会记录在操作日志里）'
+            value={reason}
+            maxLength={500}
+            onChange={(e) => setReason(e.target.value)}
+          />
+        </Space>
+      </Modal>
     </>
   )
 }
