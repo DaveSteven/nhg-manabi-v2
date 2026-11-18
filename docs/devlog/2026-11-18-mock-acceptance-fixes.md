@@ -17,3 +17,7 @@
 
 ## 风险
 - 确认页可无限停留；逐题兜底听力仍从上一阶段结束计时。
+
+## 追加：答题卡显示题型、去掉题卡 is-current
+- 题卡不再有 `is-current` 类与样式（滚动高亮全部去除；答题卡抽屉自身的当前题标记、填空 Slot 联动描边保留）。
+- `/content` 的 `layer` 增加 `question_type_label`（`question_types.label_zh`），答题卡各大题分组标题右侧显示题型。后端 `test_mock_exam.py` 16 passed，web 318 passed，typecheck 通过；浏览器未复核。

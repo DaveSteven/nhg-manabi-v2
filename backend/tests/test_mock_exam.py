@@ -154,6 +154,7 @@ def test_full_flow_phases_in_order_results_after_last(
     assert [u["id"] for u in body["units"]] == [CLOZE_UNIT]   # active Phase only
     assert body["units"][0]["session_unit_id"] == su1
     assert body["units"][0]["layer"]["subject"] == "grammar"
+    assert isinstance(body["units"][0]["layer"]["question_type_label"], str)
     assert_no_leak(body)
 
     # a future Phase's unit is not served (and not even confirmed to exist)

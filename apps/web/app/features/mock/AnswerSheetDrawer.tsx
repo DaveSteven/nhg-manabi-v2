@@ -91,6 +91,7 @@ export function AnswerSheetDrawer({ open, onClose, groups, currentGroupIdx,
                           return n;
                         })}>
                   <span className="sheet-group-title">{g.label} · {done}/{g.questions.length}</span>
+                  {g.typeLabel ? <span className="sheet-group-type">{g.typeLabel}</span> : null}
                   <span className="sheet-chevron" aria-hidden="true">{isCollapsed ? "▾" : "▴"}</span>
                 </button>
                 {!isCollapsed ? (

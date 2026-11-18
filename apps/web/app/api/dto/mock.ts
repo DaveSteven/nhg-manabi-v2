@@ -93,6 +93,7 @@ export const MockContentSchema = z.object({
       position: z.number().int(),
       subject: z.string(),
       section_title: z.string(),
+      question_type_label: z.string().nullable().optional(),
     }),
   })),
 });

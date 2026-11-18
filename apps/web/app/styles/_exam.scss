@@ -149,7 +149,7 @@
 }
 .sheet-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: var(--space-2) var(--space-6) var(--space-4); display: grid; gap: 10px; align-content: start; }
 .sheet-group { border-radius: var(--radius-sm); background: var(--color-surface-subtle); padding: 0 var(--space-3); }
-.sheet-group-head { appearance: none; width: 100%; display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); padding: var(--space-3) 0; border: 0; background: none; font: inherit; cursor: pointer; text-align: left; color: var(--color-ink); .sheet-group-title { font-weight: 600; font-variant-numeric: tabular-nums; } .sheet-chevron { color: var(--color-text-muted); font-size: 12px; } &:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; } }
+.sheet-group-head { appearance: none; width: 100%; display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); padding: var(--space-3) 0; border: 0; background: none; font: inherit; cursor: pointer; text-align: left; color: var(--color-ink); .sheet-group-title { font-weight: 600; font-variant-numeric: tabular-nums; } .sheet-group-type { flex: 1 1 auto; min-width: 0; font-size: var(--text-aux); color: var(--color-text-secondary); text-align: right; overflow-wrap: anywhere; } .sheet-chevron { color: var(--color-text-muted); font-size: 12px; } &:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; } }
 .sheet-grid { list-style: none; margin: 0; padding: 0 0 var(--space-3); display: grid; grid-template-columns: repeat(5, 1fr); gap: var(--space-2); }
 .sheet-no {
   position: relative;

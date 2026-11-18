@@ -72,6 +72,8 @@ export interface ExamUnit {
 export interface ExamGroup {
   layerId: string;
   label: string;
+  /** 题型 (Chinese label of the layer's question type), when known. */
+  typeLabel: string | null;
   subject: string;
   units: ExamUnit[];
   questions: ExamQuestion[];
@@ -95,6 +97,7 @@ export function buildGroups(units: MockContentUnit[]): ExamGroup[] {
     if (!g) {
       g = { layerId: u.layer.layer_id,
             label: u.layer.label ?? `大题 ${u.layer.position}`,
+            typeLabel: u.layer.question_type_label ?? null,
             subject: u.layer.subject, units: [], questions: [], paged: false };
       groups.push(g);
     }

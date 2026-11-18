@@ -297,6 +297,20 @@ describe("Exam Mode", () => {
     await waitFor(() => expect(abandoned).toBe(true));
   });
 
+  it("answer sheet groups show the question type", async () => {
+    authStore.setSession("tok", USER);
+    setup();
+    const base = unit("ux", "su-x", L1, [question("ux-q1", 1, "1")]) as any;
+    base.layer.question_type_label = "汉字读音";
+    server.use(http.get("*/api/mock-exams/m-1/content", () =>
+      HttpResponse.json({ phase_id: "p1", units: [base] })));
+    const user = userEvent.setup();
+    renderExam();
+    await user.click(await screen.findByRole("button", { name: "答题卡" }));
+    const sheet = await screen.findByRole("dialog", { name: "答题卡" });
+    expect(within(sheet).getByText("汉字读音")).toBeInTheDocument();
+  });
+
   it("Escape closes the sheet", async () => {
     authStore.setSession("tok", USER);
     setup();

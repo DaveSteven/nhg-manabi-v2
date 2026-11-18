@@ -581,7 +581,8 @@ def get_mock_phase_content(
         rows = conn.execute(text(
             "SELECT su.id, su.release_id, su.unit_id, su.state,"
             " l.layer_id, l.display_label, l.position AS layer_position,"
-            " sec.subject, sec.title AS section_title"
+            " sec.subject, sec.title AS section_title,"
+            " qt.label_zh AS question_type_label"
             " FROM study_session_units su"
             " JOIN release_phase_units pu ON pu.release_id = su.release_id"
             "  AND pu.unit_id = su.unit_id AND pu.phase_id = :p"
@@ -591,6 +592,7 @@ def get_mock_phase_content(
             "  AND l.layer_id = u.layer_id"
             " JOIN release_sections sec ON sec.release_id = l.release_id"
             "  AND sec.section_id = l.section_id"
+            " LEFT JOIN question_types qt ON qt.id = l.question_type_id"
             " WHERE su.session_id = :s ORDER BY su.position"),
             {"p": phase_id, "s": session_id}).mappings().all()
         units = []
@@ -610,7 +612,8 @@ def get_mock_phase_content(
             payload["layer"] = {
                 "layer_id": r["layer_id"], "label": r["display_label"],
                 "position": r["layer_position"], "subject": r["subject"],
-                "section_title": r["section_title"]}
+                "section_title": r["section_title"],
+                "question_type_label": r["question_type_label"]}
             units.append(payload)
     return {"phase_id": phase_id, "phase_audio": phase_audio, "units": units}
 
