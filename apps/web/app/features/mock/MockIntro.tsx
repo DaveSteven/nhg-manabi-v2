@@ -118,7 +118,7 @@ export function MockIntro({ examId }: { examId: string }) {
                 开始模拟考试
               </Button>
             )}
-            <ButtonLink variant="ghost" to={`/study/exams/${encodeURIComponent(examId)}`}>
+            <ButtonLink variant="secondary" size="lg" to={`/study/exams/${encodeURIComponent(examId)}`}>
               返回试卷
             </ButtonLink>
           </div>
