@@ -281,6 +281,9 @@
 
   .question-list { margin-top: 0; }
 
+  /* the scroll container clips the card shadow into a stray band below it */
+  .panel-scroll .card { box-shadow: none; }
+
   /* one question at a time; all stay mounted (answers are kept) */
   .panel-scroll li[data-question-id]:not(.is-active-question) { display: none; }
 
