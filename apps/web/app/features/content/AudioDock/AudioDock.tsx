@@ -29,7 +29,7 @@ export interface TranscriptRef {
  * padding-bottom: calc(var(--audio-dock-height) + var(--audio-dock-bottom)
  * + env(safe-area-inset-bottom)).
  */
-export function AudioDock({ src, title = "音声", subtitle = null, disabledReason = "音频暂不可用", transcript = null }: {
+export function AudioDock({ src, title = "音频", subtitle = null, disabledReason = "音频暂不可用", transcript = null }: {
   src: string | null;
   title?: string;
   subtitle?: string | null;

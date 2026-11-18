@@ -199,12 +199,12 @@ export function TopicPracticeView() {
                 <label className="topic-feedback-option">
                   <input type="radio" name="topic-feedback" checked={feedback === "immediate"}
                          onChange={() => setFeedback("immediate")} />
-                  即时反馈（每组提交后看解析）
+                  即时反馈（提交后看解析）
                 </label>
                 <label className="topic-feedback-option">
                   <input type="radio" name="topic-feedback" checked={feedback === "end"}
                          onChange={() => setFeedback("end")} />
-                  统一反馈（全部结束后揭晓）
+                  统一反馈（结束后揭晓）
                 </label>
               </div>
 

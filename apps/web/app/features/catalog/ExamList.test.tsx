@@ -145,7 +145,7 @@ describe("ExamList", () => {
     useExamsHandler([exams[2]!]);
     window.localStorage.setItem("jlptgo.level", "N4");
     renderList();
-    expect(await screen.findByText(/暂无 N4 已发布试卷/)).toBeInTheDocument();
+    expect(await screen.findByText(/暂无 N4 试卷/)).toBeInTheDocument();
     expect(screen.queryByRole("listitem", { name: "2019年" })).not.toBeInTheDocument();
   });
 });

@@ -66,7 +66,7 @@ function OverviewTab({ level }: { level: ReturnType<typeof useLevel>["level"] })
   if (t.practiced_questions === 0 && t.skipped === 0) {
     return (
       <div className="card learning-empty">
-        <p>还没有{ofLevel}正式作答记录。完成一次练习后，这里会显示正确率、覆盖率和薄弱题型。</p>
+        <p>还没有{ofLevel}作答记录，完成练习后会显示统计。</p>
         <ButtonLink variant="primary" to="/study/practice">去专项练习</ButtonLink>
       </div>
     );
@@ -135,7 +135,7 @@ function OverviewTab({ level }: { level: ReturnType<typeof useLevel>["level"] })
         <h2 className="module-title">薄弱题型</h2>
         {o.weak_types.length === 0 ? (
           <p className="text-aux">
-            暂时没有明显薄弱的题型。继续练习，同一题型有效作答达到 3 次后才会参与判断。
+            暂无明显薄弱的题型。
           </p>
         ) : (
           <ul className="learning-list">

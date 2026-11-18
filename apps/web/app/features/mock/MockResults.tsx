@@ -47,7 +47,6 @@ export function MockResultsPage({ sessionId }: { sessionId: string }) {
           答错 <strong>{r.wrong_count}</strong>，未答 <strong>{r.skipped_count}</strong>
           ；已作答正确率 <strong>{formatPercent(r.answered_accuracy)}</strong>
         </p>
-        <p className="text-aux">这里不提供官方换算分或合格判断。</p>
       </div>
       <div className="card learning-block">
         <h2 className="module-title">各阶段</h2>

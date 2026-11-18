@@ -47,9 +47,9 @@ export function ExamListView() {
           {describeLoadError(query.error, "试卷目录")}
         </p>
       ) : data.length === 0 ? (
-        <p>暂无已发布试卷。</p>
+        <p>暂无试卷。</p>
       ) : filtered.length === 0 ? (
-        <p>暂无 {level} 已发布试卷，可在右上角切换备考等级。</p>
+        <p>暂无 {level} 试卷，可在右上角切换备考等级。</p>
       ) : (
         <ol className="exam-years">
           {rows.map(({ year: y, items }) => (

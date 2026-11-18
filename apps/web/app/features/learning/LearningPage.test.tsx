@@ -134,7 +134,7 @@ describe("LearningView", () => {
     server.use(http.get("*/api/me/learning/overview", () =>
       HttpResponse.json({ ...FILLED, weak_types: [] })));
     renderPage();
-    expect(await screen.findByText(/暂时没有明显薄弱的题型/)).toBeInTheDocument();
+    expect(await screen.findByText(/暂无明显薄弱的题型/)).toBeInTheDocument();
   });
 
   it("history lists real sessions; results link only when a result exists", async () => {
