@@ -428,6 +428,53 @@ def get_mock_unit(session_id: uuid.UUID, session_unit_id: uuid.UUID,
     return payload
 
 
+@router.get("/api/mock-exams/{session_id}/content")
+def get_mock_phase_content(
+        session_id: uuid.UUID,
+        user_id: uuid.UUID = Depends(get_current_user_id)) -> dict:
+    """Answer-free content of EVERY unit of the ACTIVE Phase in one call
+    (what the exam page renders), each tagged with its 大题 (layer) so the
+    answer sheet can group by the paper's own structure."""
+    with get_engine().begin() as conn:
+        sess = _owned_advanced(conn, session_id, user_id)
+        if sess["state"] != "in_progress":
+            raise HTTPException(
+                status_code=409,
+                detail={"code": "session_not_active",
+                        "message": "the mock exam is no longer in progress"})
+        phase_id = conn.execute(text(
+            "SELECT phase_id FROM study_phase_runs"
+            " WHERE session_id = :s AND closed_at IS NULL"),
+            {"s": session_id}).scalar()
+        rows = conn.execute(text(
+            "SELECT su.id, su.release_id, su.unit_id, su.state,"
+            " l.layer_id, l.display_label, l.position AS layer_position,"
+            " sec.subject, sec.title AS section_title"
+            " FROM study_session_units su"
+            " JOIN release_phase_units pu ON pu.release_id = su.release_id"
+            "  AND pu.unit_id = su.unit_id AND pu.phase_id = :p"
+            " JOIN release_units u ON u.release_id = su.release_id"
+            "  AND u.unit_id = su.unit_id"
+            " JOIN release_layers l ON l.release_id = u.release_id"
+            "  AND l.layer_id = u.layer_id"
+            " JOIN release_sections sec ON sec.release_id = l.release_id"
+            "  AND sec.section_id = l.section_id"
+            " WHERE su.session_id = :s ORDER BY su.position"),
+            {"p": phase_id, "s": session_id}).mappings().all()
+        units = []
+        for r in rows:
+            payload = _load_unit_payload(conn, str(r["release_id"]),
+                                         r["unit_id"], include_private=False)
+            payload["session_unit_id"] = str(r["id"])
+            payload["session_unit_state"] = r["state"]
+            payload["layer"] = {
+                "layer_id": r["layer_id"], "label": r["display_label"],
+                "position": r["layer_position"], "subject": r["subject"],
+                "section_title": r["section_title"]}
+            units.append(payload)
+    return {"phase_id": phase_id, "units": units}
+
+
 @router.put("/api/mock-exams/{session_id}/units/{session_unit_id}/drafts")
 def save_mock_draft(session_id: uuid.UUID, session_unit_id: uuid.UUID,
                     body: DraftSave,

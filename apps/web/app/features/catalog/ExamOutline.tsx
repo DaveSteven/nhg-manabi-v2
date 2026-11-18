@@ -3,6 +3,8 @@ import { useNavigate } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import type { ExamOutline, OutlineLayer, OutlineUnit } from "../../api/dto/exam";
 import { Breadcrumb } from "../../components/Breadcrumb";
+import { ButtonLink } from "../../components/Button";
+import { useMockAvailability } from "../mock/useMock";
 import { decorateSections, examTitle, subjectLabel } from "./viewModels";
 import { getExamPracticeStatus } from "../../api/endpoints/sessions";
 import { useQuickPracticeStart } from "../practice/useStartPractice";
@@ -39,6 +41,9 @@ export function ExamOutlineView({ outline }: { outline: ExamOutline }) {
     (status.data?.units ?? []).map((u) => [u.unit_id, u.submitted_count]),
   );
 
+  // strict-mock entry only for papers with real phases/time limits (M10)
+  const mock = useMockAvailability(outline.exam_id);
+
   const sections = decorateSections(outline);
   const section = sections[Math.min(sectionIdx, Math.max(sections.length - 1, 0))];
 
@@ -50,7 +55,15 @@ export function ExamOutlineView({ outline }: { outline: ExamOutline }) {
     <section aria-label="试卷详情">
       <Breadcrumb items={[{ label: "试卷", to: "/study/exams" },
                           { label: "详情" }]} />
-      <h1>{examTitle(outline)}</h1>
+      <div className="exam-title-row">
+        <h1>{examTitle(outline)}</h1>
+        {mock.data?.available ? (
+          <ButtonLink variant="secondary"
+                      to={`/study/exams/${encodeURIComponent(outline.exam_id)}/mock`}>
+            模拟考试
+          </ButtonLink>
+        ) : null}
+      </div>
 
       <div className="tabs" role="tablist" aria-label="学科大题">
         {sections.map((s, i) => (

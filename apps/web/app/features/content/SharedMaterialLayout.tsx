@@ -18,10 +18,13 @@ export function usesSplitLayout(c: VmContentUnit): boolean {
   return hasText && (c.unit.kind === "passage" || c.unit.slotIds.length > 0);
 }
 
-export function SharedMaterialLayout({ content, material, footer, children, numberOf }: {
+export function SharedMaterialLayout({ content, material, footer, children, numberOf, focusRequest }: {
   content: VmContentUnit;
   /** Display number for a question chip (default: the paper's printed number). */
   numberOf?: (q: VmContentUnit["questions"][number]) => string | number;
+  /** Programmatic activation (exam answer sheet jump): a new `n` re-focuses
+   * the question and scrolls its slot into view, like clicking the chip. */
+  focusRequest?: { id: string; n: number } | null;
   material: ReactNode;
   footer: ReactNode;
   children: ReactNode; // the question list (<li data-question-id>)
@@ -55,6 +58,23 @@ export function SharedMaterialLayout({ content, material, footer, children, numb
     if (sc) sc.scrollTop = 0;
   }, []);
 
+  const gotoQuestion = (qid: string) => {
+    focusQuestion(qid);
+    const q = content.questions.find((x) => x.id === qid);
+    if (q?.slotId) {
+      root.current?.querySelector(`[data-slot-id="${CSS.escape(q.slotId)}"]`)
+        ?.scrollIntoView?.({ block: "center", behavior: "smooth" });
+    }
+  };
+  const gotoRef = useRef(gotoQuestion);
+  gotoRef.current = gotoQuestion;
+  useEffect(() => {
+    if (focusRequest && content.questions.some((q) => q.id === focusRequest.id)) {
+      gotoRef.current(focusRequest.id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusRequest?.n]);
+
   if (!split) {
     return <>{material}{children}{footer}</>;
   }
@@ -67,14 +87,6 @@ export function SharedMaterialLayout({ content, material, footer, children, numb
   };
 
   const activeIdx = content.questions.findIndex((q) => q.id === active);
-  const gotoQuestion = (qid: string) => {
-    focusQuestion(qid);
-    const q = content.questions.find((x) => x.id === qid);
-    if (q?.slotId) {
-      root.current?.querySelector(`[data-slot-id="${CSS.escape(q.slotId)}"]`)
-        ?.scrollIntoView?.({ block: "center", behavior: "smooth" });
-    }
-  };
 
   return (
     <div className="shared-material-layout" ref={root}>

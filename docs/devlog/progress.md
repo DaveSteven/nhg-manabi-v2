@@ -131,3 +131,4 @@
 
 - **严格模拟后端（2026-11-18，ADR-0019 第 1 步）**：见 `docs/devlog/2026-11-18-mock-exam-backend.md`。迁移 0013（练习/模考共用单名额）、`/api/mock-exams`（Phase 状态机、服务器计时、惰性到期封存、无答案内容接口、交 Phase 幂等、结果仅完成后开放）。后端 252 passed + 2 skipped，迁移测试库 up/down/up 通过。开发库未迁移；前端、严格听力播放器、浏览器验收未开始，对用户尚无可见变化。
 - **模考独立名额（2026-11-18，ADR-0020，取代 ADR-0019 M8）**：Alembic 0014 恢复练习/模考各自单名额，互不放弃；已有模考时再开始需继续或 `replace_active`。后端 253 passed + 2 skipped。前端仍待做（含「模考进行中」提示）。
+- **严格模拟前端：说明页与考试页（2026-11-18）**：见 `docs/devlog/2026-11-18-mock-exam-frontend.md`、`docs/design/mock-exam-ui.md`。统一考试框架（Sticky 状态栏 + 覆盖式答题卡）+ 一屏多题/文章双栏布局、阶段交卷确认、最小成绩页、「模考进行中」提醒、说明页；后端新增 `/content`；nginx 增加 `/mock` 回退。后端 253 passed + 2 skipped，web 289 passed，typecheck/build 通过；真实库 45/105 套可模考，N2 2012-12 全流程（含到期封存）走通。视觉走查未做；严格听力播放器、成绩逐题回顾未做。

@@ -3,6 +3,7 @@ import { Link, Outlet } from "react-router";
 import { NavSectionProvider, TopNav } from "../components/TopNav";
 import { HeaderControls } from "../features/auth/HeaderControls";
 import { useScrolled } from "../components/useScrolled";
+import { MockBanner } from "../features/mock/MockBanner";
 
 /**
  * /study SPA layout (design-system.md v1.1 §3.1): brand left, centered
@@ -33,6 +34,7 @@ export default function StudyLayout() {
           </div>
         </div>
       </header>
+      <MockBanner />
       <main className="container">
         <Outlet />
       </main>

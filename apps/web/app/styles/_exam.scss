@@ -1,0 +1,159 @@
+/* 模拟考试: Exam Mode frame (status bar + answer sheet) and the intro page.
+   Colours/radii come from tokens; the sheet is a fixed overlay so the page
+   behind never reflows. */
+.exam-shell {
+  --exam-bar-h: 64px;
+  min-height: 100dvh;
+  background: var(--color-bg);
+  .exam-main { padding-top: var(--space-6); padding-bottom: var(--space-8); }
+  /* long-reading panel sticks BELOW the exam bar */
+  .shared-material-layout { --sticky-offset: calc(var(--exam-bar-h) + 16px); }
+  .shared-material-article [data-slot-id] { scroll-margin-top: calc(var(--exam-bar-h) + 40px); }
+  .exam-question, .exam-unit { scroll-margin-top: calc(var(--exam-bar-h) + 16px); }
+}
+
+.exam-status { max-width: 520px; margin: 20vh auto; padding: var(--space-6); text-align: center; display: grid; gap: var(--space-3); justify-items: center; }
+
+/* ---- sticky status bar ------------------------------------------------ */
+.exam-bar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  min-height: var(--exam-bar-h);
+  padding: 0 var(--space-6);
+  background: color-mix(in srgb, var(--color-surface) 96%, transparent);
+  border-bottom: 1px solid var(--color-border);
+  box-shadow: 0 2px 12px rgba(43, 43, 51, 0.05);
+
+  .exam-bar-brand { display: flex; align-items: center; gap: var(--space-2); flex: none; }
+  .exam-bar-title { flex: none; font-size: var(--text-h6); }
+  .exam-bar-where { flex: 1 1 auto; min-width: 0; color: var(--color-text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .exam-bar-progress { flex: none; display: grid; gap: 4px; font-size: 13px; min-width: 120px; font-variant-numeric: tabular-nums; }
+  .exam-save-problem { color: var(--color-danger); font-size: 13px; font-weight: 600; }
+
+  @media (max-width: 900px) {
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-3);
+    padding: var(--space-2) var(--space-4);
+    .exam-bar-wordmark { display: none; }
+    .exam-bar-where { order: 10; flex-basis: 100%; }
+  }
+}
+
+.exam-progress-track {
+  display: block;
+  height: 4px;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-subtle);
+  overflow: hidden;
+  > span { display: block; height: 100%; background: var(--color-primary); border-radius: inherit; transition: width var(--motion-fast); }
+}
+
+.exam-clock {
+  flex: none;
+  font-size: 22px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  color: var(--color-ink);
+  &.tone-warn { color: var(--color-warning); }
+  &.tone-danger { color: var(--color-danger); }
+}
+
+/* ---- answer area -------------------------------------------------------- */
+.exam-group-head { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-3); margin-bottom: var(--space-4); h1 { margin: 0; font-size: var(--text-h3); } }
+.exam-unit { margin-bottom: var(--space-6); }
+.exam-unit .question-list { display: grid; gap: var(--space-3); list-style: none; margin: 0; padding: 0; }
+.exam-question { position: relative; &.is-current { border-color: var(--color-primary); } }
+.exam-options { display: grid; gap: var(--space-2); @media (min-width: 900px) { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.exam-flag {
+  appearance: none;
+  margin-top: var(--space-3);
+  padding: 4px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  &:hover { border-color: var(--color-primary); }
+  &.is-on { color: var(--color-primary); border-color: var(--color-primary); background: var(--color-primary-soft); }
+  &:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+}
+.exam-audio-note { margin: 0 0 var(--space-3); padding: var(--space-3) var(--space-4); border-radius: var(--radius-sm); background: var(--accent-apricot-soft); color: var(--accent-apricot); font-size: 14px; }
+.exam-bottom-nav { display: flex; justify-content: space-between; gap: var(--space-3); margin-top: var(--space-6); }
+
+/* ---- answer sheet drawer (fixed overlay, never pushes the page) ------- */
+.sheet-root {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  pointer-events: none;
+  visibility: hidden;
+  transition: visibility 0s linear var(--motion-normal);
+  &.is-open { pointer-events: auto; visibility: visible; transition-delay: 0s; }
+}
+.sheet-scrim { position: absolute; inset: 0; background: rgba(43, 43, 51, 0.45); opacity: 0; transition: opacity var(--motion-normal); .is-open & { opacity: 1; } }
+.sheet-panel {
+  position: absolute;
+  top: 0; right: 0; bottom: 0;
+  width: min(400px, 100vw);
+  display: flex;
+  flex-direction: column;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-floating);
+  transform: translateX(100%);
+  transition: transform var(--motion-normal) ease-out;
+  .is-open & { transform: none; }
+}
+.sheet-head { display: flex; justify-content: space-between; gap: var(--space-3); padding: var(--space-4) var(--space-6); border-bottom: 1px solid var(--color-border); h2 { margin: 0; font-size: var(--text-h4); } p { margin: 4px 0 0; } .sheet-summary { font-variant-numeric: tabular-nums; } }
+.sheet-close { appearance: none; border: 0; background: none; font-size: 28px; line-height: 1; width: 40px; height: 40px; border-radius: var(--radius-pill); cursor: pointer; color: var(--color-text-secondary); &:hover { background: var(--color-surface-subtle); } &:focus-visible { outline: 2px solid var(--color-primary); } }
+.sheet-body { flex: 1 1 auto; overflow-y: auto; overscroll-behavior: contain; padding: var(--space-3) var(--space-6); }
+.sheet-group + .sheet-group { border-top: 1px solid var(--color-border); }
+.sheet-group-head { appearance: none; width: 100%; display: flex; align-items: center; gap: var(--space-2); padding: var(--space-3) 0; border: 0; background: none; font: inherit; cursor: pointer; text-align: left; color: var(--color-ink); .sheet-group-title { flex: 1; font-weight: 600; } .sheet-group-count { color: var(--color-text-secondary); font-variant-numeric: tabular-nums; font-size: 13px; } &:focus-visible { outline: 2px solid var(--color-primary); } }
+.sheet-grid { list-style: none; margin: 0 0 var(--space-3); padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); gap: var(--space-2); }
+.sheet-no {
+  position: relative;
+  appearance: none;
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  &:hover { border-color: var(--color-primary); }
+  &:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+  &.is-answered { background: var(--color-primary-soft); border-color: var(--color-primary-soft); }
+  &.is-current { background: var(--color-primary); border-color: var(--color-primary); color: #fff; }
+  .sheet-flag { position: absolute; top: 1px; right: 4px; font-size: 11px; color: var(--color-warning); }
+  &.is-current .sheet-flag { color: #fff; }
+}
+.sheet-foot { display: flex; justify-content: flex-end; gap: var(--space-3); padding: var(--space-4) var(--space-6); border-top: 1px solid var(--color-border); }
+
+/* ---- hand-in dialog ----------------------------------------------------- */
+.exam-dialog-layer { position: fixed; inset: 0; z-index: 50; background: rgba(43, 43, 51, 0.45); .exam-dialog { z-index: 51; } }
+.exam-dialog-stats { display: flex; gap: var(--space-6); margin: 0 0 var(--space-3); div { display: grid; gap: 2px; } dt { color: var(--color-text-secondary); font-size: 13px; } dd { margin: 0; font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; } }
+
+/* ---- intro / results ---------------------------------------------------- */
+.mock-intro { display: grid; gap: var(--space-4); max-width: 760px; h1 { margin: 0; } }
+.mock-phase-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; th, td { padding: var(--space-2); text-align: left; } thead th { color: var(--color-text-secondary); font-weight: 500; font-size: 14px; } tbody tr + tr, tfoot tr { border-top: 1px solid var(--color-border); } tfoot th, tfoot td { font-weight: 700; } }
+.mock-phases, .mock-rules, .mock-running { padding: var(--space-4) var(--space-6); display: grid; gap: var(--space-3); h2 { margin: 0; } ul { margin: 0; padding-left: 1.2em; display: grid; gap: var(--space-2); } p { margin: 0; } }
+.mock-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); }
+.exam-title-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-3); h1 { margin: 0; } }
+
+/* ---- running-mock reminder under the study header ---------------------- */
+.mock-banner {
+  display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-primary-soft);
+  color: var(--color-ink);
+  font-size: 14px;
+  .mock-banner-clock { font-weight: 700; font-variant-numeric: tabular-nums; &.tone-warn { color: var(--color-warning); } &.tone-danger { color: var(--color-danger); } }
+}

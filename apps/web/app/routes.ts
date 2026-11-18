@@ -14,6 +14,8 @@ export default [
     route("account", "routes/study.account.tsx"),
     route("exams", "routes/study.exams._index.tsx"),
     route("exams/:examId", "routes/study.exams.$examId.tsx"),
+    route("exams/:examId/mock", "routes/study.exams.$examId.mock.tsx"),
+    route("mock/:sessionId/results", "routes/study.mock.$sessionId.results.tsx"),
     route("learning", "routes/study.learning.tsx"),
     route("practice", "routes/study.practice._index.tsx"),
     route("practice/:sessionId", "routes/study.practice.$sessionId.tsx"),
@@ -25,6 +27,8 @@ export default [
     route("dev/unit/:unitId", "routes/study.dev.unit.$unitId.tsx"),
     route("dev/select", "routes/study.dev.select.tsx"),
   ]),
+  // Strict mock exam mode: outside the study layout (ADR-0019 / ADR-0020).
+  route("mock/:sessionId", "routes/mock.$sessionId.tsx"),
   route("login", "routes/_auth.login.tsx"),
   route("register", "routes/_auth.register.tsx"),
   route("verify-email", "routes/_auth.verify-email.tsx"),

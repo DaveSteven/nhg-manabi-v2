@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
 import { ApiError } from "../../api/errors";
-import { saveDraft } from "../../api/endpoints/sessions";
+import { saveDraft as practiceSaveDraft, type SaveDraftInput } from "../../api/endpoints/sessions";
+import type { DraftSaveResult } from "../../api/dto/practice";
 import {
   collectAnswers,
   draftReducer,
@@ -53,10 +54,16 @@ export function useDraftManager(sessionId: string,
                                    * manager save drafts across ALL units (统一反馈
                                    * navigates questions of every unit). */
                                   unitOf?: (questionId: string) => string | undefined;
+                                  /** Draft endpoint (default: practice session drafts;
+                                   * strict mock passes its own). */
+                                  save?: (sessionId: string, input: SaveDraftInput)
+                                    => Promise<DraftSaveResult>;
                                 }): DraftManagerApi {
   const persist = opts?.persist ?? true;
   const unitOfRef = useRef(opts?.unitOf);
   unitOfRef.current = opts?.unitOf;
+  const saveRef = useRef(opts?.save ?? practiceSaveDraft);
+  saveRef.current = opts?.save ?? practiceSaveDraft;
   const [state, dispatch] = useReducer(draftReducer, { questions: {} });
   const timers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const stateRef = useRef(state);
@@ -73,7 +80,7 @@ export function useDraftManager(sessionId: string,
     const q = stateRef.current.questions[questionId];
     if (!q || q.status !== "dirty") return;
     dispatch({ type: "saveStarted", questionId });
-    saveDraft(sessionId, {
+    saveRef.current(sessionId, {
       session_unit_id: unitOfRef.current?.(questionId) ?? sessionUnitId,
       question_id: questionId,
       chosen_option_id: q.pendingOptionId,

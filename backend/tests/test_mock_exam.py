@@ -147,6 +147,14 @@ def test_full_flow_phases_in_order_results_after_last(
     unit = client.get(f"/api/mock-exams/{sid}/units/{su1}", headers=auth(USER_A))
     assert unit.status_code == 200 and unit.json()["id"] == CLOZE_UNIT
     assert_no_leak(unit.json())
+    content = client.get(f"/api/mock-exams/{sid}/content", headers=auth(USER_A))
+    assert content.status_code == 200
+    body = content.json()
+    assert body["phase_id"] == "p1"
+    assert [u["id"] for u in body["units"]] == [CLOZE_UNIT]   # active Phase only
+    assert body["units"][0]["session_unit_id"] == su1
+    assert body["units"][0]["layer"]["subject"] == "grammar"
+    assert_no_leak(body)
 
     # a future Phase's unit is not served (and not even confirmed to exist)
     with pg_engine.connect() as conn:
@@ -192,6 +200,8 @@ def test_full_flow_phases_in_order_results_after_last(
                             "expected_row_version": 1}).status_code == 409
     again = submit_phase(client, sid, "p1", [(su1, Q1, Q1 + "-o1")]).json()
     assert again["idempotent"] is True and again["active_phase_id"] == "p2"
+    c2 = client.get(f"/api/mock-exams/{sid}/content", headers=auth(USER_A)).json()
+    assert c2["phase_id"] == "p2" and [u["id"] for u in c2["units"]] == [SINGLE_UNIT]
     # submitting a Phase that has not started is refused
     with pg_engine.connect() as conn:
         n = conn.execute(sa.text(
