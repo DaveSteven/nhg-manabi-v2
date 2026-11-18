@@ -273,14 +273,19 @@ function StepPracticePage({ sessionId }: { sessionId: string }) {
         </header>
 
         {units.length > 1 ? (
-          <nav aria-label="题目组导航" className="unit-nav">
+          <nav aria-label="题目组导航"
+               className={`unit-nav question-strip${units.length > 20 ? " is-dense" : ""}`}>
             {units.map((u, i) => {
               const su = session.units.find((x) => x.id === u.sessionUnitId);
               return (
                 <button key={u.sessionUnitId} type="button"
-                        aria-current={i === currentIdx}
+                        aria-current={i === currentIdx ? "step" : undefined}
+                        aria-label={`第 ${i + 1} 组${su?.state === "submitted" ? "（已提交）" : ""}`}
+                        className={su?.state === "submitted" ? "is-answered" : undefined}
                         onClick={() => setCurrentIdx(i)}>
-                  {i + 1}{su?.state === "submitted" ? " ✓" : ""}
+                  {i + 1}
+                  {su?.state === "submitted"
+                    ? <span aria-hidden="true" className="strip-mark">✓</span> : null}
                 </button>
               );
             })}

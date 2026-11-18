@@ -21,3 +21,7 @@
 ## 剩余风险
 - 非专项会话仍用原结果页（含得分率），如需统一另行确认。
 - 合并页每个 Unit 一次 feedback 请求（切 Unit 前已并发预取），题量大时请求数 = Unit 数。
+
+## 追加：专项做题页题号条换行（即时反馈）
+- `StepPracticePage` 题号导航改用 `question-strip`（自动换行），超过 20 组加 `is-dense`（36px 格）；已提交的格子显示 ✓ 与「已提交」标签，当前格 `aria-current="step"`。
+- 测试：前端 335 passed、tsc 通过；未在真实浏览器核对 50 题的实际排布（需重建 Docker 后目视）。

@@ -60,6 +60,12 @@
   }
 }
 
+/* 50+ 题的专项：更小的格子，仍换行（不横向滚动） */
+.question-strip.is-dense {
+  gap: var(--space-1, 4px);
+  button { min-width: 36px; min-height: 36px; font-size: var(--text-aux); }
+}
+
 .question-fieldset {
   border: none;
   margin: 0;
