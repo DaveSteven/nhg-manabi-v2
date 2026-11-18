@@ -265,18 +265,12 @@ export function UnifiedPracticeView({ sessionId, bundle }: {
               {finalSubmit.isPending ? "提交中…" : "完成并提交练习"}
             </Button>
           ) : null}
-          {ended ? (
-            completed ? (
-              <ButtonLink variant="primary" to={`/study/practice/${encodeURIComponent(sessionId)}/results`}>
-                查看结果
-              </ButtonLink>
-            ) : (
-              <p className="text-aux">
-                {session.state === "abandoned"
-                  ? "这次练习已被新的专项练习取代；已提交的答案保留在历史中。"
-                  : "练习已提前结束，未生成完整成绩。"}
-              </p>
-            )
+          {ended && !completed ? (
+            <p className="text-aux">
+              {session.state === "abandoned"
+                ? "这次练习已被新的专项练习取代；已提交的答案保留在历史中。"
+                : "练习已提前结束，未生成完整成绩。"}
+            </p>
           ) : null}
           <Button variant="secondary" onClick={() => navigate("/study/practice")}>
             返回专项练习

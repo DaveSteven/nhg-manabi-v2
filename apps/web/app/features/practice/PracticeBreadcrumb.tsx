@@ -47,6 +47,9 @@ export function useSessionInfo(sessionId: string | undefined) {
     staleTime: Infinity,
   });
   return {
+    session: q.data ?? null,
+    /** The session query has settled (success or failure). */
+    settled: !q.isPending,
     examId: q.data?.units[0]?.exam_id ?? null,
     topic: q.data?.config.topic ?? null,
     feedbackMode: q.data?.feedback_mode ?? null,

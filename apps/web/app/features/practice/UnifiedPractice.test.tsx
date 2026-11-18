@@ -218,23 +218,10 @@ describe("统一反馈 practice", () => {
     expect(screen.queryByRole("link", { name: "查看结果" })).not.toBeInTheDocument();
   });
 
-  it("after the session is completed: locked review with answers and explanations, no submit", async () => {
-    const spy = setup({ state: "completed" });
-    mount();
-    expect(await screen.findByText(/第 1 \/ 2 组/)).toBeInTheDocument();
-    expect(await screen.findByText("解析 q1")).toBeInTheDocument();
-    expect(screen.getByRole("radio", { name: "q1 选项 a" })).toBeDisabled();
-    expect(screen.getByRole("radio", { name: "q1 选项 a" })).toBeChecked();
-    expect(screen.queryByRole("button", { name: "完成并提交练习" })).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "查看结果" })).toBeInTheDocument();
-    expect(spy.feedbackCalls).toContain("su-1");
-  });
-
-  it("review: the number strip marks each group's verdict across all units", async () => {
+  it("a completed topic session redirects to the merged result + explanation page (ADR-0026)", async () => {
     setup({ state: "completed" });
     mount();
-    // mock marks every question wrong (is_correct: false), q3 lives in su-2
-    expect(await screen.findByRole("button", { name: "第 1 组（有错）" })).toHaveClass("is-wrong");
-    expect(await screen.findByRole("button", { name: "第 2 组（有错）" })).toHaveClass("is-wrong");
+    expect(await screen.findByText("results page")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "查看结果" })).not.toBeInTheDocument();
   });
 });

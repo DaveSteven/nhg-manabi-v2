@@ -30,57 +30,6 @@ function renderResults() {
 }
 
 describe("results page for 专项练习 sessions", () => {
-  it("uses the 专项练习 trail and redraws with the same configuration", async () => {
-    let body: unknown = null;
-    server.use(
-      http.get("*/api/practice/sessions/s-1/results", () =>
-        HttpResponse.json(results.body)),
-      http.get("*/api/practice/sessions/s-1", () =>
-        HttpResponse.json(topicSession)),
-      http.post("*/api/topic-practice/sessions", async ({ request }) => {
-        body = await request.json();
-        return HttpResponse.json({ ...topicSession, id: "s-2" }, { status: 201 });
-      }),
-    );
-    renderResults();
-    const nav = await screen.findByRole("navigation", { name: "面包屑" });
-    expect(await within(nav).findByRole("link", { name: "专项练习" }))
-      .toHaveAttribute("href", "/study/practice");
-    expect(within(nav).queryByRole("link", { name: "详情" })).not.toBeInTheDocument();
-
-    expect(await screen.findByRole("link", { name: "查看答案与解析" }))
-      .toHaveAttribute("href", "/study/practice/s-1");
-    await userEvent.setup().click(
-      await screen.findByRole("button", { name: "再练一组" }));
-    expect(await screen.findByText("practice page")).toBeInTheDocument();
-    // same level/type/count/feedback — never the previously drawn units
-    expect(body).toEqual({ level: "N2", question_type_id: "vocabulary_usage",
-      count: 7, feedback_mode: "end", selection: "smart" });
-  });
-
-  it("再练一组 keeps 只复习最近仍错, and explains an exhausted pool", async () => {
-    let body: unknown = null;
-    const wrongOnly = { ...topicSession, config: { ...topicSession.config,
-      topic: { ...topicSession.config.topic, selection: "wrong_only" } } };
-    server.use(
-      http.get("*/api/practice/sessions/s-1/results", () =>
-        HttpResponse.json(results.body)),
-      http.get("*/api/practice/sessions/s-1", () =>
-        HttpResponse.json(wrongOnly)),
-      http.post("*/api/topic-practice/sessions", async ({ request }) => {
-        body = await request.json();
-        return HttpResponse.json({ detail: { code: "no_wrong_units",
-          message: "none" } }, { status: 422 });
-      }),
-    );
-    renderResults();
-    await userEvent.setup().click(
-      await screen.findByRole("button", { name: "再练一组" }));
-    expect(await screen.findByRole("alert"))
-      .toHaveTextContent("目前没有最近仍错的题了");
-    expect(body).toMatchObject({ selection: "wrong_only", count: 7 });
-  });
-
   it("an abandoned session shows a plain notice, not a score", async () => {
     server.use(
       http.get("*/api/practice/sessions/s-1/results", () =>

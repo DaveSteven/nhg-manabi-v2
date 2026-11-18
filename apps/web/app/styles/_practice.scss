@@ -296,3 +296,106 @@
   outline: 2px solid var(--color-primary);
   outline-offset: 1px;
 }
+
+/* ---- 专项练习：结果 + 解析合并页 (ADR-0026) ---------------------------- */
+.review-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-6);
+  flex-wrap: wrap;
+  padding: var(--space-3) var(--space-6);
+  margin-bottom: var(--space-4);
+}
+
+.review-accuracy {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+
+  &-figure {
+    font-size: var(--text-h2, 40px);
+    font-weight: 600;
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+  }
+  &-label { font-weight: 600; }
+  &-basis { flex-basis: 100%; margin: 0; }
+}
+
+.review-counts {
+  display: flex;
+  gap: var(--space-6);
+  margin: 0;
+
+  div { min-width: 56px; text-align: center; }
+  dt { font-size: var(--text-aux); color: var(--color-text-secondary); }
+  dd { margin: 0; font-size: var(--text-h4); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .is-correct dd { color: var(--color-success); }
+  .is-wrong dd { color: var(--color-danger); }
+  .is-skipped dd { color: var(--color-text-secondary); }
+}
+
+.review-page {
+  /* the unit's own number chips would duplicate the strip above */
+  .panel-question-nav { display: none; }
+}
+
+.review-question-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  font-size: var(--text-question);
+  margin: 0 0 var(--space-3);
+}
+
+.review-badge {
+  font-size: var(--text-aux);
+  font-weight: 600;
+  &.is-correct { color: var(--color-success); }
+  &.is-wrong { color: var(--color-danger); }
+  &.is-skipped { color: var(--color-text-secondary); }
+}
+
+.review-options {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 var(--space-3);
+}
+
+.review-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  cursor: default;
+
+  &.is-correct { border-color: var(--color-success); background: #e8f2ec; }
+  &.is-wrong { border-color: var(--color-danger); background: #f9e9e8; }
+}
+
+.review-tags { display: flex; gap: var(--space-2); flex: none; flex-wrap: wrap; }
+
+.review-tag {
+  font-size: var(--text-aux);
+  font-weight: 600;
+  &.is-ok { color: var(--color-success); }
+  &.is-bad { color: var(--color-danger); }
+}
+
+.review-explanation {
+  border-top: 1px solid var(--color-border);
+  padding-top: var(--space-3);
+}
+
+.review-pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+
+.review-actions { display: flex; gap: var(--space-3); flex-wrap: wrap; }

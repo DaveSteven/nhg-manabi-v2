@@ -1,12 +1,12 @@
-import { useNavigate, useParams } from "react-router";
+import { useParams } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import { getSessionResults } from "../api/endpoints/sessions";
 import type { ResultsResponse } from "../api/dto/practice";
 import type { ApiError } from "../api/errors";
 import { resultVerdict, summarizeResults } from "../features/practice/resultsModel";
 import { PracticeBreadcrumb, useSessionInfo } from "../features/practice/PracticeBreadcrumb";
-import { useStartTopicPractice } from "../features/topic/useTopicPractice";
-import { Button, ButtonLink } from "../components/Button";
+import { ButtonLink } from "../components/Button";
+import { TopicReview } from "../features/practice/TopicReview";
 
 /** Session results: completed numbers + per-question review; ended_early
  * renders an explicit early-end view with NO fabricated score. */
@@ -15,9 +15,6 @@ export default function ResultsRoute() {
   const info = useSessionInfo(sessionId);
   const examId = info.examId;
   const isTopic = info.topic !== null;
-  const navigate = useNavigate();
-  const again = useStartTopicPractice((s) =>
-    navigate(`/study/practice/${encodeURIComponent(s.id)}`));
   const results = useQuery<ResultsResponse, ApiError>({
     queryKey: ["results", sessionId],
     queryFn: ({ signal }) => getSessionResults(sessionId!, signal),
@@ -79,6 +76,11 @@ export default function ResultsRoute() {
   } catch {
     return <p role="alert" className="container">结果数据异常（统计恒等式不成立）。</p>;
   }
+  // 专项练习：结果与解析合并为一页（ADR-0026）；其他会话保持原结果页。
+  if (!info.settled) return <p role="status">加载结果中…</p>;
+  if (info.session !== null && info.topic !== null) {
+    return <TopicReview sessionId={sessionId!} results={data} session={info.session} />;
+  }
 
   return (
     <section className="container results-page" aria-label="练习结果">
@@ -112,36 +114,7 @@ export default function ResultsRoute() {
           );
         })}
       </ol>
-      {info.topic ? (
-        <div className="practice-actions">
-          <Button variant="primary" loading={again.isPending}
-                  onClick={() => again.mutate({
-                    level: info.topic!.level,
-                    question_type_id: info.topic!.question_type_id,
-                    count: info.topic!.requested_count,
-                    feedback_mode: info.feedbackMode ?? "immediate",
-                    selection: info.topic!.selection,
-                  })}>
-            {again.isPending ? "正在抽题…" : "再练一组"}
-          </Button>
-          <ButtonLink variant="secondary"
-                      to={`/study/practice/${encodeURIComponent(sessionId ?? "")}`}>
-            查看答案与解析
-          </ButtonLink>
-          <ButtonLink variant="secondary" to="/study/practice">返回专项练习</ButtonLink>
-        </div>
-      ) : (
-        <p><ButtonLink variant="secondary" to="/study/exams">返回试卷列表</ButtonLink></p>
-      )}
-      {again.error ? (
-        <p role="alert">
-          {again.error.code === "no_wrong_units"
-            ? "目前没有最近仍错的题了，可返回专项练习重新选择。"
-            : again.error.code === "count_exceeds_available"
-            ? "仍错的题已不足原来的数量，请返回专项练习调整。"
-            : `无法再练一组：${again.error.message}`}
-        </p>
-      ) : null}
+      <p><ButtonLink variant="secondary" to="/study/exams">返回试卷列表</ButtonLink></p>
     </section>
   );
 }

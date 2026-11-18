@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router";
+import { Navigate, useNavigate } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import { getDrafts } from "../../api/endpoints/sessions";
 import { getExamOutline } from "../../api/endpoints/exams";
@@ -40,6 +40,13 @@ const STATUS_TEXT: Record<string, string> = {
 export function PracticePage({ sessionId }: { sessionId: string }) {
   const bundle = useSessionRestore(sessionId);
   const data = bundle.data;
+  // 专项练习完成后结果与解析合并在 /results（ADR-0026）：旧练习地址跳转过去。
+  if (data && data.session.mode === "practice"
+      && data.session.config.topic !== undefined
+      && data.session.state === "completed") {
+    return <Navigate to={`/study/practice/${encodeURIComponent(sessionId)}/results`}
+                     replace />;
+  }
   // 统一反馈 practice sessions are a different interaction: drafts only while
   // navigating, one whole-session submit (UnifiedPractice.tsx). Everything
   // else — immediate practice and Quick Practice — keeps the per-unit flow.
