@@ -251,7 +251,7 @@ function StepPracticePage({ sessionId }: { sessionId: string }) {
   const copy = quickCopy ?? { submitLabel: "提交", nextLabel: "下一组" };
   const title = isQuick
     ? (quickTitle ?? vm.label ?? "练习")
-    : `练习 · ${vm.label ?? `组 ${vm.position}`}`;
+    : isTopic ? "专项练习" : `练习 · ${vm.label ?? `组 ${vm.position}`}`;
 
   return (
     <div className="practice-shell">
@@ -265,22 +265,19 @@ function StepPracticePage({ sessionId }: { sessionId: string }) {
               ? <span className="unit-locked">（已提交锁定）</span> : null}
           </h1>
           <p className="text-aux">
-            {session.feedback_mode === "immediate"
-              ? (isQuick ? "即时反馈：提交后即可查看解析" : "即时反馈：提交后即可查看解析")
-              : "统一反馈：整卷结束后统一揭晓答案"}
-            {!isQuick ? ` · 第 ${currentIdx + 1} / ${units.length} 组` : null}
+            {!isQuick ? `第 ${currentIdx + 1} / ${units.length} 题` : null}
           </p>
         </header>
 
         {units.length > 1 ? (
-          <nav aria-label="题目组导航"
+          <nav aria-label="题目导航"
                className={`unit-nav question-strip${units.length > 20 ? " is-dense" : ""}`}>
             {units.map((u, i) => {
               const su = session.units.find((x) => x.id === u.sessionUnitId);
               return (
                 <button key={u.sessionUnitId} type="button"
                         aria-current={i === currentIdx ? "step" : undefined}
-                        aria-label={`第 ${i + 1} 组${su?.state === "submitted" ? "（已提交）" : ""}`}
+                        aria-label={`第 ${i + 1} 题${su?.state === "submitted" ? "（已提交）" : ""}`}
                         className={su?.state === "submitted" ? "is-answered" : undefined}
                         onClick={() => setCurrentIdx(i)}>
                   {i + 1}
@@ -435,7 +432,7 @@ function StepPracticePage({ sessionId }: { sessionId: string }) {
       </main>
       {audioUrl ? (
         <AudioDock src={audioUrl}
-                   subtitle={isQuick ? title : `练习 · ${vm.label ?? `组 ${vm.position}`}`}
+                   subtitle={title}
                    transcript={current
                      ? { sessionId, sessionUnitId: current.sessionUnitId,
                          allowed: transcriptAllowed }

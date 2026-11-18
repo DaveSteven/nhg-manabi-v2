@@ -142,3 +142,5 @@
 - **模考听力连续播放（2026-11-18，ADR-0022）**：见 `docs/devlog/2026-11-18-mock-continuous-listening.md`。有完整录音的听力阶段整段连续播放（服务器单一时间线、只播一次，迁移 0016 + 阶段级 start 接口，片段不再下发）；确认页确认即自动播放；底部短胶囊 Mini Player 只有播放按钮与进度条；暂停/拖动/倍速在播放器逻辑层复位。后端 257 passed + 2 skipped，web 315 passed，typecheck/build 通过，开发库已迁移；Docker 真实页面验证确认页、自动播放、刷新续播与服务端位置一致。Safari/Firefox、确认页期间是否暂停计时未定。
 - **模考「一份材料一页」（2026-11-18，ADR-0023）**：见 `docs/devlog/2026-11-18-mock-one-material-per-page.md`。共享材料大题一页一个 Unit（上一篇/下一篇），多题 Unit 右栏恒为一次一题（上一题/下一题，末题换「下一篇」），取代 ADR-0021「放得下全显示」。web 316 passed，typecheck/build 通过。**未做真实浏览器走查**（問題9–14、Slot 联动、Sticky 视觉待验）。
 - **模考验收修复（2026-11-18，ADR-0024）**：见 `docs/devlog/2026-11-18-mock-acceptance-fixes.md`。听力确认后才开始倒计时（确认页不走时）；说明页与考试页顶栏均可「放弃考试」（新接口 `/abandon`，不再「放弃并重新开始」）；图片查看器遮罩覆盖全屏；题卡去背景高亮。后端模考测试 16 passed，web 317 passed，typecheck/build 通过；浏览器视觉待用户复核。
+
+- **界面文案精简（2026-11-18）**：见 `docs/devlog/2026-11-18-copy-cleanup.md`。专项练习答题页标题仅「专项练习」，去掉反馈模式说明与「组」计数，精简配置页/模考说明页文案。web 335 passed、typecheck 通过；全站文案逐页审校与浏览器复核未做。

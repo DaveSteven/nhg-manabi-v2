@@ -99,7 +99,7 @@ export function TopicPracticeView() {
     <section aria-label="专项练习" className="topic-page">
       <h1>专项练习</h1>
       <p className="text-aux">
-        选一个题型，系统会从历年真题中智能抽取：以没做过的题为主，兼顾需要复习的题。
+        选择题型和题数，优先抽取没做过的题，兼顾需要复习的题。
       </p>
 
       {level === null ? (

@@ -101,7 +101,7 @@ describe("统一反馈 practice", () => {
     const spy = setup();
     const user = userEvent.setup();
     mount();
-    expect(await screen.findByText(/第 1 \/ 2 组/)).toBeInTheDocument();
+    expect(await screen.findByText(/第 1–2 \/ 3 题/)).toBeInTheDocument();
     expect(screen.getByText(/第 1–2 \/ 3 题/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^提交$/ })).not.toBeInTheDocument();
     expect(screen.getByText("共享材料正文")).toBeInTheDocument();
@@ -113,7 +113,7 @@ describe("统一反馈 practice", () => {
 
     await user.click(screen.getByRole("radio", { name: "q1 选项 a" }));
     await user.click(screen.getByRole("button", { name: "下一篇" }));
-    expect(await screen.findByText(/第 2 \/ 2 组/)).toBeInTheDocument();
+    expect(await screen.findByText(/第 3 \/ 3 题/)).toBeInTheDocument();
     expect(screen.getByText(/第 3 \/ 3 题/)).toBeInTheDocument();
     expect(screen.queryByText("共享材料正文")).not.toBeInTheDocument();
 
@@ -128,15 +128,15 @@ describe("统一反馈 practice", () => {
     const spy = setup();
     const user = userEvent.setup();
     mount();
-    await screen.findByText(/第 1 \/ 2 组/);
+    await screen.findByText(/第 1–2 \/ 3 题/);
     await user.click(screen.getByRole("radio", { name: "q1 选项 a" }));
     await user.click(screen.getByRole("button", { name: "下一篇" }));
     await user.click(screen.getByRole("radio", { name: "q3 选项 b" }));  // unit 2 draft
     await user.click(screen.getByRole("button", { name: "上一题" }));
     expect(screen.getByRole("radio", { name: "q1 选项 a" })).toBeChecked();
     await user.click(screen.getByRole("radio", { name: "q1 选项 b" }));  // change it
-    await user.click(screen.getByRole("button", { name: /第 2 组/ }));    // jump via strip
-    expect(await screen.findByText(/第 2 \/ 2 组/)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /第 2 题/ }));    // jump via strip
+    expect(await screen.findByText(/第 3 \/ 3 题/)).toBeInTheDocument();
     expect(screen.getByRole("radio", { name: "q3 选项 b" })).toBeChecked();
 
     await waitFor(() => expect(spy.drafts.length).toBeGreaterThanOrEqual(2));
@@ -151,9 +151,9 @@ describe("统一反馈 practice", () => {
     const spy = setup();
     const user = userEvent.setup();
     mount();
-    await screen.findByText(/第 1 \/ 2 组/);
+    await screen.findByText(/第 1–2 \/ 3 题/);
     await user.click(screen.getByRole("radio", { name: "q1 选项 b" }));
-    await user.click(screen.getByRole("button", { name: /第 2 组/ }));
+    await user.click(screen.getByRole("button", { name: /第 2 题/ }));
     expect(screen.queryByRole("button", { name: /^下一/ })).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "完成并提交练习" }));
     const dialog = await screen.findByRole("dialog", { name: "还有题目未作答" });
@@ -173,7 +173,7 @@ describe("统一反馈 practice", () => {
     const spy = setup();
     const user = userEvent.setup();
     mount();
-    await screen.findByText(/第 1 \/ 2 组/);
+    await screen.findByText(/第 1–2 \/ 3 题/);
     await user.click(screen.getByRole("radio", { name: "q1 选项 a" }));
     await user.click(screen.getByRole("radio", { name: "q2 选项 b" }));
     await user.click(screen.getByRole("button", { name: "下一篇" }));
@@ -196,9 +196,9 @@ describe("统一反馈 practice", () => {
     });
     const user = userEvent.setup();
     mount();
-    await screen.findByText(/第 1 \/ 2 组/);
+    await screen.findByText(/第 1–2 \/ 3 题/);
     expect(await screen.findByRole("radio", { name: "q2 选项 b" })).toBeChecked();
-    await user.click(screen.getByRole("button", { name: /第 2 组/ }));
+    await user.click(screen.getByRole("button", { name: /第 2 题/ }));
     expect(await screen.findByRole("radio", { name: "q3 选项 a" })).toBeChecked();
     await user.click(screen.getByRole("button", { name: "完成并提交练习" }));
     await user.click(await screen.findByRole("button", { name: "确认提交" }));
@@ -211,7 +211,7 @@ describe("统一反馈 practice", () => {
   it("an abandoned (replaced) session is a locked read-only view with a clear note", async () => {
     setup({ state: "abandoned" });
     mount();
-    expect(await screen.findByText(/第 1 \/ 2 组/)).toBeInTheDocument();
+    expect(await screen.findByText(/第 1–2 \/ 3 题/)).toBeInTheDocument();
     expect(screen.getByText(/已被新的专项练习取代/)).toBeInTheDocument();
     expect(screen.getByRole("radio", { name: "q1 选项 a" })).toBeDisabled();
     expect(screen.queryByRole("button", { name: "完成并提交练习" })).not.toBeInTheDocument();

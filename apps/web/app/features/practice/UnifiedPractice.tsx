@@ -200,16 +200,16 @@ export function UnifiedPracticeView({ sessionId, bundle }: {
       <main className="container">
         <PracticeBreadcrumb current="练习" topic examId={null} />
         <header className="practice-header">
-          <h1>专项练习 · {vm.label ?? `组 ${vm.position}`}</h1>
+          <h1>专项练习</h1>
           <p className="text-aux">
-            统一反馈：全部提交后统一揭晓答案与成绩 ·{" "}
-            <span aria-live="polite">第 {idx + 1} / {contents.length} 组</span>
-            {` · 第 ${firstNo}${unitQuestions.length > 1
-              ? `–${firstNo + unitQuestions.length - 1}` : ""} / ${total} 题`}
+            <span aria-live="polite">
+              {`第 ${firstNo}${unitQuestions.length > 1
+                ? `–${firstNo + unitQuestions.length - 1}` : ""} / ${total} 题`}
+            </span>
           </p>
         </header>
 
-        <nav aria-label="题组导航" className="unit-nav question-strip">
+        <nav aria-label="题目导航" className="unit-nav question-strip">
           {contents.map((c, i) => {
             const qids = c.vm.questions.map((q) => q.id);
             const answeredN = qids.filter((id) => {
@@ -227,7 +227,7 @@ export function UnifiedPracticeView({ sessionId, bundle }: {
             return (
               <button key={c.sessionUnitId} type="button"
                       aria-current={i === idx ? "step" : undefined}
-                      aria-label={`第 ${i + 1} 组（${status}）`}
+                      aria-label={`第 ${i + 1} 题（${status}）`}
                       className={verdict ? `is-${verdict}`
                         : answeredN === qids.length ? "is-answered" : undefined}
                       onClick={() => setIdx(i)}>
@@ -337,7 +337,7 @@ export function UnifiedPracticeView({ sessionId, bundle }: {
       </main>
       {audioUrl ? (
         <AudioDock src={audioUrl}
-                   subtitle={`练习 · ${vm.label ?? `组 ${vm.position}`}`}
+                   subtitle="专项练习"
                    transcript={{ sessionId, sessionUnitId: content.sessionUnitId,
                                  allowed: ended && unitSubmitted }} />
       ) : null}
