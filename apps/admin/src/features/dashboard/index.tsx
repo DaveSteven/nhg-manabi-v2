@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
-  CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis,
+  CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts'
 import { type Dashboard, getDashboard } from '@/lib/api'
 import { Header } from '@/components/layout/header'
@@ -33,7 +33,8 @@ export function DashboardView({ data, days }: { data: Dashboard; days: 7 | 30 })
   const m = data.metrics
   const f = data.funnel
   const range = `近 ${days} 天`
-  const hasLearning = data.daily.some((d) => d.learning > 0)
+  const vt = data.visit_tracking
+  const hasData = data.daily.some((d) => d.learning > 0 || (d.visit ?? 0) > 0)
   return (
     <div className='space-y-4'>
       <div className='grid gap-4 sm:grid-cols-2 xl:grid-cols-4'>
@@ -46,22 +47,24 @@ export function DashboardView({ data, days }: { data: Dashboard; days: 7 | 30 })
       <Card>
         <CardHeader>
           <CardTitle className='text-base'>每日活跃趋势</CardTitle>
-          {!data.visit_tracking.available && (
-            <p className='text-xs text-muted-foreground'>
-              访问活跃：暂不可用。{data.visit_tracking.note}
-            </p>
-          )}
+          <p className='text-xs text-muted-foreground'>
+            {vt.available ? vt.note : `访问活跃：暂不可用。${vt.note}`}
+          </p>
         </CardHeader>
         <CardContent>
-          {hasLearning ? (
+          {hasData ? (
             <div className='h-64' data-testid='trend-chart'>
               <ResponsiveContainer width='100%' height='100%'>
                 <LineChart data={data.daily}>
                   <CartesianGrid strokeDasharray='3 3' vertical={false} />
                   <XAxis dataKey='date' tickFormatter={(d: string) => d.slice(5)} fontSize={12} />
                   <YAxis allowDecimals={false} width={32} fontSize={12} />
-                  <Tooltip formatter={(v) => [`${v} 人`, '学习活跃']} labelFormatter={(l) => `${l}（日本时间）`} />
-                  <Line type='monotone' dataKey='learning' name='学习活跃' stroke='var(--chart-1, #2563eb)' strokeWidth={2} dot={false} />
+                  <Legend />
+                  <Tooltip formatter={(v, name) => [`${v} 人`, name]} labelFormatter={(l) => `${l}（日本时间）`} />
+                  {vt.available && (
+                    <Line type='monotone' dataKey='visit' name='访问活跃' stroke='#94a3b8' strokeWidth={2} dot={false} connectNulls={false} />
+                  )}
+                  <Line type='monotone' dataKey='learning' name='学习活跃' stroke='#2563eb' strokeWidth={2} dot={false} />
                 </LineChart>
               </ResponsiveContainer>
             </div>
@@ -100,8 +103,8 @@ export function DashboardView({ data, days }: { data: Dashboard; days: 7 | 30 })
           <CardHeader><CardTitle className='text-base'>学习转化漏斗</CardTitle></CardHeader>
           <CardContent className='space-y-2 text-sm'>
             <div className='flex justify-between'><span>访问网站</span>
-              <span className='text-muted-foreground'>{f.visit_users === null ? '暂不可用（未采集访问事件）' : f.visit_users}</span></div>
-            <div className='flex justify-between'><span>开始练习</span><span className='tabular-nums'>{f.started_users} 人</span></div>
+              <span className='text-muted-foreground'>{f.visit_users === null ? '暂不可用（未采集访问事件）' : `${f.visit_users} 人`}</span></div>
+            <div className='flex justify-between'><span>开始练习</span><span className='tabular-nums'>{f.started_users} 人{f.visit_to_start_rate !== null && ` · ${pct(f.visit_to_start_rate)}`}</span></div>
             <div className='flex justify-between'><span>完成练习</span><span className='tabular-nums'>{f.completed_users} 人 · {pct(f.start_to_complete_rate)}</span></div>
             <p className='pt-1 text-xs text-muted-foreground'>{f.note}</p>
           </CardContent>

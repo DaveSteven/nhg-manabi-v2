@@ -14,6 +14,7 @@ PW = "correct horse battery"
 def _isolation(clean_study, pg_engine):
     def wipe():
         with pg_engine.begin() as conn:
+            conn.execute(sa.text("DELETE FROM user_visit_days"))
             conn.execute(sa.text("DELETE FROM admin_sessions"))
             conn.execute(sa.text("DELETE FROM admin_users"))
             conn.execute(sa.text(
@@ -154,3 +155,32 @@ def test_inactive_disabled_and_excluded_users_are_left_out(
     finally:
         with pg_engine.begin() as conn:
             conn.execute(sa.text("DELETE FROM users WHERE email LIKE '%@dash.test'"))
+
+
+@requires_db
+def test_visit_ping_is_idempotent_authenticated_and_feeds_dashboard(
+        pg_engine, published_release, monkeypatch):
+    client = make_client(monkeypatch, pg_engine)
+    add_user(pg_engine, USER_A, "a@dash.test")
+    add_user(pg_engine, USER_B, "b@dash.test")
+    assert client.post("/api/me/visit").status_code == 401
+    try:
+        for _ in range(3):
+            assert client.post("/api/me/visit", headers=auth(USER_A)).status_code == 204
+        assert client.post("/api/me/visit", headers=auth(USER_B)).status_code == 204
+        with pg_engine.connect() as conn:
+            assert conn.execute(sa.text("SELECT count(*) FROM user_visit_days")).scalar() == 2
+        q = create_quick(client, USER_A, published_release, SINGLE_UNIT).json()
+        submit(client, USER_A, q["id"], q["units"][0]["id"], [(QS, QS + "-o3")])
+        d = dash(pg_engine)
+        assert d["visit_tracking"]["available"] is True
+        assert d["daily"][-1]["visit"] == 2 and d["daily"][-1]["learning"] == 1
+        assert d["daily"][0]["visit"] is None          # before collection began: not guessed
+        assert d["funnel"]["visit_users"] == 2
+        assert d["funnel"]["visit_to_start_rate"] == 0.5
+        # excluded users drop out of visit counts too
+        monkeypatch.setenv("DASHBOARD_EXCLUDE_EMAILS", "b@dash.test")
+        assert dash(pg_engine)["funnel"]["visit_users"] == 1
+    finally:
+        with pg_engine.begin() as conn:
+            conn.execute(sa.text("DELETE FROM user_visit_days"))

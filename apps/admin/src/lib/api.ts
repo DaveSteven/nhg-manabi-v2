@@ -140,7 +140,9 @@ export const dashboardSchema = z.strictObject({
   daily: z.array(z.strictObject({
     date: z.string(), learning: z.number().int(), visit: z.number().int().nullable(),
   })),
-  visit_tracking: z.strictObject({ available: z.boolean(), note: z.string() }),
+  visit_tracking: z.strictObject({
+    available: z.boolean(), since: z.string().nullable(), note: z.string(),
+  }),
   features: z.array(z.strictObject({
     key: z.string(), label: z.string(), users: z.number().int(),
     starts: z.number().int(), completions: z.number().int(), completion_rate: rate,
@@ -148,7 +150,7 @@ export const dashboardSchema = z.strictObject({
   funnel: z.strictObject({
     visit_users: z.number().int().nullable(),
     started_users: z.number().int(), completed_users: z.number().int(),
-    start_to_complete_rate: rate, note: z.string(),
+    visit_to_start_rate: rate, start_to_complete_rate: rate, note: z.string(),
   }),
   alerts: z.array(z.strictObject({
     key: z.string(), label: z.string(), count: z.number().int(),

@@ -3,6 +3,7 @@ import { Link, Outlet } from "react-router";
 import { NavSectionProvider, TopNav } from "../components/TopNav";
 import { HeaderControls } from "../features/auth/HeaderControls";
 import { useScrolled } from "../components/useScrolled";
+import { useVisitBeacon } from "../features/auth/visitBeacon";
 import { MockBanner } from "../features/mock/MockBanner";
 
 /**
@@ -19,6 +20,7 @@ export const meta: MetaFunction = () => [
 export default function StudyLayout() {
   // once the sticky header sits over scrolled content its row becomes a capsule
   const stuck = useScrolled();
+  useVisitBeacon();
   return (
     <NavSectionProvider>
     <div className="study-shell">

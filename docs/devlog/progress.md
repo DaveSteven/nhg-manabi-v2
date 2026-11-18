@@ -2,6 +2,10 @@
 
 最后更新：2026-11-18
 
+## 管理端 Dashboard 访问埋点（2026-11-18）
+
+- 新增 `user_visit_days`（迁移 0017，本地开发库已升级、downgrade/upgrade 验证）与 `POST /api/me/visit`，学生端 `/study` 每日一次上报；Dashboard 现显示访问活跃折线与「访问→开始→完成」漏斗，采集起点之前的日期不造数，见 [日志](2026-11-18-dashboard-visit-tracking.md)。后端 280 passed + 2 skipped，web 347 tests，admin 36 单测，tsc/build 通过；浏览器未验收，仅登录用户计入访问。
+
 ## 管理端 Dashboard P0（2026-11-18）
 
 - 管理端首页改为运营总览：四项指标、7/30 天切换、每日学习活跃、功能使用、漏斗、两条提醒；访问活跃/访问漏斗因无埋点明示不可用，见 [日志](2026-11-18-admin-dashboard-p0.md) 与 [口径](../development/admin-dashboard.md)。后端 279 passed + 2 skipped，admin 35 单测、tsc、build 通过；浏览器视觉未验收，P1（访问埋点、资源异常、用户管理联动）未做。

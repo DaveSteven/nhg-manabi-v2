@@ -9,8 +9,10 @@ Definitions (shared with the docs in docs/development/admin-dashboard.md):
 - "Learning active" = distinct valid users with >=1 formally submitted answer
   carrying an actual choice (drafts, skipped answers and page views don't
   count). "Answered questions" counts those same rows.
-- Visit events are not collected, so visit activity / the visit funnel stage
-  are reported as unavailable (null), never estimated.
+- Visit activity = distinct valid users with a row in user_visit_days (one
+  ping per signed-in user per day, migration 0017). Collection starts when the
+  table gets its first row; days before that are null, never estimated, and
+  with no rows at all visit data is reported unavailable.
 Only counts and dates are returned; no personal data or answer content.
 """
 import os
@@ -93,6 +95,16 @@ def build_dashboard(engine, days: int, now: datetime | None = None) -> dict:
         )"""
         active, answered = c.execute(text(
             answers_cte + " SELECT count(DISTINCT user_id), count(*) FROM ans"), p).one()
+        since = c.execute(text("SELECT min(visit_date) FROM user_visit_days")).scalar_one()
+        visit_rows = {r[0]: r[1] for r in c.execute(text(
+            f"WITH {_VALID_USERS} SELECT d.visit_date, count(*)"
+            " FROM user_visit_days d JOIN valid_users v ON v.id = d.user_id"
+            " WHERE d.visit_date >= :first AND d.visit_date <= :today"
+            " GROUP BY d.visit_date"), p)}
+        visit_users = c.execute(text(
+            f"WITH {_VALID_USERS} SELECT count(DISTINCT d.user_id)"
+            " FROM user_visit_days d JOIN valid_users v ON v.id = d.user_id"
+            " WHERE d.visit_date >= :first AND d.visit_date <= :today"), p).scalar_one()
         daily_rows = {r[0]: r[1] for r in c.execute(text(
             answers_cte + " SELECT d, count(DISTINCT user_id) FROM ans GROUP BY d"), p)}
         sess_cte = f"""
@@ -123,8 +135,9 @@ def build_dashboard(engine, days: int, now: datetime | None = None) -> dict:
     daily = []
     for i in range(days):
         d = first + timedelta(days=i)
+        tracked = since is not None and d >= since
         daily.append({"date": d.isoformat(), "learning": daily_rows.get(d, 0),
-                      "visit": None})
+                      "visit": visit_rows.get(d, 0) if tracked else None})
     features = []
     for key, label in FEATURES:
         r = feat_rows.get(key)
@@ -140,11 +153,16 @@ def build_dashboard(engine, days: int, now: datetime | None = None) -> dict:
         "metrics": {"registered_users": registered, "active_learners": active,
                     "new_users": new_users, "answered_questions": answered},
         "daily": daily,
-        "visit_tracking": {"available": False,
-                           "note": "尚未采集访问事件，访问活跃与访问漏斗暂不可用。"},
+        "visit_tracking": (
+            {"available": True, "since": since.isoformat(),
+             "note": f"访问数据自 {since.isoformat()} 起采集（登录用户每日一次），此前日期不统计。"}
+            if since else
+            {"available": False, "since": None,
+             "note": "尚未采集访问事件，访问活跃与访问漏斗暂不可用。"}),
         "features": features,
-        "funnel": {"visit_users": None, "started_users": started_u,
-                   "completed_users": completed_u,
+        "funnel": {"visit_users": visit_users if since else None,
+                   "started_users": started_u, "completed_users": completed_u,
+                   "visit_to_start_rate": _rate(started_u, visit_users) if since else None,
                    "start_to_complete_rate": _rate(completed_u, started_u),
                    "note": "分母为同一时间范围内开始过练习的去重用户；完成=有已完成的练习。"},
         "alerts": [
