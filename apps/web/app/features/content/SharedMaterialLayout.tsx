@@ -42,7 +42,8 @@ export function layoutModeOf(c: VmContentUnit): LayoutMode {
 }
 
 export function SharedMaterialLayout({ content, material, footer, children, numberOf,
-  focusRequest, adaptive, onActiveChange, initialActive, onNextMaterial }: {
+  focusRequest, adaptive, onActiveChange, initialActive, onNextMaterial,
+  pageScroll = true }: {
   content: VmContentUnit;
   /** Display number for a question chip (default: the paper's printed number). */
   numberOf?: (q: VmContentUnit["questions"][number]) => string | number;
@@ -58,6 +59,8 @@ export function SharedMaterialLayout({ content, material, footer, children, numb
   /** Programmatic activation (exam answer sheet jump): a new `n` re-focuses
    * the question and scrolls its slot into view, like clicking the chip. */
   focusRequest?: { id: string; n: number } | null;
+  /** false: switching question never moves the page (review pages). */
+  pageScroll?: boolean;
   material: ReactNode;
   footer: ReactNode;
   children: ReactNode; // the question list (<li data-question-id>)
@@ -104,7 +107,7 @@ export function SharedMaterialLayout({ content, material, footer, children, numb
   const gotoQuestion = (qid: string) => {
     focusQuestion(qid);
     const q = content.questions.find((x) => x.id === qid);
-    if (q?.slotId) {
+    if (pageScroll && q?.slotId) {
       // only move the page when the slot is not already comfortably visible
       const slot = root.current?.querySelector<HTMLElement>(
         `[data-slot-id="${CSS.escape(q.slotId)}"]`);

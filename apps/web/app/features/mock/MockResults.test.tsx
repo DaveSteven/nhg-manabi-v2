@@ -144,6 +144,30 @@ describe("模考成绩页", () => {
     expect(screen.queryByRole("button", { name: /提交/ })).not.toBeInTheDocument();
   });
 
+  it("navigation never scrolls the page (no scrollIntoView / scrollTo)", async () => {
+    authStore.setSession("tok", USER);
+    setup();
+    const calls: string[] = [];
+    const proto = Element.prototype as unknown as Record<string, unknown>;
+    const saved = { si: proto.scrollIntoView, st: window.scrollTo };
+    proto.scrollIntoView = () => { calls.push("scrollIntoView"); };
+    window.scrollTo = (() => { calls.push("scrollTo"); }) as typeof window.scrollTo;
+    try {
+      mount();
+      const tabs = await screen.findByRole("tablist", { name: "科目" });
+      await userEvent.click(within(tabs).getByRole("tab", { name: /文字词汇/ }));
+      expect(await screen.findByText("解析 q1")).toBeInTheDocument();
+      await userEvent.click(within(screen.getByRole("radiogroup", { name: "回顾筛选" }))
+        .getByLabelText(/全部/));
+      await userEvent.click(within(tabs).getByRole("tab", { name: /读解/ }));
+      expect(await screen.findByText("解析 q3")).toBeInTheDocument();
+      expect(calls).toEqual([]);
+    } finally {
+      proto.scrollIntoView = saved.si;
+      window.scrollTo = saved.st;
+    }
+  });
+
   it("remembers subject, filter and question across a reload of the page", async () => {
     authStore.setSession("tok", USER);
     setup();

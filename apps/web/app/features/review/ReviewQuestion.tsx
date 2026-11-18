@@ -32,7 +32,7 @@ export type ReviewContent = { sessionUnitId: string; vm: ReturnType<typeof toVie
 
 export function ReviewQuestion({ sessionId, content, active, activeIdx, total, feedback,
   feedbackError, focus, seqOf, onActivate, onPrev, onNext,
-  transcriptSource = "practice" }: {
+  transcriptSource = "practice", pageScroll = true }: {
   sessionId: string;
   content: ReviewContent;
   active: ReviewAnswer;
@@ -46,6 +46,8 @@ export function ReviewQuestion({ sessionId, content, active, activeIdx, total, f
   onPrev: () => void;
   onNext: () => void;
   transcriptSource?: TranscriptSource;
+  /** false: switching question never scrolls the page (mock review). */
+  pageScroll?: boolean;
 }) {
   const vm = content.vm;
   const q = vm.questions.find((x) => x.id === active.question_id);
@@ -65,6 +67,7 @@ export function ReviewQuestion({ sessionId, content, active, activeIdx, total, f
         material={<MaterialDisplay unit={vm.unit} materials={vm.materials} />}
         initialActive={active.question_id}
         focusRequest={focus}
+        pageScroll={pageScroll}
         onActiveChange={onActivate}
         footer={
           <nav aria-label="题目翻页" className="review-pager">

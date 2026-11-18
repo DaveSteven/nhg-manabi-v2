@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { Navigate } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import type { MockResultQuestion, MockResults as Results } from "../../api/dto/mock";
@@ -124,14 +124,13 @@ function MockReview({ sessionId, results }: { sessionId: string; results: Result
   };
   const [st, setSt] = useState<ReviewState>(initial);
   const [focus, setFocus] = useState<{ id: string; n: number } | null>(null);
-  const areaRef = useRef<HTMLDivElement>(null);
 
-  const apply = (next: ReviewState, scroll = true) => {
+  // Navigation only swaps content: the page never scrolls by itself.
+  const apply = (next: ReviewState) => {
     setSt(next);
     try { window.sessionStorage.setItem(storeKey, JSON.stringify(next)); }
     catch { /* storage unavailable: state just isn't remembered */ }
     if (next.activeId) setFocus((f) => ({ id: next.activeId!, n: (f?.n ?? 0) + 1 }));
-    if (scroll) areaRef.current?.scrollIntoView?.({ block: "start", behavior: "smooth" });
   };
   const defaultFilter = (subject: Subject): Filter =>
     inScope(subject, "wrong").length > 0 ? "wrong" : "all";
@@ -206,7 +205,7 @@ function MockReview({ sessionId, results }: { sessionId: string; results: Result
         </nav>
       )}
 
-      <div ref={areaRef} className="mock-review-area">
+      <div className="mock-review-area">
         {active ? (
           <ReviewUnit key={active.session_unit_id}
             sessionId={sessionId} releaseId={results.release_id}
@@ -263,7 +262,7 @@ function ReviewUnit({ sessionId, releaseId, active, all, pagerIndex, pagerTotal,
       sessionId={sessionId} content={content} active={active}
       activeIdx={Math.max(pagerIndex, 0)} total={pagerTotal}
       feedback={feedback.data} feedbackError={feedback.error}
-      focus={focus} transcriptSource="mock"
+      focus={focus} transcriptSource="mock" pageScroll={false}
       seqOf={(qid) => all.findIndex((x) => x.question_id === qid) + 1}
       onActivate={onActivate} onPrev={onPrev} onNext={onNext} />
   );

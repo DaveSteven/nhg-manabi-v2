@@ -433,4 +433,6 @@
   }
 }
 .mock-review .learning-filters { margin-bottom: var(--space-3); }
-.mock-review-area { scroll-margin-top: calc(104px + 8px); }
+/* Reserve room so short/long explanations (and loading) do not jump the
+   content below; the page itself is never scrolled by navigation. */
+.mock-review-area { min-height: 520px; }
