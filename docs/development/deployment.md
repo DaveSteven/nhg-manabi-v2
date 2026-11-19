@@ -46,6 +46,10 @@ docker compose --env-file .env up -d --build
 
 生产部署 checklist 必须包含以上三项；缺 key 的生产部署会让用户收不到验证/重置邮件（服务端日志有 error）。
 
+## 上线与 V1 迁移计划
+
+完整的分阶段步骤、回滚和风险见 [cutover-plan.md](cutover-plan.md)（草案，待用户确认；v2 生产环境尚未建立）。
+
 ## 变更与备份
 
 - 禁止把 v2 migration 或 Docker Compose 的挂载目录指向 v1 线上数据库/Volumes/服务器发布目录。
