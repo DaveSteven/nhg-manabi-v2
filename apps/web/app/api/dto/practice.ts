@@ -49,6 +49,11 @@ export const PracticeSessionSchema = z.strictObject({
       /** Sessions created before 只复习最近仍错 carry no selection. */
       selection: z.enum(["smart", "wrong_only"]).default("smart"),
     }).optional(),
+    /** Sessions imported from V1 真题专项作答 (ADR-0030); not listed in 练习历史. */
+    imported: z.strictObject({
+      source: z.literal("v1_practice"),
+      attempt_id: z.number().int(),
+    }).optional(),
     /** Present on 扩展练习 lesson sessions (ADR-0030). */
     supplementary: z.strictObject({
       kind: z.literal("supplementary"),

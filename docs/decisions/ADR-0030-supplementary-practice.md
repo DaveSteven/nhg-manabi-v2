@@ -34,6 +34,12 @@ V1 有 362 课、3618 道教材题（`books`/`questions`/`options`）：级别 N
 - 映射：V1 用户 → `users.legacy_v1_user_id`；V1 题 → `source_mappings`（`jlptgo-v1-book`）→ 当前已发布 Release 的 v2 题。对错按 v2 答案 Key 的**选项位置**重新判定；V1 快照答案与 v2 Key 不一致、被人工修订过的题（选项顺序变了）、选项缺失、Unit 不可练习的作答跳过并计数报告，不猜测。
 - 脚本 `python -m app.v1_answer_import`，默认 dry-run；前置：v2 已导入对应用户（ADR-0029）和扩展课（本 ADR）。V1 `wrong_questions` 是聚合冗余，不单独导入。
 
+## V1 真题专项作答迁移（2026-11-19）
+
+- 同样导入为已完成 practice 会话 + 正式答案（`python -m app.v1_answer_import --kind exam --raw-dir <原始 exam.json 目录>`，默认 dry-run）。映射链：V1 题 `identity_json` →（原始 `exam.json` 中同一题的 `identity` 与上游 `objectId`）→ `source_mappings(mojitest)` → v2 题；选项按 `source_order + 1` 对应 v2 位置，对错按 v2 答案 Key 重判，快照答案与 v2 Key 不一致则跳过。
+- V1 按「题」作答、v2 会话按「Unit」，且 V1 专项分类不对应 v2 题型，因此：同一 attempt 内同一 Unit 的答案共用一个 session unit；**只写入用户真正作答的题**（不为组题里没做的小题伪造“未答”）；会话标记 `config.imported = {source: "v1_practice", attempt_id}`，**计入覆盖率、仍错、抽样与管理端作答统计，但不列入「练习历史」与「完成练习数」**（避免无法展示的残缺记录）。如需展示历史，另行设计。
+- V1 `exam_wrong_questions` 是聚合冗余，不单独导入；dry-run 时与导入后的仍错集合核对。
+
 ## 分期
 
 - **本次（阶段一）**：ADR、迁移 `0020`、校验器与发布器放宽、历年试卷与专项抽样的 `kind` 过滤、V1 教材题转换器，并用一课样例验证导入。

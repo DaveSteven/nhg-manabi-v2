@@ -2,6 +2,10 @@
 
 最后更新：2026-11-19
 
+## V1 真题专项作答迁移脚本（2026-11-19）
+
+- `app/v1_answer_import.py --kind exam`：V1 专项练习答案经 identity→objectId→canonical 映射导入为正式答案（只写真正作答的题，不进练习历史），见 [日志](2026-11-19-v1-exam-answers-import.md)。后端 327 passed + 2 skipped；**未对线上 V1 做 dry-run，未导入任何环境**。
+
 ## V1 教材作答迁移脚本（2026-11-19）
 
 - `app/v1_answer_import.py`：V1 教材练习导入为已完成会话 + 正式答案（进度缓存由答案重建，避免被覆盖），对错按 v2 答案 Key 重判，异常作答分类跳过，默认 dry-run，见 [日志](2026-11-19-v1-textbook-answers-import.md)。后端 323 passed + 2 skipped；已对线上 V1 做只读 dry-run（测试库）：69 会话/538 作答全部可导入，0 跳过、0 改判；**用户、扩展内容与作答尚未导入开发库/生产**。

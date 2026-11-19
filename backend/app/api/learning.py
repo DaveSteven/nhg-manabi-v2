@@ -90,6 +90,7 @@ def learning_overview(
             "SELECT count(*) FROM study_sessions WHERE user_id = :u"
             " AND mode IN ('practice', 'quick_practice')"
             " AND config -> 'supplementary' IS NULL"
+            " AND config -> 'imported' IS NULL"
             " AND state = 'completed'"), {"u": user_id}).scalar()
         last = conn.execute(text(
             "SELECT max(last_seen_at) FROM user_question_progress"
@@ -158,6 +159,7 @@ _HISTORY_WHERE = (
     "   AND s.state IN ('completed', 'ended_early'))"
     "  OR (s.mode = 'mock' AND s.state = 'completed'))"
     " AND s.config -> 'supplementary' IS NULL"  # 扩展练习 stays out (ADR-0030)
+    " AND s.config -> 'imported' IS NULL"       # V1 per-question answers (ADR-0030)
     " AND (:kind = 'all'"
     "  OR (:kind = 'mock' AND s.mode = 'mock')"
     "  OR (:kind = 'quick' AND s.mode <> 'mock'"
