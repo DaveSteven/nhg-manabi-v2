@@ -44,6 +44,7 @@ _CANDIDATES_SQL = (
     " JOIN exam_current_releases c ON c.release_id = r.id"
     " JOIN exam_catalogs e ON e.id = r.exam_id"
     " WHERE e.level = :level AND r.state = 'published'"
+    "   AND e.kind IN ('past_exam', 'mock_exam')"  # supplementary stays out (ADR-0030)
     "   AND u.conversion_status = 'complete'")
 
 # Formal history only: submitted session units of practice/quick sessions;
@@ -59,6 +60,7 @@ _HISTORY_SQL = (
     " JOIN exam_catalogs e ON e.id = er.exam_id"
     " WHERE s.user_id = :u AND s.mode IN ('practice', 'quick_practice')"
     "   AND su.state = 'submitted' AND e.level = :level"
+    "   AND e.kind IN ('past_exam', 'mock_exam')"
     " GROUP BY er.exam_id, su.unit_id),"
     " agg AS ("
     " SELECT r.exam_id, q.unit_id,"
@@ -71,6 +73,7 @@ _HISTORY_SQL = (
     " JOIN user_question_progress p"
     "  ON p.question_id = q.question_id AND p.user_id = :u"
     " WHERE e.level = :level AND r.state = 'published'"
+    "   AND e.kind IN ('past_exam', 'mock_exam')"
     " GROUP BY r.exam_id, q.unit_id)"
     " SELECT sub.exam_id, sub.unit_id, sub.submitted_count, sub.last_at,"
     "  coalesce(agg.answered, 0) AS answered,"
@@ -91,6 +94,7 @@ _WRONG_SQL = (
     "  ON p.question_id = q.question_id AND p.user_id = :u"
     "  AND p.last_valid_result IS FALSE"
     " WHERE e.level = :level AND r.state = 'published'"
+    "   AND e.kind IN ('past_exam', 'mock_exam')"
     "   AND u.conversion_status = 'complete'"
     " GROUP BY u.release_id, u.unit_id")
 

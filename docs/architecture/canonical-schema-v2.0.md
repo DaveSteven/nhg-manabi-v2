@@ -133,10 +133,10 @@ JLPTGO-N2-2018-12-r1/
 |---|---|---|
 | `id` | string | JLPT GO 稳定主键 |
 | `level` | enum | `N1..N5` |
-| `year` | integer | 考试年份 |
-| `month` | integer | 1–12，不写死仅 7、12 |
+| `year` | integer | 考试年份；`supplementary` 为 null（ADR-0030） |
+| `month` | integer | 1–12，不写死仅 7、12；`supplementary` 为 null |
 | `title` | string | 非空显示标题 |
-| `kind` | enum | `past_exam / mock_exam`；类型不等于版权许可 |
+| `kind` | enum | `past_exam / mock_exam / supplementary`（扩展练习，ADR-0030：无年月、不进历年试卷目录与专项抽样）；类型不等于版权许可 |
 | `full_audio_asset_id` | string/null | 整卷音频资源，可能没有 |
 | `status` | enum | `draft / review / published / archived` |
 

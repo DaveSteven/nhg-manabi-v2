@@ -49,6 +49,7 @@ SELECT e.id AS exam_id, e.level, e.year, e.month, e.title,
   LEFT JOIN q_counts q ON q.release_id = s.id
   LEFT JOIN key_counts k ON k.release_id = s.id
   LEFT JOIN last_dec d ON d.exam_id = e.id
+ WHERE e.kind IN ('past_exam', 'mock_exam')
  ORDER BY e.level, e.year DESC, e.month DESC
 """
 

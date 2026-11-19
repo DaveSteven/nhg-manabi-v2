@@ -12,7 +12,8 @@ RICHTEXT_FORMAT = "jlptgo-richtext-v1"
 RICHTEXT_BLOCK_TYPES = {"paragraph", "heading", "list", "table", "image"}
 RICHTEXT_CHILD_TYPES = {"text", "ruby", "slot", "break"}
 EXAM_LEVELS = {"N1", "N2", "N3", "N4", "N5"}
-EXAM_KINDS = {"past_exam", "mock_exam"}
+EXAM_KINDS = {"past_exam", "mock_exam", "supplementary"}
+DATED_EXAM_KINDS = {"past_exam", "mock_exam"}  # year/month required (ADR-0030)
 SUBJECTS = {"vocabulary", "grammar", "reading", "listening"}
 UNIT_KINDS = {"single", "passage", "cloze", "comparison", "visual", "audio"}
 MATERIAL_KINDS = {"passage", "image", "audio", "transcript", "instruction"}
@@ -204,8 +205,15 @@ def validate_package(package: CanonicalPackage) -> ValidationResult:
         vr.error("record_type", f"{loc}.exam", f"expected 'exam', got {exam.get('record_type')!r}")
     if exam.get("level") not in EXAM_LEVELS:
         vr.error("exam_level", f"{loc}.exam", f"invalid level {exam.get('level')!r}")
-    if not _positive_int(exam.get("month")) or exam["month"] > 12:
-        vr.error("exam_month", f"{loc}.exam", f"invalid month {exam.get('month')!r}")
+    if exam.get("kind") in DATED_EXAM_KINDS:
+        if not _positive_int(exam.get("month")) or exam["month"] > 12:
+            vr.error("exam_month", f"{loc}.exam", f"invalid month {exam.get('month')!r}")
+        if not _positive_int(exam.get("year")):
+            vr.error("exam_year", f"{loc}.exam", f"invalid year {exam.get('year')!r}")
+    elif exam.get("kind") == "supplementary":
+        if exam.get("year") is not None or exam.get("month") is not None:
+            vr.error("exam_date", f"{loc}.exam",
+                     "supplementary exams must not carry year/month")
     if exam.get("kind") not in EXAM_KINDS:
         vr.error("exam_kind", f"{loc}.exam", f"invalid kind {exam.get('kind')!r}")
     if exam.get("status") not in {"draft", "review", "published", "archived"}:

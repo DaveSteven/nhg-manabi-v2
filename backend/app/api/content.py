@@ -132,7 +132,9 @@ def list_public_exams() -> list[dict]:
             " FROM exam_current_releases c"
             " JOIN exam_releases r ON r.id = c.release_id"
             " JOIN exam_catalogs e ON e.id = c.exam_id"
-            " WHERE r.state = 'published' ORDER BY e.level, e.year, e.month"),
+            " WHERE r.state = 'published'"
+            "   AND e.kind IN ('past_exam', 'mock_exam')"  # ADR-0030
+            " ORDER BY e.level, e.year, e.month"),
         ).mappings().all()
     return [dict(r) for r in rows]
 
