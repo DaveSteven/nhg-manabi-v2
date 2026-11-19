@@ -10,14 +10,23 @@ import { examRoute } from "../catalog/viewModels";
  * exam_id); when that isn't known (still loading, or the session can't be
  * read) the crumb is omitted rather than pointing somewhere wrong.
  */
-export function PracticeBreadcrumb({ current, examId, topic = false }: {
+export function PracticeBreadcrumb({ current, examId, topic = false,
+                                    supplementary = false }: {
   current: string;
   examId: string | null;
   /** 专项练习 sessions draw Units from many exams: trail is 专项练习 ›
    * 练习|结果 and never points at one exam. */
   topic?: boolean;
+  /** 扩展练习 lesson (ADR-0030): trail is 扩展练习 › 练习|结果. */
+  supplementary?: boolean;
 }) {
-  useNavSection(topic ? "topic" : "exams");
+  useNavSection(topic || supplementary ? "topic" : "exams");
+  if (supplementary) {
+    return (
+      <Breadcrumb items={[{ label: "扩展练习", to: "/study/supplementary" },
+                          { label: current }]} />
+    );
+  }
   if (topic) {
     return (
       <Breadcrumb items={[{ label: "专项练习", to: "/study/practice" },
@@ -52,6 +61,7 @@ export function useSessionInfo(sessionId: string | undefined) {
     settled: !q.isPending,
     examId: q.data?.units[0]?.exam_id ?? null,
     topic: q.data?.config.topic ?? null,
+    supplementary: q.data?.config.supplementary ?? null,
     feedbackMode: q.data?.feedback_mode ?? null,
   };
 }

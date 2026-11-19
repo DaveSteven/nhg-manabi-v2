@@ -49,6 +49,14 @@ export const PracticeSessionSchema = z.strictObject({
       /** Sessions created before 只复习最近仍错 carry no selection. */
       selection: z.enum(["smart", "wrong_only"]).default("smart"),
     }).optional(),
+    /** Present on 扩展练习 lesson sessions (ADR-0030). */
+    supplementary: z.strictObject({
+      kind: z.literal("supplementary"),
+      exam_id: z.string(),
+      level: z.enum(["N1", "N2", "N3", "N4", "N5"]),
+      subject: z.enum(["kanji", "vocabulary", "grammar"]),
+      lesson: z.number().int(),
+    }).optional(),
   }),
   version: z.number().int(),
   created_at: z.string(),

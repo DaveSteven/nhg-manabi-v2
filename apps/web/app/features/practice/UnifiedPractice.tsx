@@ -1,3 +1,4 @@
+import { lessonTitle } from "../supplementary/lessonTitle";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { useMutation, useQueries, useQueryClient } from "@tanstack/react-query";
@@ -39,6 +40,7 @@ export function UnifiedPracticeView({ sessionId, bundle }: {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { session } = bundle;
+  const supp = session.config.supplementary;
   const ended = session.state !== "in_progress";
   const completed = session.state === "completed";
 
@@ -198,9 +200,10 @@ export function UnifiedPracticeView({ sessionId, bundle }: {
   return (
     <div className="practice-shell">
       <main className="container">
-        <PracticeBreadcrumb current="练习" topic examId={null} />
+        <PracticeBreadcrumb current="练习" topic={!supp} supplementary={!!supp}
+                            examId={null} />
         <header className="practice-header">
-          <h1>专项练习</h1>
+          <h1>{supp ? lessonTitle(supp) : "专项练习"}</h1>
           <p className="text-aux">
             <span aria-live="polite">
               {`第 ${firstNo}${unitQuestions.length > 1
@@ -272,8 +275,9 @@ export function UnifiedPracticeView({ sessionId, bundle }: {
                 : "练习已提前结束，未生成完整成绩。"}
             </p>
           ) : null}
-          <Button variant="secondary" onClick={() => navigate("/study/practice")}>
-            返回专项练习
+          <Button variant="secondary"
+                  onClick={() => navigate(supp ? "/study/supplementary" : "/study/practice")}>
+            {supp ? "返回扩展练习" : "返回专项练习"}
           </Button>
         
         </div>

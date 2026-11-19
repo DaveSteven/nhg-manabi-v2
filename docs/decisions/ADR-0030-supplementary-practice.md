@@ -22,6 +22,11 @@ V1 有 362 课、3618 道教材题（`books`/`questions`/`options`）：级别 N
 6. **ID 与来源**：Canonical ID 形如 `JLPTGO-SUP-N3-vocabulary-L013`，V1 题号只进内部 provenance，不进业务条件。
 7. **用户数据**：扩展题发布后，V1 教材作答与错题用 V1 题号 → provenance → v2 题号映射，写入 `user_question_progress`（沿用 ADR-0029 之后的迁移方案）。教材题的学习记录不进入「专项」统计。
 
+## 学生端入口（2026-11-19）
+
+- 路由 `/study/supplementary`（入口为专项练习页的文字链接，不增加顶栏项）；接口 `GET /api/supplementary/lessons`、`POST /api/supplementary/sessions`（见 api-conventions）。一课 = 该课全部可练习 Unit，按固定顺序创建普通 `practice` 会话，复用作答、反馈、结果。
+- 与「我的学习」隔离：概览覆盖率、题目记录、练习历史、完成会话数均排除扩展练习（`kind` 过滤 + `config.supplementary`）；课程状态仅在扩展练习页展示。管理端 Dashboard 的功能分类暂把它归入「其他」。
+
 ## 分期
 
 - **本次（阶段一）**：ADR、迁移 `0020`、校验器与发布器放宽、历年试卷与专项抽样的 `kind` 过滤、V1 教材题转换器，并用一课样例验证导入。

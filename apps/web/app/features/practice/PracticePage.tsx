@@ -1,3 +1,4 @@
+import { lessonTitle } from "../supplementary/lessonTitle";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Navigate, useNavigate } from "react-router";
 import { useQuery } from "@tanstack/react-query";
@@ -73,6 +74,7 @@ function StepPracticePage({ sessionId }: { sessionId: string }) {
   const sessionEnded = session !== undefined && session.state !== "in_progress";
   const isQuick = session?.mode === "quick_practice";
   const isTopic = session?.config.topic !== undefined;
+  const supp = session?.config.supplementary;
 
   // Quick Practice copy derives from the Canonical unit kind + question
   // count (quick-practice.md v2.1 §6): 独立单题 提交/下一题,
@@ -251,12 +253,14 @@ function StepPracticePage({ sessionId }: { sessionId: string }) {
   const copy = quickCopy ?? { submitLabel: "提交", nextLabel: "下一组" };
   const title = isQuick
     ? (quickTitle ?? vm.label ?? "练习")
+    : supp ? lessonTitle(supp)
     : isTopic ? "专项练习" : `练习 · ${vm.label ?? `组 ${vm.position}`}`;
 
   return (
     <div className="practice-shell">
       <main className="container">
         <PracticeBreadcrumb current="练习" topic={isTopic}
+                            supplementary={supp !== undefined}
                             examId={session.units[0]?.exam_id ?? null} />
         <header className="practice-header">
           <h1>
@@ -356,7 +360,13 @@ function StepPracticePage({ sessionId }: { sessionId: string }) {
                   下一组
                 </Button>
               ) : null}
-              {isTopic ? (
+              {supp ? (
+                <Button variant="secondary"
+                        onClick={() => navigate(
+                          `/study/supplementary?subject=${supp.subject}`)}>
+                  返回扩展练习
+                </Button>
+              ) : isTopic ? (
                 <Button variant="secondary"
                         onClick={() => navigate("/study/practice")}>
                   返回专项练习

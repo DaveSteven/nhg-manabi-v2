@@ -13,6 +13,7 @@ from app.api.mock_exam import router as mock_exam_router
 from app.api.practice import router as practice_router
 from app.api.learning import router as learning_router
 from app.api.topic_practice import router as topic_practice_router
+from app.api.supplementary import router as supplementary_router
 
 app = FastAPI(title="JLPT GO 2.0 API", version="0.1.0")
 
@@ -32,6 +33,7 @@ app.include_router(media_router)
 app.include_router(mock_exam_router)
 app.include_router(practice_router)
 app.include_router(topic_practice_router)
+app.include_router(supplementary_router)
 app.include_router(learning_router)
 
 

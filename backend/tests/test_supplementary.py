@@ -213,6 +213,12 @@ def sup_published(pg_engine, tmp_path):
 
     def wipe():
         with pg_engine.begin() as c:
+            # study rows reference the release; clear them first (isolated test DB)
+            for t in ("study_phase_audio_plays", "study_audio_plays", "study_answer_drafts",
+                      "study_submitted_answers", "study_session_units", "study_results",
+                      "study_phase_runs", "study_sessions", "user_question_progress",
+                      "user_favorites"):
+                c.execute(sa.text(f"DELETE FROM {t}"))
             for t in RELEASE_TABLES:
                 c.execute(sa.text(f"DELETE FROM {t} WHERE release_id IN"
                                   " (SELECT id FROM exam_releases WHERE exam_id = :e)"), {"e": SUP_EXAM})

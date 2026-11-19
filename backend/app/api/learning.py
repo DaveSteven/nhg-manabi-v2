@@ -56,7 +56,8 @@ _CUR = (
     " JOIN release_layers l ON l.release_id = u.release_id"
     "  AND l.layer_id = u.layer_id"
     " JOIN question_types qt ON qt.id = q.question_type_id"
-    " WHERE (CAST(:level AS text) IS NULL OR e.level = :level)")
+    " WHERE e.kind IN ('past_exam', 'mock_exam')"  # 扩展练习 stays out (ADR-0030)
+    "   AND (CAST(:level AS text) IS NULL OR e.level = :level)")
 
 
 def _accuracy(correct: int, wrong: int) -> float | None:
@@ -88,6 +89,7 @@ def learning_overview(
         completed = conn.execute(text(
             "SELECT count(*) FROM study_sessions WHERE user_id = :u"
             " AND mode IN ('practice', 'quick_practice')"
+            " AND config -> 'supplementary' IS NULL"
             " AND state = 'completed'"), {"u": user_id}).scalar()
         last = conn.execute(text(
             "SELECT max(last_seen_at) FROM user_question_progress"
@@ -155,6 +157,7 @@ _HISTORY_WHERE = (
     "  (s.mode IN ('practice', 'quick_practice')"
     "   AND s.state IN ('completed', 'ended_early'))"
     "  OR (s.mode = 'mock' AND s.state = 'completed'))"
+    " AND s.config -> 'supplementary' IS NULL"  # 扩展练习 stays out (ADR-0030)
     " AND (:kind = 'all'"
     "  OR (:kind = 'mock' AND s.mode = 'mock')"
     "  OR (:kind = 'quick' AND s.mode <> 'mock'"

@@ -119,3 +119,38 @@
   }
   &:has(input:focus-visible) { outline: 2px solid var(--color-primary); outline-offset: 2px; }
 }
+
+/* 扩展练习 lesson grid (ADR-0030): each card is one button. */
+.lesson-grid {
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: repeat(2, 1fr);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+
+  @media (min-width: 720px) { grid-template-columns: repeat(3, 1fr); }
+  @media (min-width: 1040px) { grid-template-columns: repeat(4, 1fr); }
+}
+
+.lesson-card {
+  display: grid;
+  gap: var(--space-1);
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  transition: border-color var(--motion-fast), background var(--motion-fast);
+
+  &:hover:not(:disabled) { border-color: var(--color-primary); background: var(--color-primary-soft); }
+  &:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+  &:disabled { cursor: progress; opacity: 0.6; }
+}
+.lesson-name { font-weight: 600; }
+.lesson-meta {
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}

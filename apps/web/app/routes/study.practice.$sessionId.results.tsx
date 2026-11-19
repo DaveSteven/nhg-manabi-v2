@@ -6,6 +6,7 @@ import type { ApiError } from "../api/errors";
 import { resultVerdict, summarizeResults } from "../features/practice/resultsModel";
 import { PracticeBreadcrumb, useSessionInfo } from "../features/practice/PracticeBreadcrumb";
 import { ButtonLink } from "../components/Button";
+import { lessonTitle } from "../features/supplementary/lessonTitle";
 import { TopicReview } from "../features/practice/TopicReview";
 
 /** Session results: completed numbers + per-question review; ended_early
@@ -15,6 +16,7 @@ export default function ResultsRoute() {
   const info = useSessionInfo(sessionId);
   const examId = info.examId;
   const isTopic = info.topic !== null;
+  const isSupp = info.supplementary !== null;
   const results = useQuery<ResultsResponse, ApiError>({
     queryKey: ["results", sessionId],
     queryFn: ({ signal }) => getSessionResults(sessionId!, signal),
@@ -29,11 +31,13 @@ export default function ResultsRoute() {
     if (e.status === 409 && e.code === "no_results_early_end") {
       return (
         <section className="container" aria-label="练习结果">
-          <PracticeBreadcrumb current="结果" examId={examId} topic={isTopic} />
+          <PracticeBreadcrumb current="结果" examId={examId} topic={isTopic} supplementary={isSupp} />
           <h1>练习已提前结束</h1>
           <p>本次练习有未提交的题目，因此没有生成完整成绩。已提交的答案保留在历史中。</p>
           <p>
-            {isTopic
+            {isSupp
+              ? <ButtonLink variant="secondary" to="/study/supplementary">返回扩展练习</ButtonLink>
+              : isTopic
               ? <ButtonLink variant="secondary" to="/study/practice">返回专项练习</ButtonLink>
               : <ButtonLink variant="secondary" to="/study/exams">返回试卷列表</ButtonLink>}
           </p>
@@ -43,17 +47,21 @@ export default function ResultsRoute() {
     if (e.status === 409 && e.code === "session_abandoned") {
       return (
         <section className="container" aria-label="练习结果">
-          <PracticeBreadcrumb current="结果" examId={examId} topic={isTopic} />
+          <PracticeBreadcrumb current="结果" examId={examId} topic={isTopic} supplementary={isSupp} />
           <h1>这次练习已被取代</h1>
           <p>你开始了新的专项练习，这次未完成的练习没有生成成绩；已提交的答案保留在历史中。</p>
-          <p><ButtonLink variant="secondary" to="/study/practice">返回专项练习</ButtonLink></p>
+          <p>
+            {isSupp
+              ? <ButtonLink variant="secondary" to="/study/supplementary">返回扩展练习</ButtonLink>
+              : <ButtonLink variant="secondary" to="/study/practice">返回专项练习</ButtonLink>}
+          </p>
         </section>
       );
     }
     if (e.status === 409 && e.code === "session_not_finished") {
       return (
         <section className="container" aria-label="练习结果">
-          <PracticeBreadcrumb current="结果" examId={examId} topic={isTopic} />
+          <PracticeBreadcrumb current="结果" examId={examId} topic={isTopic} supplementary={isSupp} />
           <h1>练习尚未完成</h1>
           <p>完成并交卷后才能查看结果。</p>
           <p>
@@ -84,8 +92,8 @@ export default function ResultsRoute() {
 
   return (
     <section className="container results-page" aria-label="练习结果">
-      <PracticeBreadcrumb current="结果" examId={examId} topic={isTopic} />
-      <h1>练习结果</h1>
+      <PracticeBreadcrumb current="结果" examId={examId} topic={isTopic} supplementary={isSupp} />
+      <h1>{info.supplementary ? lessonTitle(info.supplementary) : "练习结果"}</h1>
       <dl className="results-summary">
         <div><dt>正确</dt><dd>{summary.correct}</dd></div>
         <div><dt>错误</dt><dd>{summary.wrong}</dd></div>
@@ -114,7 +122,11 @@ export default function ResultsRoute() {
           );
         })}
       </ol>
-      <p><ButtonLink variant="secondary" to="/study/exams">返回试卷列表</ButtonLink></p>
+      <p>
+        {isSupp
+          ? <ButtonLink variant="secondary" to={`/study/supplementary?subject=${info.supplementary!.subject}`}>返回扩展练习</ButtonLink>
+          : <ButtonLink variant="secondary" to="/study/exams">返回试卷列表</ButtonLink>}
+      </p>
     </section>
   );
 }
