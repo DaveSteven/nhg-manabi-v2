@@ -27,6 +27,13 @@ V1 有 362 课、3618 道教材题（`books`/`questions`/`options`）：级别 N
 - 路由 `/study/supplementary`（入口为专项练习页的文字链接，不增加顶栏项）；接口 `GET /api/supplementary/lessons`、`POST /api/supplementary/sessions`（见 api-conventions）。一课 = 该课全部可练习 Unit，按固定顺序创建普通 `practice` 会话，复用作答、反馈、结果。
 - 与「我的学习」隔离：概览覆盖率、题目记录、练习历史、完成会话数均排除扩展练习（`kind` 过滤 + `config.supplementary`）；课程状态仅在扩展练习页展示。管理端 Dashboard 的功能分类暂把它归入「其他」。
 
+## V1 教材作答迁移（2026-11-19）
+
+- `user_question_progress` 是由正式答案**派生的缓存**（每次提交都从 `study_submitted_answers` 重算），只导缓存会在用户下次练习时被覆盖。因此 V1 教材作答导入为**已完成的 practice 会话 + 不可变正式答案**（V1 每个 attempt 一个会话，一道题一个 Unit），再由正式答案重建进度缓存。
+- 会话 `config.supplementary` 带 `imported_from="v1"` 与 `v1_attempt_id`（幂等键），因此与其他扩展练习一样不进入「我的学习」；它们会计入管理端的正式作答/学习活跃统计（同一批用户在 V1 的真实学习）。
+- 映射：V1 用户 → `users.legacy_v1_user_id`；V1 题 → `source_mappings`（`jlptgo-v1-book`）→ 当前已发布 Release 的 v2 题。对错按 v2 答案 Key 的**选项位置**重新判定；V1 快照答案与 v2 Key 不一致、被人工修订过的题（选项顺序变了）、选项缺失、Unit 不可练习的作答跳过并计数报告，不猜测。
+- 脚本 `python -m app.v1_answer_import`，默认 dry-run；前置：v2 已导入对应用户（ADR-0029）和扩展课（本 ADR）。V1 `wrong_questions` 是聚合冗余，不单独导入。
+
 ## 分期
 
 - **本次（阶段一）**：ADR、迁移 `0020`、校验器与发布器放宽、历年试卷与专项抽样的 `kind` 过滤、V1 教材题转换器，并用一课样例验证导入。
