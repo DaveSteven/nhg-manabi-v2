@@ -4,7 +4,7 @@
 
 ## V1 真题专项作答迁移脚本（2026-11-19）
 
-- `app/v1_answer_import.py --kind exam`：V1 专项练习答案经 identity→objectId→canonical 映射导入为正式答案（只写真正作答的题，不进练习历史），见 [日志](2026-11-19-v1-exam-answers-import.md)。后端 327 passed + 2 skipped；**未对线上 V1 做 dry-run，未导入任何环境**。
+- `app/v1_answer_import.py --kind exam`：V1 专项练习答案经 identity→objectId→canonical 映射导入为正式答案（只写真正作答的题，不进练习历史），见 [日志](2026-11-19-v1-exam-answers-import.md)。后端 327 passed + 2 skipped；已对线上 V1 做只读 dry-run（临时库+真实真题内容）：55 会话/627 作答中 625 条可导入、2 条因 Unit 不可练习跳过、0 改判，错题本 111/112 行吻合；**未导入任何正式环境**。
 
 ## V1 教材作答迁移脚本（2026-11-19）
 
