@@ -72,6 +72,38 @@ def split_stem(stem: str) -> tuple[str, list[str]]:
     return prompt, opts
 
 
+_RUBY_RE = re.compile(r"\[([^\]]+)\]\(([^)]+)\)")
+
+
+def _plain_ruby(t: str) -> str:
+    """V1 writes furigana as [漢](かん); kept as visible 漢(かん) text (the
+    richtext ruby node has no defined shape yet)."""
+    return _RUBY_RE.sub(r"\1(\2)", t)
+
+
+def split_inline_options(stem: str) -> tuple[str, list[str]]:
+    """Options written inline in the stem: "…。1.舌が回る2.かみ砕く3.溶ける4.味わう"
+    (also "1.A2B" without a dot, or split over lines). Exactly four
+    non-empty options in order 1..4, else no parse."""
+    s = (stem or "").replace("\r", "").replace("\n", " ")
+    m1 = re.search(r"(?<![0-9])[1１][\.．]", s)
+    if m1 is None:
+        return (stem or "").strip(), []
+    spans, pos = [m1], m1.end()
+    for k in "234":
+        m = (re.compile(rf"(?<![0-9]){k}[\.．](?![0-9])").search(s, pos)
+             or re.compile(rf"(?<![0-9]){k}(?![0-9])").search(s, pos))
+        if m is None:
+            return (stem or "").strip(), []
+        spans.append(m)
+        pos = m.end()
+    ends = [m.start() for m in spans[1:]] + [len(s)]
+    opts = [s[m.end():e].strip() for m, e in zip(spans, ends)]
+    if any(not o for o in opts):
+        return (stem or "").strip(), []
+    return s[:m1.start()].strip(), opts
+
+
 def _text(t: str, marks=None) -> dict:
     c = {"type": "text", "text": t}
     if marks:
@@ -97,7 +129,7 @@ def prompt_richtext(prompt: str) -> dict:
 
 def option_richtext(text: str) -> dict:
     return {"format": RICHTEXT, "blocks": [
-        {"type": "paragraph", "children": [_text(text.strip())]}]}
+        {"type": "paragraph", "children": [_text(_plain_ruby(text.strip()))]}]}
 
 
 def classify(subject_label: str, prompt: str) -> str | None:
@@ -141,6 +173,8 @@ def build_package(book: dict, questions: list[dict], options: dict[int, list[dic
         texts = [o["text"] for o in opts]
         problems = []
         if texts and all(t.strip() in _PLACEHOLDER for t in texts):
+            if len(stem_opts) != len(texts):   # not one option per line: try inline
+                prompt, stem_opts = split_inline_options(q["stem"])
             if len(stem_opts) == len(texts):
                 texts = stem_opts          # real option text lives in the stem
             else:

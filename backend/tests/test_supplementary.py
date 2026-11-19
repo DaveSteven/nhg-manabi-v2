@@ -100,6 +100,39 @@ def test_options_written_in_the_stem_are_recovered_with_the_right_answer():
     assert rep2["needs_review"] == [{"question_id": 4, "issues": ["options_unparsed"]}]
 
 
+@pytest.mark.parametrize("stem,expected_prompt,expected", [
+    ("このワインは、ゆっくり時間をかけて【　　　】のが一番だ。1.舌が回る2.かみ[砕](くだ)く3.溶ける4.味わう",
+     "このワインは、ゆっくり時間をかけて【　　　】のが一番だ。", ["舌が回る", "かみ[砕](くだ)く", "溶ける", "味わう"]),
+    ("テストで答えがわからなくて【　　　】答えを書いた。\n1.なつかしい2こいしい\n3.でたらめな\n4.あきっぽい",
+     "テストで答えがわからなくて【　　　】答えを書いた。", ["なつかしい", "こいしい", "でたらめな", "あきっぽい"]),
+    ("【　　　】がのぼって、暖かくなった。\n1.月\n2.日\n3.雲4星",
+     "【　　　】がのぼって、暖かくなった。", ["月", "日", "雲", "星"]),
+    ("今日は時間がないので、また日を【　　　】話しましょう。 1.改めて2.かためて3.沿って4.治めて",
+     "今日は時間がないので、また日を【　　　】話しましょう。", ["改めて", "かためて", "沿って", "治めて"]),
+])
+def test_inline_options_are_parsed(stem, expected_prompt, expected):
+    from app.v1_book_convert import split_inline_options
+    assert split_inline_options(stem) == (expected_prompt, expected)
+
+
+def test_inline_options_never_guess():
+    from app.v1_book_convert import split_inline_options
+    assert split_inline_options("10分の【　　　】だ。")[1] == []           # no 1./2./3./4.
+    assert split_inline_options("文。1.あ2.い3.う")[1] == []              # only three
+    assert split_inline_options("文。1.あ2.い3.う4.")[1] == []            # empty option
+
+
+def test_inline_options_book_converts_clean_with_ruby_kept_as_text():
+    qs = [dict(id=9, external_id="v1-9", book_id=8, source_index=1,
+               stem="税金を【　　　】なければならない。1.かぶせ2.かり3.占め4.[納](おさ)め")]
+    book = make_book(subject_label="語彙", name="第 41 课", level="N2")
+    records, _, rep = build_package(book, qs, {9: opt(9, ["1", "2", "3", "4"], 3)})
+    assert rep["needs_review"] == []
+    q = records["questions.jsonl"][0]
+    assert q["options"][3]["content"]["blocks"][0]["children"][0]["text"] == "納(おさ)め"
+    assert records["answer_keys.private.jsonl"][0]["correct_option_ids"] == [q["id"] + "-o4"]
+
+
 def test_unsupported_or_empty_books_are_reported_not_converted():
     qs, opts = make_questions()
     assert build_package(make_book(name="附录"), qs, opts)[0] is None
