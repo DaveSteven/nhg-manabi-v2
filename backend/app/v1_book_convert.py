@@ -44,6 +44,29 @@ INSTRUCTION = {
     "grammar_form": "（　　　）に入れるのに最もよいものを、1・2・3・4から一つ選びなさい。",
 }
 
+# Human-approved repairs of broken V1 data (user decision 2026-11-19, ADR-0030).
+# Keyed by V1 question id. A fix applies only while the V1 row still looks
+# exactly like `expect_stem`/`expect_options` (otherwise it is reported and the
+# question is left unconverted for review) — never a blind override.
+MANUAL_FIXES = {
+    2326: dict(
+        reason="V1 把「10分の…」从题干拆进了选项表，且正确答案误标为「長所」；"
+               "还原题干，答案按语义改为「距離」",
+        expect_stem="会社まで車で",
+        expect_options=["0分の【　　　】だ。", "性格", "長所", "距離", "連絡"],
+        prompt="会社まで車で10分の【　　　】だ。",
+        options=["性格", "長所", "距離", "連絡"], correct=2),
+    1758: dict(
+        reason="V1 选项「出そう」重复且两个都标为正确；去重，保留「出そう」为正确",
+        expect_stem="みんなで遊びに行くとき、いつも田中さんは自分からお金を【　　　】としない。",
+        expect_options=["出そう", "出そう", "出よう", "出しよう"],
+        prompt=None, options=["出そう", "出よう", "出しよう"], correct=0),
+}
+
+# V1 questions that genuinely have 3 options; content checked and approved by
+# the user 2026-11-19 (others with a non-4 option count stay needs_review).
+APPROVED_THREE_OPTIONS = {405, 419, 632, 781, 794, 1758, 2689, 2812}
+
 _LESSON_RE = re.compile(r"第\s*(\d+)\s*课")
 _BRACKET_RE = re.compile(r"【([^】]*)】")
 _OPT_LINE_RE = re.compile(r"^\s*([1-4１-４])\s*[\.．、]\s*(.+?)\s*$")
@@ -156,7 +179,7 @@ def build_package(book: dict, questions: list[dict], options: dict[int, list[dic
     """Return (records, provenance, report) for one V1 book, or
     (None, [], report) when the book cannot be converted at all."""
     report = {"book_id": book["id"], "name": book["name"], "excluded": [],
-              "needs_review": [], "converted": 0}
+              "needs_review": [], "manual_fixes": [], "converted": 0}
     slug_info = SUBJECTS.get(book["subject_label"])
     lesson = lesson_number(book["name"])
     if slug_info is None or lesson is None or book["level"] not in {"N1", "N2", "N3", "N4", "N5"}:
@@ -167,11 +190,24 @@ def build_package(book: dict, questions: list[dict], options: dict[int, list[dic
     section_id = f"{exam_id}-sec-{section_subject}"
 
     converted = []  # (question_row, type_id, prompt_text, option_texts, status, correct_idx)
+    fixed_ids = set()
     for q in sorted(questions, key=lambda r: (r.get("source_index") or 0, r["id"])):
         opts = sorted(options.get(q["id"], []), key=lambda o: o["source_order"])
         prompt, stem_opts = split_stem(q["stem"])
         texts = [o["text"] for o in opts]
         problems = []
+        fix = MANUAL_FIXES.get(q["id"])
+        if fix is not None:
+            if q["stem"] == fix["expect_stem"] and texts == fix["expect_options"]:
+                prompt = fix["prompt"] or prompt
+                texts = list(fix["options"])
+                opts = [dict(text=t, is_correct=int(i == fix["correct"]), source_order=i)
+                        for i, t in enumerate(texts)]
+                fixed_ids.add(q["id"])
+                report["manual_fixes"].append({"question_id": q["id"], "reason": fix["reason"]})
+            else:
+                report["excluded"].append({"question_id": q["id"], "reason": "manual_fix_stale"})
+                continue
         if texts and all(t.strip() in _PLACEHOLDER for t in texts):
             if len(stem_opts) != len(texts):   # not one option per line: try inline
                 prompt, stem_opts = split_inline_options(q["stem"])
@@ -194,7 +230,7 @@ def build_package(book: dict, questions: list[dict], options: dict[int, list[dic
         if type_id is None:
             problems.append("type_unclassified")
             type_id = {"漢字": "vocabulary_kanji_reading"}.get(book["subject_label"])
-        if len(texts) != 4:
+        if len(texts) != 4 and not (q["id"] in APPROVED_THREE_OPTIONS and len(texts) == 3):
             problems.append(f"option_count={len(texts)}")
         status = "needs_review" if problems else "complete"
         if problems:
@@ -258,7 +294,8 @@ def build_package(book: dict, questions: list[dict], options: dict[int, list[dic
             "source_identity": q.get("external_id"), "source_node_path": f"books[{book['id']}]",
             "canonical_type": "question", "canonical_id": qid,
             "raw_node_hash": _hash([q, options.get(q["id"], [])]),
-            "transform_version": TRANSFORM_VERSION})
+            "transform_version": TRANSFORM_VERSION,
+            **({"manual_fix": MANUAL_FIXES[q["id"]]["reason"]} if q["id"] in fixed_ids else {})})
     report["converted"] = len(converted)
     return records, provenance, report
 
@@ -345,6 +382,7 @@ def main(argv: list[str] | None = None) -> int:
         reports.append(rep)
     summary = {"books": len(books), "packages_written": written,
                "questions_converted": sum(r["converted"] for r in reports),
+               "manual_fixes": [f for r in reports for f in r["manual_fixes"]],
                "excluded": [r for r in reports if r["excluded"]],
                "needs_review": [r for r in reports if r["needs_review"]]}
     print(json.dumps(summary, ensure_ascii=False, indent=2, default=str))

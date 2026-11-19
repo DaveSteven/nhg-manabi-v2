@@ -68,6 +68,13 @@ def test_build_package_never_silently_fixes(tmp_path):
     assert rep["converted"] == 3
     assert rep["excluded"] == [{"question_id": 5, "reason": "correct_answers=0"}]
     assert rep["needs_review"] == [{"question_id": 4, "issues": ["option_count=3"]}]
+    # the same shape is accepted once the user approved that exact V1 question
+    from app import v1_book_convert as conv
+    conv.APPROVED_THREE_OPTIONS.add(4)
+    try:
+        assert build_package(make_book(), qs, opts)[2]["needs_review"] == []
+    finally:
+        conv.APPROVED_THREE_OPTIONS.discard(4)
     exam = records["exam.json"][0]
     assert exam["kind"] == "supplementary" and exam["year"] is None
     assert exam["id"] == "JLPTGO-SUP-N3-kanji-L013"
@@ -131,6 +138,41 @@ def test_inline_options_book_converts_clean_with_ruby_kept_as_text():
     q = records["questions.jsonl"][0]
     assert q["options"][3]["content"]["blocks"][0]["children"][0]["text"] == "納(おさ)め"
     assert records["answer_keys.private.jsonl"][0]["correct_option_ids"] == [q["id"] + "-o4"]
+
+
+def test_approved_manual_fixes_apply_only_to_the_exact_v1_rows():
+    from app.v1_book_convert import MANUAL_FIXES
+    # 2326: stem was split into the options table, answer mis-marked
+    qs = [dict(id=2326, external_id="v1-2326", book_id=9, stem="会社まで車で", source_index=1)]
+    book = make_book(subject_label="語彙", name="第 23 课", level="N3")
+    texts = ["0分の【　　　】だ。", "性格", "長所", "距離", "連絡"]
+    records, prov, rep = build_package(book, qs, {2326: opt(2326, texts, 2)})
+    assert rep["needs_review"] == [] and rep["excluded"] == [] and rep["converted"] == 1
+    assert rep["manual_fixes"][0]["question_id"] == 2326
+    q = records["questions.jsonl"][0]
+    flat = lambda rt: "".join(c["text"] for b in rt["blocks"] for c in b["children"])
+    assert flat(q["prompt"]) == "会社まで車で10分の（　　　）だ。"
+    assert [flat(o["content"]) for o in q["options"]] == ["性格", "長所", "距離", "連絡"]
+    assert records["answer_keys.private.jsonl"][0]["correct_option_ids"] == [q["id"] + "-o3"]
+    assert prov[0]["manual_fix"] == MANUAL_FIXES[2326]["reason"]
+
+    # 1758: duplicate option removed, 出そう stays correct
+    qs = [dict(id=1758, external_id="v1-1758", book_id=9, source_index=1,
+               stem=MANUAL_FIXES[1758]["expect_stem"])]
+    book = make_book(subject_label="文法", name="第 19 课", level="N3")
+    t = MANUAL_FIXES[1758]["expect_options"]
+    o = [dict(question_id=1758, text=x, is_correct=int(i < 2), source_order=i) for i, x in enumerate(t)]
+    records, _, rep = build_package(book, qs, {1758: o})
+    assert rep["converted"] == 1 and rep["excluded"] == [] and rep["needs_review"] == []
+    q = records["questions.jsonl"][0]
+    assert [flat(x["content"]) for x in q["options"]] == ["出そう", "出よう", "出しよう"]
+    assert records["answer_keys.private.jsonl"][0]["correct_option_ids"] == [q["id"] + "-o1"]
+
+    # if V1 data changed, the fix must NOT apply blindly
+    qs[0]["stem"] = "変わった題干"
+    _, _, rep = build_package(book, qs, {1758: o})
+    assert rep["converted"] == 0
+    assert rep["excluded"] == [{"question_id": 1758, "reason": "manual_fix_stale"}, {"reason": "no_convertible_questions"}]
 
 
 def test_unsupported_or_empty_books_are_reported_not_converted():
