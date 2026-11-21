@@ -92,7 +92,7 @@ export function SupplementaryView() {
             <label className="topic-feedback-option">
               <input type="radio" name="supp-feedback" checked={feedback === "end"}
                      onChange={() => setFeedback("end")} />
-              统一反馈（结束后揭晓）
+              统一反馈（结束后总结）
             </label>
           </div>
 
