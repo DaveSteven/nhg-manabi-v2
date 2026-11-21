@@ -26,3 +26,10 @@
 - 预览站点 `nhg-manabi-v2-preview`（仅 127.0.0.1）仍启用，可按需移除。
 - V1 容器 `nhg-manabi-api-1` 已停止、`db` 仍在运行；观察期（建议 72 小时）后由用户确认再下线 V1，并合并 `main`。
 - 3618 道扩展题与真题答案仍为 unverified，扩展题无解析。
+
+## 补充：管理员、每日备份、预览站点（同日 21:40–21:45）
+- 管理员：用户本人在服务器上执行 `admin_cli create-admin`（密码未经过对话）；库中确认 `admin | super_admin | 启用`，管理端公网可打开，错误密码 401。
+- 每日备份：`deploy/prod/backup.sh`（装到 `/opt/nhg-manabi-v2/backup.sh`）+ `/etc/cron.d/nhg-manabi-v2-backup`，每天 03:30（服务器时区 JST），自定义格式 `pg_dump`，写入前用 `pg_restore -l` 校验，保留 14 天，日志 `/opt/nhg-manabi-v2/backups/backup.log`。手动运行一次：20 MB。
+- 恢复演练：把该备份恢复到临时库 `restore_check`，用户/答案/进度/目录/题目/管理员六项计数与线上库完全一致（7 / 1425 / 1129 / 467 / 14480 / 1），随后已删除临时库。
+- 预览站点（仅 127.0.0.1:8180/8181）已移除并 reload nginx；公网 `jpn.manabi.cc`、`/api/exams`、`admin.manabi.cc` 复测均 200。
+- 仍待办：用真实 V1 用户登录验证一次、真实邮件与移动端验收、备份异地副本（目前只在同一台服务器上）、观察期后经用户确认再下线 V1 并合并 `main`。
