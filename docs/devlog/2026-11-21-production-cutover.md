@@ -38,3 +38,9 @@
 - `jpn.manabi.cc/` 现在 302 跳转到 `/study`（nginx `location = / { return 302 /study; }`，未做浏览器缓存的 301，可随时撤回）；`/study`、`/login`、`/api/exams`、`admin.manabi.cc` 复测均 200，带查询串的 `/?x=1` 同样跳转（查询串不保留）。
 - 这实际上让品牌首页 `/`（ADR-0007 的静态预渲染页）不再对外可见；页面文件仍在构建产物里。若要恢复，删掉 `deploy/prod/web-locations.inc` 里这一行并重新上传、`nginx -t`、reload。
 - 同步改了本地 Docker 的 `deploy/nginx.conf`（未重建本地容器）。
+
+## 补充三：V1 下线（用户决定，2026-11-21 晚；未等满建议的 72 小时观察期）
+- 停止 V1 数据库容器 `nhg-manabi-db-1`（V1 API 自 T0 起已停）。V1 两个容器重启策略为 `unless-stopped`，手动停止后服务器重启也不会自动拉起。v2 两个容器、`jpn.manabi.cc`、`admin.manabi.cc` 复测均正常，内存可用约 1.2 GB。
+- **保留（均未删除）：** V1 数据卷 `nhg-manabi_postgres`、`/opt/nhg-manabi/`（compose、`.env`、api 源码、`assets` 7 GB、静态 releases）、`/opt/nhg-manabi/backups/`（含 `database-final-v1-20261121T212214.dump`）、V1 nginx 原站点文件（`sites-available`）。V1 的 `assets` 与 v2 媒体是各自独立的副本，可以分别处理。
+- 复活 V1（应急）：`ln -sfn /etc/nginx/sites-available/nhg-manabi-web /etc/nginx/sites-enabled/nhg-manabi-web`（admin 同理）→ `nginx -t` → reload；`cd /opt/nhg-manabi && docker compose start db api`。此后 v2 期间产生的数据不会回写 V1。
+- 未做：清理 V1 数据卷/素材/目录（建议至少保留数周，并先把备份拉到异地）；**`main` 尚未合并**（需用户明确确认上线验收后执行）。
