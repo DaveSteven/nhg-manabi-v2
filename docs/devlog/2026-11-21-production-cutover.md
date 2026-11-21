@@ -33,3 +33,8 @@
 - 恢复演练：把该备份恢复到临时库 `restore_check`，用户/答案/进度/目录/题目/管理员六项计数与线上库完全一致（7 / 1425 / 1129 / 467 / 14480 / 1），随后已删除临时库。
 - 预览站点（仅 127.0.0.1:8180/8181）已移除并 reload nginx；公网 `jpn.manabi.cc`、`/api/exams`、`admin.manabi.cc` 复测均 200。
 - 仍待办：用真实 V1 用户登录验证一次、真实邮件与移动端验收、备份异地副本（目前只在同一台服务器上）、观察期后经用户确认再下线 V1 并合并 `main`。
+
+## 补充二：根路径直接进入学习区（用户决定，同日）
+- `jpn.manabi.cc/` 现在 302 跳转到 `/study`（nginx `location = / { return 302 /study; }`，未做浏览器缓存的 301，可随时撤回）；`/study`、`/login`、`/api/exams`、`admin.manabi.cc` 复测均 200，带查询串的 `/?x=1` 同样跳转（查询串不保留）。
+- 这实际上让品牌首页 `/`（ADR-0007 的静态预渲染页）不再对外可见；页面文件仍在构建产物里。若要恢复，删掉 `deploy/prod/web-locations.inc` 里这一行并重新上传、`nginx -t`、reload。
+- 同步改了本地 Docker 的 `deploy/nginx.conf`（未重建本地容器）。

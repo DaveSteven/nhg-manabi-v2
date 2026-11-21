@@ -13,7 +13,8 @@ location /assets/ {
     add_header Cache-Control "public, immutable";
     try_files $uri =404;
 }
-location = / { try_files /index.html =404; }
+# 2026-11-21 user decision: the root goes straight to the learning area (302, not cached).
+location = / { return 302 /study; }
 # SPA routes use the noindex fallback, never the brand HTML.
 location ~ ^/(study|mock|login|register|verify-email|forgot-password|reset-password)(/|$) {
     try_files /__spa-fallback.html =404;
