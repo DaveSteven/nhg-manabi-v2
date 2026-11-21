@@ -52,3 +52,11 @@
 - 验证：失败的音频 `JLPTGO-N2-2026-07-as031` 现在 200 `audio/mpeg`、`accept-ranges`、`Range` 请求 206、`cache-control: immutable`；整文件下载的 SHA-256 与登记的 `stored_sha256` 一致；当前版本里 3226 个带素材的资源随机抽 150 个做 Range 请求，150/150 成功。没有遗漏登记的资源（线上 `media_assets` 与 `media_storage` 一一对应）。
 - 上线清单补充（`cutover-plan.md`）：复制/传输媒体后必须登记 `media_storage` 并做媒体接口抽样，作为阶段 B 的验收项。
 - 未验证：真实手机/微信内置浏览器上的实际播放与拖动进度（服务端 Range 行为已验证）；严格模考的听力播放规则仍待真实验收。
+
+## 补充五：`main` 合并与 V1 数据删除（用户明确确认，2026-11-21）
+- **`main`：** 用户确认上线验收（登录注册已验证、资源已可加载）后，把 `develop` 快进合并到 `main`（`6426552`，此前 `main` 无独有提交，183 个提交）。**仅本地合并，未推送到 origin。**
+- **V1 删除范围（用户选择「全部删除，包括备份」，已被告知不可恢复）：** V1 容器与网络、数据库数据卷 `nhg-manabi_postgres`、V1 镜像（`nhg-manabi-api:latest`、`postgres:16`）、整个 `/opt/nhg-manabi/`（api、web、admin、normalized、compose.yml、`.env`、**assets 7 GB**、**backups 456 MB，含 `database-final-v1-20261121T212214.dump` 与历史备份**）。
+- 删除前核对：v2 媒体 3887 个文件按「文件名 = SHA-256」复核全部一致；v2 目录无指向 V1 的符号链接、媒体无硬链接；v2 容器只挂载 `/opt/nhg-manabi-v2/media`。删除后 v2 两个容器健康，`jpn.manabi.cc`、`admin.manabi.cc`、`/api/exams` 与媒体接口 Range 请求均正常，磁盘使用从约 22 GB 降到 15 GB。
+- **保留：** v2 的全部数据与每日备份（`/opt/nhg-manabi-v2/backups/db/`，同机）、V1 nginx 站点原文件 `/etc/nginx/sites-available/nhg-manabi-{web,admin}`（已不启用，引用的目录已不存在，仅作历史配置，可随时删除）、`/opt/nhg-manabi-v2/backups/nginx-v1-*`（V1 配置副本）。
+- **不再可能：** 回滚到 V1。V1 的最终数据现在只存在于 v2 数据库（已导入的用户与作答）；V1 其余原始数据（含 V1 管理员账号、V1 题库表等）已永久删除。
+- 风险提醒：v2 备份仍只在同一台服务器上，建议尽快建立异地副本。
