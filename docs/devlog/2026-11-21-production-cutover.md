@@ -44,3 +44,11 @@
 - **保留（均未删除）：** V1 数据卷 `nhg-manabi_postgres`、`/opt/nhg-manabi/`（compose、`.env`、api 源码、`assets` 7 GB、静态 releases）、`/opt/nhg-manabi/backups/`（含 `database-final-v1-20261121T212214.dump`）、V1 nginx 原站点文件（`sites-available`）。V1 的 `assets` 与 v2 媒体是各自独立的副本，可以分别处理。
 - 复活 V1（应急）：`ln -sfn /etc/nginx/sites-available/nhg-manabi-web /etc/nginx/sites-enabled/nhg-manabi-web`（admin 同理）→ `nginx -t` → reload；`cd /opt/nhg-manabi && docker compose start db api`。此后 v2 期间产生的数据不会回写 V1。
 - 未做：清理 V1 数据卷/素材/目录（建议至少保留数周，并先把备份拉到异地）；**`main` 尚未合并**（需用户明确确认上线验收后执行）。
+
+## 补充四：音频加载失败的排查与修复（同日，用户报告）
+- 现象：学生端音频加载失败。v2 API 日志里有 `GET /api/releases/<release>/assets/<asset>` → **404**。
+- 根因：v2 媒体接口只服务 `media_storage` 里 `state='stored'` 且哈希匹配的资源；我部署时只把 3887 个文件复制到了 `/opt/nhg-manabi-v2/media` 并核对了哈希，**没有登记 `media_storage`**（线上该表为 0 行，`media_assets` 有 4027 行）。部署时的预览冒烟测试只测了页面、真题列表和登录，**没有覆盖媒体接口**，所以没发现。
+- 修复：本地开发库的 `media_storage`（4027 行，均 `stored`，由真实 `media_sync` 用 ffprobe 校验生成；`source_path` 为素材包内的相对路径，不对外）以 `pg_dump --data-only` 同步到线上库，单事务加载成功；文件未改动。
+- 验证：失败的音频 `JLPTGO-N2-2026-07-as031` 现在 200 `audio/mpeg`、`accept-ranges`、`Range` 请求 206、`cache-control: immutable`；整文件下载的 SHA-256 与登记的 `stored_sha256` 一致；当前版本里 3226 个带素材的资源随机抽 150 个做 Range 请求，150/150 成功。没有遗漏登记的资源（线上 `media_assets` 与 `media_storage` 一一对应）。
+- 上线清单补充（`cutover-plan.md`）：复制/传输媒体后必须登记 `media_storage` 并做媒体接口抽样，作为阶段 B 的验收项。
+- 未验证：真实手机/微信内置浏览器上的实际播放与拖动进度（服务端 Range 行为已验证）；严格模考的听力播放规则仍待真实验收。

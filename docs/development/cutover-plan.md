@@ -43,6 +43,7 @@
 ### 阶段 B：v2 并存部署（V1 仍是对外入口）
 4. ⚠ `docker compose -p nhg-manabi-v2 up -d postgres` → `migrate`（0001→0020）。检查：迁移版本 `0020_supplementary_exams`；`SELECT 1`。
 5. ⚠ 导入内容：真题 108 个包（`python -m app.importer`，应得 105 套已发布、`mojitest` 映射 10647）；扩展练习 362 课（`app.v1_book_convert` 转换 → `app.importer`；3618 题、0 隐藏 Unit）。导入工具在开发机运行，经 `ssh -L` 连 v2 数据库（v2 库无公网端口）。
+5b. ⚠ **登记媒体**：文件传到 `media/` 后，必须让 `media_storage` 有对应的 `stored` 行（用 `media_sync` 或同步已校验的登记数据），否则媒体接口全部 404。验收：`media_assets` 与 `media_storage` 一一对应；对失败过的资源和随机抽样的 100+ 个资源发 Range 请求，应为 200/206 且哈希一致。
 6. ⚠ 创建管理员；启动 `api`；启用仅本机的预览站点；经 `ssh -L` 在浏览器里走：登录、真题列表、一套真题与一课扩展练习的完整作答（用测试账号，结束后删除）、管理端。**V1 与 v2 并存期间用 `free -h` 观察内存。**
 
 ### 阶段 C：冻结 V1 → 迁移 → 切换（有停机窗口，约 15–30 分钟）
