@@ -14,3 +14,9 @@
 
 ## 未执行 / 风险
 - 没有执行任何部署、导入、备份或对 V1 的操作；v2 生产环境尚不存在，计划中的演练步骤都未做。
+
+## 补充（2026-11-21）：部署目标已定，计划改写为 v2 版
+- 用户确认：部署目标 = V1 所在服务器，停掉 V1，v2 做成正式版本（ADR-0031）。
+- 只读查看了服务器（`ssh manabi`，未改动任何东西）：x86_64、3 核、**1.9 GB 内存**、2 GB swap、磁盘剩余 79 GB；V1 为 Compose 项目 `nhg-manabi`（`api` 127.0.0.1:8002 + `db`），宿主 nginx 终止 80/443（`jpn.manabi.cc`、`admin.manabi.cc`，Let's Encrypt），静态根 `/opt/nhg-manabi/{web,admin}/current`，已有 V1 数据库备份。
+- `cutover-plan.md` 据此改写：v2 在 `/opt/nhg-manabi-v2/` 独立并存（独立 Compose 项目与数据库，不跑 web 容器，宿主 nginx 提供静态文件），开发机构建 amd64 镜像后传输，预览站点仅本机经 `ssh -L` 访问，窗口内冻结 V1→导入→nginx 切换，V1 只停不删，回滚=nginx 切回 V1 并启动 V1 api；列出逐项授权清单。
+- 新增 ADR-0031 与决策表 P-031。仅文档，未执行任何部署、导入或服务器改动。
