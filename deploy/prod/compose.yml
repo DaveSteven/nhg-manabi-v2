@@ -1,0 +1,52 @@
+# v2 production stack (ADR-0031). Lives at /opt/nhg-manabi-v2/ on the server,
+# completely separate from V1 (/opt/nhg-manabi, project `nhg-manabi`).
+# No web container: the host nginx serves the static builds. The database
+# publishes no port; operators reach it through the container IP over ssh -L.
+name: nhg-manabi-v2
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - nhg_manabi_v2_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  migrate:
+    image: nhg-manabi-v2-api:${IMAGE_TAG}
+    command: ["alembic", "upgrade", "head"]
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+    depends_on:
+      postgres: {condition: service_healthy}
+    restart: "no"
+
+  api:
+    image: nhg-manabi-v2-api:${IMAGE_TAG}
+    restart: unless-stopped
+    env_file: [.env]
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      MEDIA_STORAGE_DIR: /srv/media
+    ports:
+      - "127.0.0.1:8102:8000"
+    volumes:
+      - ./media:/srv/media:ro
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health').status==200 else 1)"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  nhg_manabi_v2_pgdata:
+    name: nhg_manabi_v2_pgdata
