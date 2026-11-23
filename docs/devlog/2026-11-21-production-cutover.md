@@ -85,3 +85,7 @@
 - `deploy/prod/backup-v1.sh`（装到 `/opt/nhg-manabi/backup.sh`）+ `/etc/cron.d/nhg-manabi-backup`：每天 03:35（JST），`pg_dump -Fc`，写入前用 `pg_restore -l` 校验，保留 14 天，日志 `/opt/nhg-manabi/backups/backup.log`；备份目录 `/opt/nhg-manabi/backups/db/`。
 - 手动跑一次 6.9 MB；恢复演练：恢复到临时库后与线上六项计数完全一致（用户 8、管理员 1、真题题目 10749、教材题 3618、教材作答 11、真题作答 65），临时库已删除。
 - 仍然只有同机备份；V1 没有配置异地副本（v2 的加密周报邮件任务仍只针对 v2 数据库）。
+
+## 补充九：撤销备份邮件（用户决定「不用发邮件了」，2026-11-23）
+- 删除服务器上的 `/etc/cron.d/nhg-manabi-v2-backup-mail`、`/opt/nhg-manabi-v2/backup_mail.py`、`/opt/nhg-manabi-v2/backup.key`，并从仓库移除 `deploy/prod/backup_mail.py`。该任务从未发出过邮件（收件地址从未配置），因此没有需要该密钥解密的备份；补充六的方案作废。
+- 现状：V1 与 v2 各有每日服务器本机备份（保留 14 天），**都没有异地副本**。
