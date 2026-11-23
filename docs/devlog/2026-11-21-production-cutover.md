@@ -80,3 +80,8 @@
 - 验证：`jpn.manabi.cc` `/`、`/login`、`/api/health`、`admin.manabi.cc` 均 200，页面标题 `JLPT GO!`（V1），`stu.biblenotes.cc` 301 → `jpn.manabi.cc`，错误登录 401；V1 素材接口 Range 206。**未做：** 真实用户登录 V1、手机播放验证。
 - 回到 v2：把 `sites-enabled` 链接改回 `/opt/nhg-manabi-v2/nginx/nginx-{web,admin}.conf`，`nginx -t`、reload，`cd /opt/nhg-manabi-v2 && docker compose start api`。v2 数据未受影响；V1 恢复期间若产生新数据，不会同步到 v2。
 - 风险：V1 现在是 11/14 的数据；V1 的备份机制没有恢复（新 V1 库没有定期备份）；V1 与 v2 两套库并存占用内存（服务器仅 1.9 GB）。
+
+## 补充八：V1 新库的每日备份（用户确认，2026-11-23）
+- `deploy/prod/backup-v1.sh`（装到 `/opt/nhg-manabi/backup.sh`）+ `/etc/cron.d/nhg-manabi-backup`：每天 03:35（JST），`pg_dump -Fc`，写入前用 `pg_restore -l` 校验，保留 14 天，日志 `/opt/nhg-manabi/backups/backup.log`；备份目录 `/opt/nhg-manabi/backups/db/`。
+- 手动跑一次 6.9 MB；恢复演练：恢复到临时库后与线上六项计数完全一致（用户 8、管理员 1、真题题目 10749、教材题 3618、教材作答 11、真题作答 65），临时库已删除。
+- 仍然只有同机备份；V1 没有配置异地副本（v2 的加密周报邮件任务仍只针对 v2 数据库）。
