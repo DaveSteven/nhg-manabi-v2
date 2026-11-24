@@ -138,3 +138,24 @@ def test_reused_v1_attempt_id_with_other_timestamp_is_a_new_attempt(pg_engine, v
     assert rep["sessions_imported"] == 1 and rep["already_imported"] == 0
     again = import_answers(pg_engine, reused, more, ORDER, apply=True)
     assert again["sessions_imported"] == 0 and again["already_imported"] == 1
+
+
+@requires_db
+def test_users_matched_by_username_when_v1_ids_differ(pg_engine, v1_user):
+    from app.v1_answer_import import import_answers
+    rebuilt = [dict(id=1, user_id="rebuilt-id-1", created_at=T, duration_seconds=None)]
+    rows = [ans(1, 1, 1, 101, 101, 1)]
+    rows[0]["user_id"] = "rebuilt-id-1"
+    none = import_answers(pg_engine, rebuilt, rows, ORDER, apply=False)
+    assert none["skipped_attempts"] == {"user_not_imported": 1}
+    rep = import_answers(pg_engine, rebuilt, rows, ORDER, apply=True,
+                         v1_usernames={"rebuilt-id-1": "v1user",
+                                       "other": "someone-else"})
+    assert rep["sessions_imported"] == 1 and rep["users"] == 1
+
+
+def test_filter_since_keeps_later_attempts_and_their_answers():
+    from app.v1_answer_import import filter_since
+    at, an = filter_since(attempts(), answers(), "2026-11-16T00:00:00")
+    assert [a["id"] for a in at] == [2, 4]
+    assert {a["attempt_id"] for a in an} == {2, 4}

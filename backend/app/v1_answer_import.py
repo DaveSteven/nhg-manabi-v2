@@ -139,7 +139,8 @@ def import_answers(engine: Engine, attempts: list[dict], answers: list[dict],
                    v1_option_order: dict[int, int], apply: bool, *,
                    kind: str = "textbook", mapped: dict[int, str] | None = None,
                    identities: dict[int, str] | None = None, raw_dir=None,
-                   object_system: str = "mojitest") -> dict:
+                   object_system: str = "mojitest",
+                   v1_usernames: dict[str, str] | None = None) -> dict:
     report = {"attempts": len(attempts), "answers": len(answers),
               "sessions_imported": 0, "answers_imported": 0,
               "already_imported": 0, "skipped_answers": Counter(),
@@ -153,6 +154,16 @@ def import_answers(engine: Engine, attempts: list[dict], answers: list[dict],
         legacy_users = {r[0]: r[1] for r in conn.execute(text(
             "SELECT legacy_v1_user_id, id FROM users"
             " WHERE legacy_v1_user_id IS NOT NULL"))}
+        if v1_usernames:
+            # A V1 rebuilt from a backup carries different user ids for the
+            # same people: fall back to the (unique) username, still limited
+            # to accounts that came from V1.
+            by_name = {r[0]: r[1] for r in conn.execute(text(
+                "SELECT username, id FROM users WHERE legacy_v1_user_id IS NOT NULL"
+                " AND username IS NOT NULL"))}
+            for v1_id, name in v1_usernames.items():
+                if v1_id not in legacy_users and name in by_name:
+                    legacy_users[v1_id] = by_name[name]
         marker = ("config -> 'supplementary' ->> 'v1_attempt_id'" if kind == "textbook"
                   else "config -> 'imported' ->> 'attempt_id'")
         # (id, created_at): a V1 restored from an older backup hands out the
@@ -311,11 +322,33 @@ def read_v1(v1_url: str, kind: str = "textbook"):
     return attempts, answers, order, identities
 
 
+def read_v1_usernames(v1_url: str) -> dict[str, str]:
+    engine = create_engine(v1_url)
+    try:
+        with engine.connect() as c:
+            c.execute(text("SET TRANSACTION READ ONLY"))
+            return {str(r[0]): r[1] for r in c.execute(text(
+                "SELECT id, username FROM users WHERE username IS NOT NULL"))}
+    finally:
+        engine.dispose()
+
+
+def filter_since(attempts: list[dict], answers: list[dict], since: str):
+    cut = _utc(datetime.fromisoformat(since))
+    kept = [a for a in attempts if _utc(a["created_at"]) >= cut]
+    ids = {a["id"] for a in kept}
+    return kept, [a for a in answers if a["attempt_id"] in ids]
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--v1-url", required=True, help="V1 database URL (read-only)")
     ap.add_argument("--kind", choices=("textbook", "exam"), default="textbook")
     ap.add_argument("--raw-dir", help="raw upstream exam.json tree (kind=exam)")
+    ap.add_argument("--match-users-by-username", action="store_true",
+                    help="map V1 users to v2 legacy users by username when ids differ")
+    ap.add_argument("--since", help="only attempts created at/after this UTC time"
+                    " (ISO, naive = UTC), e.g. when a V1 was rebuilt from a backup")
     ap.add_argument("--apply", action="store_true",
                     help="commit; default is a dry-run that rolls back")
     args = ap.parse_args(argv)
@@ -323,9 +356,13 @@ def main(argv: list[str] | None = None) -> int:
         ap.error("--raw-dir is required for --kind exam")
     from app.db.engine import get_engine
     attempts, answers, order, identities = read_v1(args.v1_url, args.kind)
+    if args.since:
+        attempts, answers = filter_since(attempts, answers, args.since)
     print(json.dumps(import_answers(
         get_engine(), attempts, answers, order, args.apply, kind=args.kind,
-        identities=identities, raw_dir=args.raw_dir),
+        identities=identities, raw_dir=args.raw_dir,
+        v1_usernames=(read_v1_usernames(args.v1_url)
+                      if args.match_users_by_username else None)),
         ensure_ascii=False, indent=2, default=str))
     return 0
 
