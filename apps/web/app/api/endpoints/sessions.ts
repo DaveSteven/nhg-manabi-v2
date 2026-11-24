@@ -44,6 +44,22 @@ export function createQuickSession(
                           "POST /api/quick-practice/sessions", p));
 }
 
+/**
+ * 历年试卷「练习本大题」: one ordinary `practice` session over every Unit of
+ * a 問題N layer, in paper order, fixed immediate feedback. Ordinary mode, so
+ * it replaces the single resumable practice (ADR-0016), never the quick slot.
+ */
+export function createLayerSession(
+  input: { units: { release_id: string; unit_id: string }[] },
+  signal?: AbortSignal,
+): Promise<PracticeSession> {
+  return apiFetch("/api/practice/sessions",
+    { method: "POST",
+      body: { feedback_mode: "immediate", units: input.units }, signal })
+    .then((p) => parseDto(CreateSessionResponseSchema,
+                          "POST /api/practice/sessions", p));
+}
+
 export function getCurrentSession(signal?: AbortSignal): Promise<PracticeSession> {
   return apiFetch("/api/practice/sessions/current", { signal })
     .then((p) => parseDto(PracticeSessionSchema, "GET /api/practice/sessions/current", p));

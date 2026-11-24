@@ -54,6 +54,19 @@ const outline = {
         },
       ],
     },
+    {
+      section_id: "sec-r", subject: "reading", position: 3, title: "読解",
+      layers: [
+        {
+          layer_id: "ly-r1", position: 1, question_type_id: "reading_short",
+          display_label: "問題13", instruction: null,
+          units: [
+            { unit_id: "u-r1", position: 1, kind: "passage", label: null,
+              question_type_id: "reading_short", question_count: 2 },
+          ],
+        },
+      ],
+    },
   ],
 };
 
@@ -130,21 +143,57 @@ describe("ExamOutline", () => {
     expect(screen.queryByText("返回试卷列表")).not.toBeInTheDocument();
   });
 
-  it("unit rows are whole-row buttons with count and chevron, no inner start button", async () => {
+  it("reading unit rows are whole-row buttons with count and chevron, no inner start button", async () => {
     const user = userEvent.setup();
     useOutlineHandler();
     renderDetail();
-    const toggle = await screen.findByRole("button", { name: /問題1/ });
+    await user.click(await screen.findByRole("tab", { name: /读解/ }));
+    const toggle = await screen.findByRole("button", { name: /問題13/ });
     expect(toggle).toHaveClass("capsule-card");
     await user.click(toggle);
     const rows = document.querySelectorAll("button.unit-row");
     expect(rows.length).toBeGreaterThan(0);
     rows.forEach((r) => expect(r).toHaveClass("capsule-card"));
-    // whole row is clickable (one button = the row itself); no nested action
-    // the row is the only button — no nested start action
     expect((rows[0] as HTMLElement).querySelectorAll("button")).toHaveLength(0);
-    expect(rows[0]).not.toHaveTextContent("5 题"); // count removed from unit-meta
     expect(screen.queryByText("反馈方式")).not.toBeInTheDocument();
+  });
+
+  it("vocabulary 問題N is one click: all its units in one practice session", async () => {
+    const user = userEvent.setup();
+    useOutlineHandler();
+    const created: Record<string, unknown>[] = [];
+    server.use(http.post(`*/api/practice/sessions`, async ({ request }) => {
+      created.push(await request.json() as Record<string, unknown>);
+      return HttpResponse.json({ ...createdSession, mode: "practice" },
+                               { status: 201 });
+    }));
+    renderDetail();
+    const layer = await screen.findByRole("button", { name: /問題1/ });
+    expect(layer).not.toHaveAttribute("aria-expanded"); // no unit list
+    await user.click(layer);
+    expect(created).toEqual([{
+      feedback_mode: "immediate",
+      units: [{ release_id: "r-uuid-1", unit_id: "u-v1" }],
+    }]);
+    expect(document.querySelector("button.unit-row")).toBeNull();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("grammar 問題N also starts the whole layer directly", async () => {
+    const user = userEvent.setup();
+    useOutlineHandler();
+    const created: Record<string, unknown>[] = [];
+    server.use(http.post(`*/api/practice/sessions`, async ({ request }) => {
+      created.push(await request.json() as Record<string, unknown>);
+      return HttpResponse.json({ ...createdSession, mode: "practice" },
+                               { status: 201 });
+    }));
+    renderDetail();
+    await user.click(await screen.findByRole("tab", { name: "文法" }));
+    await user.click(screen.getByRole("button", { name: /問題9/ }));
+    expect(created).toHaveLength(1);
+    expect(created[0]).toMatchObject({
+      units: [{ release_id: "r-uuid-1", unit_id: "u-g1" }] });
   });
 
   it("renders section tabs in server order and switches panels", async () => {
@@ -166,7 +215,7 @@ describe("ExamOutline", () => {
     expect(screen.getByRole("button", { name: /問題9/ })).toBeInTheDocument();
   });
 
-  it("clicking a unit row creates a quick_practice session directly", async () => {
+  it("clicking a reading unit row creates a quick_practice session directly", async () => {
     const user = userEvent.setup();
     useOutlineHandler();
     const created: Record<string, unknown>[] = [];
@@ -175,88 +224,48 @@ describe("ExamOutline", () => {
         created.push(await request.json() as Record<string, unknown>);
         return HttpResponse.json(createdSession, { status: 201 });
       }));
-
     renderDetail();
-    const toggle = await screen.findByRole("button", { name: /問題1/ });
-    await user.click(toggle); // expand layer
+    await user.click(await screen.findByRole("tab", { name: /读解/ }));
+    await user.click(await screen.findByRole("button", { name: /問題13/ }));
     await user.click(document.querySelector("button.unit-row")!);
-
-    // exactly one POST, one single unit, no start-confirmation round-trip
-    expect(created).toHaveLength(1);
-    expect(created[0]).toEqual({
-      release_id: "r-uuid-1",
-      unit_id: "u-v1",
-    });
-    // navigated to the practice page for the new session
-    expect(await screen.findByRole("heading", { name: "問題1-1" })).toBeInTheDocument();
-    // no active-session conflict dialog ever appears
+    expect(created).toEqual([{ release_id: "r-uuid-1", unit_id: "u-r1" }]);
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
-  it("starts a NEW quick session even when a session for the unit exists", async () => {
-    const user = userEvent.setup();
-    useOutlineHandler();
-    let created = 0;
-    server.use(http.post(`*/api/quick-practice/sessions`, () => {
-      created += 1;
-      return HttpResponse.json(createdSession, { status: 201 });
-    }));
-
-    renderDetail();
-    await user.click(await screen.findByRole("button", { name: /問題1/ }));
-    await user.click(document.querySelector("button.unit-row")!);
-    // no resume probe, no dialog: the click itself is the whole flow
-    expect(created).toBe(1);
-    expect(await screen.findByRole("heading", { name: "問題1-1" })).toBeInTheDocument();
-    expect(screen.queryByRole("dialog", { name: "继续旧练习？" }))
-      .not.toBeInTheDocument();
-  });
-
-  it("shows practice counts from the server and 已练习 X / Y 组 per layer", async () => {
+  it("shows 已练习 X/Y per layer and per-unit counts from the server", async () => {
     const user = userEvent.setup();
     useOutlineHandler();
     server.use(http.get(`*/api/exams/E-N2-2018-12/practice-status`, () =>
       HttpResponse.json({
         exam_id: "E-N2-2018-12",
         units: [{ unit_id: "u-v1", submitted_count: 2,
+                  last_submitted_at: "2026-11-17T00:00:00+00:00" },
+                { unit_id: "u-r1", submitted_count: 3,
                   last_submitted_at: "2026-11-17T00:00:00+00:00" }],
       })));
-
     renderDetail();
     const layerToggle = await screen.findByRole("button", { name: /問題1/ });
-    // Layer header: X counts distinct practiced units of THIS layer
-    await waitFor(() =>
-      expect(layerToggle).toHaveTextContent("已练习1/1"));
-    await user.click(layerToggle);
+    await waitFor(() => expect(layerToggle).toHaveTextContent("已练习1/1"));
+    await user.click(screen.getByRole("tab", { name: "文法" }));
+    expect(screen.getByRole("button", { name: /問題9/ }))
+      .toHaveTextContent("已练习0/1");
+    await user.click(screen.getByRole("tab", { name: /读解/ }));
+    await user.click(screen.getByRole("button", { name: /問題13/ }));
     const row = document.querySelector("button.unit-row")!;
-    expect(row).toHaveTextContent("已练习 2 次");
-    expect(row.querySelector(".unit-count")).toHaveTextContent("2");
-    expect(row).not.toHaveTextContent("题"); // question count removed
-
-    // a unit without history shows 未练习, and an unpracticed layer is 0/Y
-    await user.click(await screen.findByRole("tab", { name: "文法" }));
-    const gToggle = screen.getByRole("button", { name: /問題9/ });
-    expect(gToggle).toHaveTextContent("已练习0/1");
-    await user.click(gToggle);
-    expect(document.querySelector("button.unit-row")!)
-      .toHaveTextContent("未练习");
-    // the old pink checkmark state is gone
+    expect(row).toHaveTextContent("已练习 3 次");
     expect(screen.queryByText("✓")).not.toBeInTheDocument();
   });
 
-  it("surfaces creation errors without a dialog", async () => {
+  it("surfaces layer creation errors without a dialog", async () => {
     const user = userEvent.setup();
     useOutlineHandler();
-    server.use(http.post(`*/api/quick-practice/sessions`, () =>
+    server.use(http.post(`*/api/practice/sessions`, () =>
       HttpResponse.json({ detail: {
         code: "unit_not_available", message: "unit not available",
       } }, { status: 422 })));
-
     renderDetail();
     await user.click(await screen.findByRole("button", { name: /問題1/ }));
-    await user.click(document.querySelector("button.unit-row")!);
-    const alert = await screen.findByRole("alert");
-    expect(alert).toHaveTextContent("开始练习失败");
+    expect(await screen.findByRole("alert")).toHaveTextContent("开始练习失败");
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 });

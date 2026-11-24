@@ -1,7 +1,7 @@
 import { useMutation } from "@tanstack/react-query";
 import type { PracticeSession } from "../../api/dto/practice";
 import { ApiError } from "../../api/errors";
-import { createQuickSession, finishSession } from "../../api/endpoints/sessions";
+import { createLayerSession, createQuickSession, finishSession } from "../../api/endpoints/sessions";
 
 /**
  * Quick Practice start (quick-practice.md v2.0): click a unit → the
@@ -18,6 +18,17 @@ export function useQuickPracticeStart(
                      { release_id: string; unit_id: string }>({
     mutationFn: (input) => createQuickSession(input),
     retry: (failureCount, error) => failureCount < 1 && error.status === 409,
+    onSuccess: onStarted,
+  });
+}
+
+/** Start every Unit of one 問題N layer as a single ordinary practice. */
+export function useLayerPracticeStart(
+  onStarted: (session: PracticeSession) => void,
+) {
+  return useMutation<PracticeSession, ApiError,
+                     { units: { release_id: string; unit_id: string }[] }>({
+    mutationFn: (input) => createLayerSession(input),
     onSuccess: onStarted,
   });
 }

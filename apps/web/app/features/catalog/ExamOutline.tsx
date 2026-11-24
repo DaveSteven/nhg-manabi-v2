@@ -8,7 +8,7 @@ import { useMockAvailability } from "../mock/useMock";
 import { MockRecords } from "../mock/MockRecords";
 import { decorateSections, examTitle, subjectLabel } from "./viewModels";
 import { getExamPracticeStatus } from "../../api/endpoints/sessions";
-import { useQuickPracticeStart } from "../practice/useStartPractice";
+import { useLayerPracticeStart, useQuickPracticeStart } from "../practice/useStartPractice";
 
 /**
  * Quick Practice exam detail (quick-practice.md v2.0): whole-row clickable
@@ -41,6 +41,14 @@ export function ExamOutlineView({ outline }: { outline: ExamOutline }) {
   const counts = new Map(
     (status.data?.units ?? []).map((u) => [u.unit_id, u.submitted_count]),
   );
+
+  const startLayer = useLayerPracticeStart((session) => {
+    navigate(`/study/practice/${encodeURIComponent(session.id)}`);
+  });
+  const openLayer = useCallback((layer: OutlineLayer) => {
+    startLayer.mutate({ units: layer.units.map((u) => ({
+      release_id: outline.release_id, unit_id: u.unit_id })) });
+  }, [outline.release_id, startLayer]);
 
   // strict-mock entry only for papers with real phases/time limits (M10)
   const mock = useMockAvailability(outline.exam_id);
@@ -85,26 +93,33 @@ export function ExamOutlineView({ outline }: { outline: ExamOutline }) {
             <LayerBlock key={layer.layer_id} layer={layer}
                         counts={counts}
                         onOpen={openUnit}
-                        opening={start.isPending} />
+                        onOpenLayer={openLayer}
+                        // 文字词汇/文法: 点開問題N直接练习整个大题
+                        direct={section.subject === "vocabulary"
+                                || section.subject === "grammar"}
+                        opening={start.isPending || startLayer.isPending} />
           ))}
         </div>
       ) : null}
 
       <MockRecords examId={outline.exam_id} />
 
-      {start.error ? (
+      {start.error || startLayer.error ? (
         <p role="alert">
-          开始练习失败：{start.error.message}
+          开始练习失败：{(start.error ?? startLayer.error)?.message}
         </p>
       ) : null}
     </section>
   );
 }
 
-function LayerBlock({ layer, counts, onOpen, opening }: {
+function LayerBlock({ layer, counts, onOpen, onOpenLayer, direct, opening }: {
   layer: OutlineLayer;
   counts: Map<string, number>;
   onOpen: (unit: OutlineUnit) => void;
+  onOpenLayer: (layer: OutlineLayer) => void;
+  /** true: the whole 問題N row starts practice of all its Units at once. */
+  direct: boolean;
   opening: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
@@ -113,6 +128,22 @@ function LayerBlock({ layer, counts, onOpen, opening }: {
   // same unit do not increase it. Y: all units of the layer.
   const practiced = layer.units.filter(
     (u) => (counts.get(u.unit_id) ?? 0) > 0).length;
+  if (direct) {
+    return (
+      <div className="layer-block">
+        <button type="button" className="layer-toggle capsule-card"
+                disabled={opening || layer.units.length === 0}
+                aria-label={`练习 ${label}（全部）`}
+                onClick={() => onOpenLayer(layer)}>
+          <span className="layer-chevron" aria-hidden="true">▸</span>
+          <span className="layer-label">{label}</span>
+          <span className="layer-meta">
+            已练习<span className="layer-progress">{practiced}/{layer.units.length}</span>
+          </span>
+        </button>
+      </div>
+    );
+  }
   return (
     <div className="layer-block">
       <button type="button" className="layer-toggle capsule-card"
