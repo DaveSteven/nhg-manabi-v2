@@ -9,51 +9,58 @@ beforeEach(() => {
 });
 
 describe("useReadingScale", () => {
-  it("defaults to standard and does not touch the root variable value", () => {
+  it("defaults to step 0 (scale 1)", () => {
     const { result } = renderHook(() => useReadingScale());
-    expect(result.current.size).toBe("standard");
+    expect(result.current.step).toBe(0);
     expect(result.current.scale).toBe(1);
   });
 
   it("persists the choice and applies --reading-scale on <html>", () => {
     const { result } = renderHook(() => useReadingScale({ apply: true }));
-    act(() => result.current.setSize("large"));
-    expect(window.localStorage.getItem("jlptgo.readingSize")).toBe("large");
+    act(() => result.current.setStep(3));
+    expect(window.localStorage.getItem("jlptgo.readingSize")).toBe("3");
     expect(document.documentElement.style.getPropertyValue("--reading-scale"))
-      .toBe(String(READING_SCALES.large));
+      .toBe(String(READING_SCALES[3]));
   });
 
-  it("ignores unknown stored values", () => {
+  it("ignores unknown stored values and maps legacy names", () => {
     window.localStorage.setItem("jlptgo.readingSize", "huge!");
-    const { result } = renderHook(() => useReadingScale());
-    expect(result.current.size).toBe("standard");
+    expect(renderHook(() => useReadingScale()).result.current.step).toBe(0);
+    window.localStorage.setItem("jlptgo.readingSize", "large");
+    expect(renderHook(() => useReadingScale()).result.current.step).toBe(2);
   });
 
   it("keeps two hook instances in sync", () => {
     const a = renderHook(() => useReadingScale());
     const b = renderHook(() => useReadingScale());
-    act(() => a.result.current.setSize("xlarge"));
-    expect(b.result.current.size).toBe("xlarge");
+    act(() => a.result.current.setStep(4));
+    expect(b.result.current.step).toBe(4);
   });
 });
 
 describe("ReadingSizeControl", () => {
-  it("full variant exposes three radios and selects one", () => {
+  it("opens a dialog with a slider; moving it saves and shows the label", () => {
     render(<ReadingSizeControl />);
-    expect(screen.getAllByRole("radio")).toHaveLength(3);
-    fireEvent.click(screen.getByRole("radio", { name: "大" }));
-    expect(screen.getByRole("radio", { name: "大" })).toBeChecked();
-    expect(window.localStorage.getItem("jlptgo.readingSize")).toBe("large");
+    expect(screen.queryByRole("dialog")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "字号设置" }));
+    expect(screen.getByRole("dialog", { name: "字号设置" })).toBeInTheDocument();
+    expect(screen.getByLabelText("预览")).toBeInTheDocument();
+    fireEvent.change(screen.getByRole("slider", { name: "题目字号" }),
+                     { target: { value: "2" } });
+    expect(window.localStorage.getItem("jlptgo.readingSize")).toBe("2");
+    expect(screen.getByRole("slider")).toHaveAttribute("aria-valuetext", "大");
   });
 
-  it("compact variant cycles standard → large → xlarge → standard", () => {
+  it("reset returns to standard; Escape and 完成 close", () => {
+    window.localStorage.setItem("jlptgo.readingSize", "4");
     render(<ReadingSizeControl compact />);
-    const btn = screen.getByRole("button", { name: /题目字号/ });
-    fireEvent.click(btn);
-    expect(window.localStorage.getItem("jlptgo.readingSize")).toBe("large");
-    fireEvent.click(btn);
-    expect(window.localStorage.getItem("jlptgo.readingSize")).toBe("xlarge");
-    fireEvent.click(btn);
-    expect(window.localStorage.getItem("jlptgo.readingSize")).toBe("standard");
+    fireEvent.click(screen.getByRole("button", { name: "字号" }));
+    fireEvent.click(screen.getByRole("button", { name: "恢复标准" }));
+    expect(window.localStorage.getItem("jlptgo.readingSize")).toBe("0");
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(screen.queryByRole("dialog")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "字号" }));
+    fireEvent.click(screen.getByRole("button", { name: "完成" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 });

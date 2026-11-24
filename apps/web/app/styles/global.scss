@@ -350,7 +350,7 @@ button {
 
 .reading-size-btn {
   appearance: none;
-  padding: 2px 10px;
+  padding: 4px 14px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-pill);
   background: transparent;
@@ -362,35 +362,57 @@ button {
   &:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
 }
 
-/* three "A" glyphs of growing size; the active one is the primary tint */
-.reading-size-group {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  padding: 3px;
-  border-radius: var(--radius-pill);
-  background: var(--color-surface-subtle);
-  label {
-    position: relative;
-    display: grid;
-    place-items: center;
-    width: 36px;
-    height: 32px;
-    border-radius: var(--radius-pill);
-    color: var(--color-text-secondary);
-    font-family: var(--font-sans);
-    font-weight: 600;
-    line-height: 1;
-    cursor: pointer;
-    transition: background var(--motion-fast), color var(--motion-fast);
-    &:hover { color: var(--color-ink); }
-    &.is-on { background: var(--color-surface); color: var(--color-primary); box-shadow: 0 1px 4px rgba(43, 43, 51, 0.14); }
-    &:has(input:focus-visible) { outline: 2px solid var(--color-primary); outline-offset: 1px; }
+.reading-size-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: var(--space-4);
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.reading-size-dialog {
+  width: min(480px, 100%);
+  max-height: calc(100dvh - 2 * var(--space-4));
+  overflow-y: auto;
+  padding: var(--space-4) var(--space-6);
+  h2 { font-size: var(--text-h4); margin: 0 0 var(--space-1); }
+  > .text-aux { margin: 0 0 var(--space-3); }
+  @media (max-width: 720px) {
+    align-self: end;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom, 0px));
   }
-  .glyph-standard { font-size: 13px; }
-  .glyph-large { font-size: 17px; }
-  .glyph-xlarge { font-size: 22px; }
-  input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+}
+
+.reading-size-preview {
+  min-height: 7.5em;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-surface-subtle);
+  font-size: var(--text-question);
+  p { margin: 0 0 var(--space-2); }
+  .preview-option { color: var(--color-text-secondary); margin: 0; }
+}
+
+.reading-size-slider {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: var(--space-4) 0 var(--space-1);
+  input[type="range"] { flex: 1; accent-color: var(--color-primary); height: 28px; cursor: pointer; }
+  .end { color: var(--color-text-secondary); font-weight: 600; line-height: 1; }
+  .end-small { font-size: 13px; }
+  .end-large { font-size: 24px; }
+}
+
+.reading-size-current {
+  margin: 0 0 var(--space-4);
+  text-align: center;
+  font-size: var(--text-aux);
+  color: var(--color-text-secondary);
 }
 
 .practice-progress-row {
