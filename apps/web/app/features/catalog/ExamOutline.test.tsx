@@ -121,6 +121,8 @@ function useOutlineHandler() {
 }
 
 describe("ExamOutline", () => {
+  afterEach(() => sessionStorage.clear());
+
   function renderDetail() {
     return renderRoutes(
       [{ path: "study", Component: StudyLayout, children: [
@@ -157,6 +159,18 @@ describe("ExamOutline", () => {
     rows.forEach((r) => expect(r).toHaveClass("capsule-card"));
     expect((rows[0] as HTMLElement).querySelectorAll("button")).toHaveLength(0);
     expect(screen.queryByText("反馈方式")).not.toBeInTheDocument();
+  });
+
+  it("remembers the selected subject tab when the page is reopened", async () => {
+    const user = userEvent.setup();
+    useOutlineHandler();
+    const first = renderDetail();
+    await user.click(await screen.findByRole("tab", { name: "文法" }));
+    first.unmount();
+    renderDetail();
+    expect(await screen.findByRole("tab", { name: "文法" }))
+      .toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("button", { name: /問題9/ })).toBeInTheDocument();
   });
 
   it("vocabulary 問題N is one click: all its units in one practice session", async () => {

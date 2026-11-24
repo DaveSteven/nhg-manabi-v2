@@ -1,4 +1,5 @@
 import { useCallback, useState } from "react";
+import { readTabSubject, saveTabSubject } from "./tabMemory";
 import { useNavigate } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import type { ExamOutline, OutlineLayer, OutlineUnit } from "../../api/dto/exam";
@@ -29,7 +30,9 @@ function PracticeCount({ count }: { count: number | undefined }) {
 
 export function ExamOutlineView({ outline }: { outline: ExamOutline }) {
   const navigate = useNavigate();
-  const [sectionIdx, setSectionIdx] = useState(0);
+  // selected tab is remembered by subject (not index) across visits
+  const [subjectKey, setSubjectKey] = useState<string | null>(
+    () => readTabSubject(outline.exam_id));
   const start = useQuickPracticeStart((session) => {
     navigate(`/study/practice/${encodeURIComponent(session.id)}`);
   });
@@ -54,7 +57,9 @@ export function ExamOutlineView({ outline }: { outline: ExamOutline }) {
   const mock = useMockAvailability(outline.exam_id);
 
   const sections = decorateSections(outline);
-  const section = sections[Math.min(sectionIdx, Math.max(sections.length - 1, 0))];
+  const found = sections.findIndex((s) => s.subject === subjectKey);
+  const sectionIdx = found >= 0 ? found : 0; // unknown/missing subject → first
+  const section = sections[sectionIdx];
 
   const openUnit = useCallback((unit: OutlineUnit) => {
     start.mutate({ release_id: outline.release_id, unit_id: unit.unit_id });
@@ -80,7 +85,10 @@ export function ExamOutlineView({ outline }: { outline: ExamOutline }) {
                   id={`tab-${s.section_id}`}
                   aria-selected={i === sectionIdx}
                   aria-controls={`panel-${s.section_id}`}
-                  onClick={() => setSectionIdx(i)}>
+                  onClick={() => {
+                    setSubjectKey(s.subject);
+                    saveTabSubject(outline.exam_id, s.subject);
+                  }}>
             {subjectLabel(s.subject)}
           </button>
         ))}

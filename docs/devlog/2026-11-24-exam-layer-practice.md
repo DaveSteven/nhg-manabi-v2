@@ -27,3 +27,7 @@
 ## 追加：胶囊显示题型名（同日）
 - 试卷详情接口 layer 新增 `question_type_label`（`question_types.label_zh` 左连接，无 Schema 变更）；文字词汇/文法胶囊显示「問題1 汉字读音 · 共 5 题 · 已练习 X/Y」。
 - 测试：backend `-k "outline or content or catalog"` 16 passed（真实 PG）；catalog web 28 passed；tsc 通过。api/web 容器已重建；浏览器未核对。
+
+## 追加：学科 Tab 记忆（同日）
+- 试卷详情的学科 Tab 选择按「科目」存入 sessionStorage（每份试卷一条，另记最近使用科目，新试卷沿用）；从练习返回、刷新、重进都停在原科目。仅当前浏览器标签页有效，无后端改动。
+- 测试：catalog 29 passed（新增重进恢复用例）；tsc 通过；浏览器未核对。大题展开状态未做缓存。
