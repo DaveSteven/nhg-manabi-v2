@@ -46,6 +46,11 @@ def new_doc() -> Document:
     pf = doc.styles["Normal"].paragraph_format
     pf.line_spacing = Pt(15)
     pf.space_before = pf.space_after = Pt(0)
+    # Headings inherit the exact 15pt line height and would be clipped: use single spacing
+    for name in ("Heading 1", "Heading 2", "Heading 3", "Title"):
+        h = doc.styles[name].paragraph_format
+        h.line_spacing = 1.2
+        h.space_before, h.space_after = Pt(10), Pt(4)
     return doc
 
 
