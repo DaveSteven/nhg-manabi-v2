@@ -77,6 +77,8 @@ describe("AnswerDistributionView", () => {
     render();
     await screen.findByText(/全部题型/);
     await user.click(screen.getByRole("tab", { name: "N2" }));
+    // subject headings separate the groups so listening etc. are identifiable
+    expect(screen.getByText("文字词汇")).toBeInTheDocument();
     const row = screen.getByRole("row", { name: /汉字读音/ });
     expect(row).toHaveTextContent("样本少"); // 4 questions < 30
     expect(screen.queryByRole("region", { name: "汉字读音 详情" })).not.toBeInTheDocument();

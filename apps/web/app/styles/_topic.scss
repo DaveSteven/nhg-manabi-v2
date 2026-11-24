@@ -201,3 +201,5 @@
   .dist-heat-row { grid-template-columns: minmax(6em, 2fr) repeat(4, 1fr) 4.5em; font-size: 13px; }
 }
 .dist-legend-note { margin-left: var(--space-4); }
+.dist-heat-group { margin-top: var(--space-3); padding: var(--space-2) var(--space-2) var(--space-1);
+  font-weight: 600; color: var(--color-primary-hover); border-bottom: 1px solid var(--color-border); }

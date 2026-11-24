@@ -6,6 +6,7 @@ import { describeLoadError, type ApiError } from "../../api/errors";
 import type { AnswerDistribution } from "../../api/dto/answerDistribution";
 import { getAnswerDistribution } from "../../api/endpoints/answerDistribution";
 import { useLevel, JLPT_LEVELS } from "../auth/useLevel";
+import { TOPIC_SUBJECTS } from "../topic/topicModel";
 import { ALL, SMALL_SAMPLE, formatPercent, summarize, tint } from "./distributionModel";
 
 /**
@@ -91,12 +92,19 @@ export function AnswerDistributionView() {
                   ))}
                   <span role="columnheader">题数</span>
                 </div>
-                {rows.map(({ t, s }) => {
+                {rows.map(({ t, s }, i) => {
                   const cells = tint(s);
+                  // a subject heading above its first type (文字词汇/文法/读解/听力)
+                  const newSubject = i === 0 || rows[i - 1]!.t.subject !== t.subject;
                   const isOpen = open === t.question_type_id;
                   const small = s.total < SMALL_SAMPLE;
                   return (
                     <Fragment key={t.question_type_id}>
+                      {newSubject ? (
+                        <div className="dist-heat-group" role="presentation">
+                          {TOPIC_SUBJECTS.find((x) => x.key === t.subject)?.label ?? t.subject}
+                        </div>
+                      ) : null}
                       <button type="button" role="row"
                               className={`dist-heat-row dist-heat-item${small ? " is-small" : ""}`}
                               aria-expanded={isOpen}
