@@ -155,8 +155,11 @@ def import_answers(engine: Engine, attempts: list[dict], answers: list[dict],
             " WHERE legacy_v1_user_id IS NOT NULL"))}
         marker = ("config -> 'supplementary' ->> 'v1_attempt_id'" if kind == "textbook"
                   else "config -> 'imported' ->> 'attempt_id'")
-        done = {int(r[0]) for r in conn.execute(text(
-            f"SELECT {marker} FROM study_sessions WHERE {marker} IS NOT NULL"))}
+        # (id, created_at): a V1 restored from an older backup hands out the
+        # same attempt ids again for different attempts, so id alone is not a key
+        done = {(int(r[0]), r[1]) for r in conn.execute(text(
+            f"SELECT {marker}, created_at FROM study_sessions"
+            f" WHERE {marker} IS NOT NULL"))}
         if mapped is None:
             mapped = (textbook_question_map(conn) if kind == "textbook"
                       else exam_question_map(conn, identities or {}, raw_dir,
@@ -164,7 +167,7 @@ def import_answers(engine: Engine, attempts: list[dict], answers: list[dict],
         info = _load_question_info(conn, mapped, {a["question_id"] for a in answers})
         touched: set[uuid.UUID] = set()
         for at in attempts:
-            if at["id"] in done:
+            if (at["id"], _utc(at["created_at"])) in done:
                 report["already_imported"] += 1
                 continue
             user_id = legacy_users.get(str(at["user_id"]))

@@ -123,3 +123,18 @@ def test_imported_lessons_show_progress_but_not_in_my_learning(pg_engine, v1_use
     assert client.get("/api/me/learning/history", headers=auth(USER_A)).json()["total"] == 0
     ov = client.get("/api/me/learning/overview?level=N3", headers=auth(USER_A)).json()
     assert ov["totals"]["completed_sessions"] == 0
+
+
+@requires_db
+def test_reused_v1_attempt_id_with_other_timestamp_is_a_new_attempt(pg_engine, v1_user):
+    """V1 was restored from an older backup, so its attempt ids were handed
+    out again for different attempts. Dedupe by (id, created_at), not id."""
+    from app.v1_answer_import import import_answers
+    run(pg_engine, apply=True)                       # attempts 1, 2, 4 imported
+    reused = [dict(id=1, user_id=V1_USER, created_at=T.replace(day=25),
+                   duration_seconds=None)]          # id 1 again, a different day
+    more = [ans(20, 1, 1, 101, 101, 1, 7)]
+    rep = import_answers(pg_engine, reused, more, ORDER, apply=True)
+    assert rep["sessions_imported"] == 1 and rep["already_imported"] == 0
+    again = import_answers(pg_engine, reused, more, ORDER, apply=True)
+    assert again["sessions_imported"] == 0 and again["already_imported"] == 1
