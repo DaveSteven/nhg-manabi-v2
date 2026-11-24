@@ -162,3 +162,22 @@
   align-items: center;
   gap: var(--space-2) var(--space-4);
 }
+
+/* 历年答案分布 */
+.dist-filter { display: flex; align-items: center; gap: var(--space-3); margin: var(--space-4) 0; }
+.dist-card { display: grid; gap: var(--space-3); margin-bottom: var(--space-4); }
+.dist-total { font-weight: 600; margin: 0; }
+.dist-bars { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-3); }
+.dist-bars li { display: grid; grid-template-columns: 4.5em 1fr 9em; align-items: center; gap: var(--space-3); }
+.dist-track { height: 12px; border-radius: 999px; background: var(--color-surface-subtle); overflow: hidden; }
+.dist-fill { display: block; height: 100%; border-radius: 999px; background: var(--color-primary); }
+.dist-value { font-variant-numeric: tabular-nums; text-align: right; }
+.dist-count { color: var(--color-text-muted); font-size: 13px; }
+.dist-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.dist-table th, .dist-table td { padding: var(--space-2) var(--space-3); text-align: right; }
+.dist-table th:first-child, .dist-table tbody th { text-align: left; font-weight: 500; }
+.dist-table thead th { color: var(--color-text-muted); font-weight: 500; font-size: 13px; }
+.dist-table tbody tr + tr { border-top: 1px solid var(--color-border); }
+.dist-link { background: none; border: none; padding: 0; font: inherit; color: inherit; cursor: pointer; }
+.dist-link:hover { color: var(--color-primary); }
+@media (max-width: 767px) { .dist-bars li { grid-template-columns: 4em 1fr 7.5em; } }

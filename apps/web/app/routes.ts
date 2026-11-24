@@ -18,6 +18,7 @@ export default [
     route("mock/:sessionId/results", "routes/study.mock.$sessionId.results.tsx"),
     route("learning", "routes/study.learning.tsx"),
     route("practice", "routes/study.practice._index.tsx"),
+    route("answer-distribution", "routes/study.answer-distribution.tsx"),
     route("supplementary", "routes/study.supplementary.tsx"),
     route("practice/:sessionId", "routes/study.practice.$sessionId.tsx"),
     route(

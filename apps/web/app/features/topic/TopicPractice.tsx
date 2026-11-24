@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router";
+import { Link, useNavigate, useSearchParams } from "react-router";
 import type { TopicSelection, TopicType } from "../../api/dto/topic";
 import { describeLoadError } from "../../api/errors";
 import type { FeedbackMode } from "../../api/dto/practice";
@@ -100,6 +100,10 @@ export function TopicPracticeView() {
       <h1>专项练习</h1>
       <p className="text-aux">
         选择题型和题数，优先抽取没做过的题，兼顾需要复习的题。
+      </p>
+
+      <p className="text-aux">
+        <Link to="/study/answer-distribution">历年答案分布：各选项作为正确答案的比例 ›</Link>
       </p>
 
       {level === null ? (
