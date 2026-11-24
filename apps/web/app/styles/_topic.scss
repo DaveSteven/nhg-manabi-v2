@@ -175,14 +175,16 @@
 .dist-value { font-variant-numeric: tabular-nums; text-align: right; }
 .dist-count { color: var(--color-text-muted); font-size: 13px; }
 .dist-legend { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin: 0; }
-.dist-swatch { width: 12px; height: 12px; border-radius: 3px; display: inline-block; margin-left: var(--space-2); }
+.dist-swatch { width: 12px; height: 12px; border-radius: 3px; display: inline-block; margin: 0 calc(-1 * var(--space-1)) 0 var(--space-2); }
+.dist-swatch + .dist-swatch { margin-left: var(--space-4); }
 .dist-swatch.is-high { background: rgba(185, 73, 104, 0.6); }
 .dist-swatch.is-low { background: rgba(88, 110, 140, 0.45); }
 .dist-heat { display: grid; font-variant-numeric: tabular-nums; }
 .dist-heat-row { display: grid; grid-template-columns: minmax(8em, 2fr) repeat(4, 1fr) 6em;
   align-items: center; gap: var(--space-2); padding: var(--space-1) var(--space-2);
   background: none; border: none; font: inherit; color: inherit; text-align: right; width: 100%; }
-.dist-heat-head { color: var(--color-text-muted); font-size: 13px; padding-bottom: var(--space-2); }
+.dist-heat-head { color: var(--color-text-muted); font-size: 13px; padding-bottom: var(--space-2); text-align: center; }
+.dist-heat-head > span:last-child { text-align: right; }
 .dist-heat-head > span:first-child, .dist-heat-name { text-align: left; }
 .dist-heat-item { cursor: pointer; border-radius: var(--radius-sm); }
 .dist-heat-item:hover { box-shadow: inset 0 0 0 1px var(--color-primary); }
@@ -198,3 +200,4 @@
   .dist-bars li { grid-template-columns: 4em 1fr 7.5em; }
   .dist-heat-row { grid-template-columns: minmax(6em, 2fr) repeat(4, 1fr) 4.5em; font-size: 13px; }
 }
+.dist-legend-note { margin-left: var(--space-4); }

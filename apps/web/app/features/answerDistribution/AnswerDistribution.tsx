@@ -81,7 +81,7 @@ export function AnswerDistributionView() {
               <p className="text-aux dist-legend">
                 <span className="dist-swatch is-high" aria-hidden="true" />明显偏高
                 <span className="dist-swatch is-low" aria-hidden="true" />明显偏低
-                无色＝与平均无明显差异；样本不足 {SMALL_SAMPLE} 题不着色。点题型查看详情。
+                <span className="dist-legend-note">无色＝与平均无明显差异；样本不足 {SMALL_SAMPLE} 题不着色。点题型查看详情。</span>
               </p>
               <div className="dist-heat" role="table" aria-label="题型分布热力图">
                 <div className="dist-heat-row dist-heat-head" role="row">
