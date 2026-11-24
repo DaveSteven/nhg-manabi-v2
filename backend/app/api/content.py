@@ -166,9 +166,11 @@ def _load_exam_outline(conn, exam_id: str, with_units: bool) -> dict:
         "SELECT section_id, subject, position, title FROM release_sections"
         " WHERE release_id = :r ORDER BY position"), {"r": release_id}).mappings().all()
     layers = conn.execute(text(
-        "SELECT section_id, layer_id, question_type_id, position,"
-        " display_label, instruction FROM release_layers"
-        " WHERE release_id = :r ORDER BY section_id, position"),
+        "SELECT l.section_id, l.layer_id, l.question_type_id, l.position,"
+        " l.display_label, l.instruction, qt.label_zh AS type_label_zh"
+        " FROM release_layers l"
+        " LEFT JOIN question_types qt ON qt.id = l.question_type_id"
+        " WHERE l.release_id = :r ORDER BY l.section_id, l.position"),
         {"r": release_id}).mappings().all()
     units_by_layer: dict[str, list] = {}
     unit_rows = conn.execute(text(
@@ -192,6 +194,7 @@ def _load_exam_outline(conn, exam_id: str, with_units: bool) -> dict:
             "layer_id": l["layer_id"], "position": l["position"],
             "question_type_id": l["question_type_id"],
             "display_label": l["display_label"], "instruction": l["instruction"],
+            "question_type_label": l["type_label_zh"],
         }
         if with_units:
             entry["units"] = units_by_layer.get(l["layer_id"], [])

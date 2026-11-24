@@ -23,3 +23,7 @@
 - 直达的大题胶囊去掉 ▸（展开暗示），右侧改为与单题行一致的 › ；meta 显示「共 N 题 · 已练习 X/Y」（N 为该大题全部题数）。读解/听力仍为 ▸ 展开。
 - 测试：catalog 28 passed，tsc 通过；web 容器已重建；未做浏览器视觉核对。
 - 未做：误触确认（需改 ADR-0016 的「无冲突弹窗」，待用户决定）、结果页回到该大题。
+
+## 追加：胶囊显示题型名（同日）
+- 试卷详情接口 layer 新增 `question_type_label`（`question_types.label_zh` 左连接，无 Schema 变更）；文字词汇/文法胶囊显示「問題1 汉字读音 · 共 5 题 · 已练习 X/Y」。
+- 测试：backend `-k "outline or content or catalog"` 16 passed（真实 PG）；catalog web 28 passed；tsc 通过。api/web 容器已重建；浏览器未核对。

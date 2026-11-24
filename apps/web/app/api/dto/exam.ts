@@ -40,6 +40,8 @@ export const OutlineLayerSchema = z.strictObject({
   layer_id: z.string(),
   position: z.number().int(),
   question_type_id: z.string(),
+  /** question_types.label_zh, e.g. 汉字读音 (absent on older servers). */
+  question_type_label: z.string().nullable().optional(),
   display_label: z.string().nullable(),
   instruction: z.unknown().nullable(),
   units: z.array(OutlineUnitSchema),

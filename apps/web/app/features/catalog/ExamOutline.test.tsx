@@ -23,6 +23,7 @@ const outline = {
         {
           layer_id: "ly-v1", position: 1,
           question_type_id: "vocabulary_kanji_reading",
+          question_type_label: "汉字读音",
           display_label: "問題1", instruction: null,
           units: [
             { unit_id: "u-v1", position: 1, kind: "set", label: null,
@@ -170,6 +171,7 @@ describe("ExamOutline", () => {
     renderDetail();
     const layer = await screen.findByRole("button", { name: /問題1/ });
     expect(layer).not.toHaveAttribute("aria-expanded"); // no unit list
+    expect(layer).toHaveTextContent("問題1汉字读音"); // type name from the DB
     expect(layer).toHaveTextContent("共 5 题"); // size known before clicking
     expect(layer.querySelector(".unit-chevron")).not.toBeNull(); // › = go
     expect(layer.querySelector(".layer-chevron")).toBeNull(); // not ▸ expand

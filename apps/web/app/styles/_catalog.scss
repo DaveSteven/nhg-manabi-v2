@@ -565,3 +565,12 @@
 /* direct-start layer (文字词汇/文法): meta then › like a unit row */
 .layer-toggle > .layer-meta + .unit-chevron { margin-left: var(--space-3); }
 .layer-toggle:hover .unit-chevron { color: inherit; }
+
+/* question-type name next to 問題N (from question_types.label_zh) */
+.layer-type {
+  margin-left: var(--space-3);
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--color-text-muted);
+}
+.layer-toggle:hover .layer-type { color: inherit; }

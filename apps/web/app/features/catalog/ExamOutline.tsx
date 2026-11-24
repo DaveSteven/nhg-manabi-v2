@@ -134,9 +134,12 @@ function LayerBlock({ layer, counts, onOpen, onOpenLayer, direct, opening }: {
       <div className="layer-block">
         <button type="button" className="layer-toggle capsule-card"
                 disabled={opening || layer.units.length === 0}
-                aria-label={`练习 ${label}（共 ${total} 题）`}
+                aria-label={`练习 ${label}${layer.question_type_label ? ` ${layer.question_type_label}` : ""}（共 ${total} 题）`}
                 onClick={() => onOpenLayer(layer)}>
           <span className="layer-label">{label}</span>
+          {layer.question_type_label ? (
+            <span className="layer-type">{layer.question_type_label}</span>
+          ) : null}
           <span className="layer-meta">
             共 {total} 题 · 已练习
             <span className="layer-progress">{practiced}/{layer.units.length}</span>
