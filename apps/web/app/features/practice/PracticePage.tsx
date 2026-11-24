@@ -269,10 +269,12 @@ function StepPracticePage({ sessionId }: { sessionId: string }) {
             {!isQuick && unitSubmitted
               ? <span className="unit-locked">（已提交锁定）</span> : null}
           </h1>
-          <p className="text-aux">
-            {!isQuick ? `第 ${currentIdx + 1} / ${units.length} 题` : null}
-            {" "}<ReadingSizeControl compact />
-          </p>
+          <div className="practice-progress-row">
+            <p className="text-aux">
+              {!isQuick ? `第 ${currentIdx + 1} / ${units.length} 题` : null}
+            </p>
+            <ReadingSizeControl />
+          </div>
         </header>
 
         {units.length > 1 ? (
