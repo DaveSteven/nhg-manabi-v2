@@ -75,9 +75,22 @@ class PracticeSessionCreate(BaseModel):
         return v
 
 
+# True when the session's user formally submitted this unit (any release of
+# the same exam) in ANOTHER practice/quick session. Mock sessions never
+# count (strict-mock content stays under its own rules). Expects the outer
+# query to alias session units as `su` / releases as `r` and bind :u.
+_PREVIOUSLY_PRACTICED_SQL = (
+    "EXISTS (SELECT 1 FROM study_session_units p"
+    " JOIN study_sessions ps ON ps.id = p.session_id"
+    " JOIN exam_releases pr ON pr.id = p.release_id"
+    " WHERE ps.user_id = :u AND ps.mode IN ('practice', 'quick_practice')"
+    " AND p.state = 'submitted' AND p.unit_id = su.unit_id"
+    " AND pr.exam_id = r.exam_id AND p.id <> su.id)")
+
+
 def _session_payload(conn, session_id: uuid.UUID) -> dict | None:
     head = conn.execute(text(
-        "SELECT id, mode, feedback_mode, state, config, version,"
+        "SELECT id, user_id, mode, feedback_mode, state, config, version,"
         " created_at, ended_at FROM study_sessions WHERE id = :s"),
         {"s": session_id}).mappings().first()
     if head is None:
@@ -86,11 +99,12 @@ def _session_payload(conn, session_id: uuid.UUID) -> dict | None:
     # session pinned to an old release still knows which exam it belongs to
     units = conn.execute(text(
         "SELECT su.id, su.release_id, su.unit_id, su.position, su.state,"
-        " su.submitted_at, r.exam_id"
+        " su.submitted_at, r.exam_id,"
+        " (" + _PREVIOUSLY_PRACTICED_SQL + ") AS previously_practiced"
         " FROM study_session_units su"
         " JOIN exam_releases r ON r.id = su.release_id"
         " WHERE su.session_id = :s ORDER BY su.position"),
-        {"s": session_id}).mappings().all()
+        {"s": session_id, "u": head["user_id"]}).mappings().all()
     return {
         "id": str(head["id"]), "mode": head["mode"],
         "feedback_mode": head["feedback_mode"], "state": head["state"],
@@ -102,6 +116,7 @@ def _session_payload(conn, session_id: uuid.UUID) -> dict | None:
             "id": str(u["id"]), "release_id": str(u["release_id"]),
             "unit_id": u["unit_id"], "position": u["position"],
             "exam_id": u["exam_id"], "state": u["state"],
+            "previously_practiced": u["previously_practiced"],
             "submitted_at": (u["submitted_at"].isoformat()
                              if u["submitted_at"] else None),
         } for u in units],
@@ -808,6 +823,24 @@ def _feedback_gate(unit: dict) -> None:
                                " the session ends"})
 
 
+def _transcript_gate(conn, unit: dict, user_id: uuid.UUID) -> None:
+    """Transcript reveal: the feedback gate, OR the caller already formally
+    submitted this unit in an earlier practice/quick session (ADR-0035).
+    Only the transcript is opened this way; answers/explanations keep
+    using _feedback_gate."""
+    try:
+        _feedback_gate(unit)
+    except HTTPException:
+        seen = conn.execute(text(
+            "SELECT " + _PREVIOUSLY_PRACTICED_SQL
+            + " FROM study_session_units su"
+            " JOIN exam_releases r ON r.id = su.release_id"
+            " WHERE su.id = :sid"),
+            {"sid": unit["id"], "u": user_id}).scalar()
+        if not seen:
+            raise
+
+
 @router.get("/api/practice/sessions/{session_id}/units/{session_unit_id}/feedback")
 def get_unit_feedback(
     session_id: uuid.UUID,
@@ -847,7 +880,7 @@ def get_unit_transcript(
         unit = _load_session_unit(conn, session_id, session_unit_id, user_id)
         if unit is None:
             raise HTTPException(status_code=404, detail="session unit not found")
-        _feedback_gate(unit)
+        _transcript_gate(conn, unit, user_id)
         body = _build_unit_transcript(conn, unit["release_id"], unit["unit_id"])
     return {
         "session_unit_id": str(session_unit_id),

@@ -24,6 +24,9 @@ export const SessionUnitSchema = z.strictObject({
   position: z.number().int(),
   state: z.enum(["pending", "submitted"]),
   submitted_at: z.string().nullable(),
+  /** The caller formally submitted this unit in an earlier practice session
+   *  (ADR-0035): its listening transcript is open even before submitting. */
+  previously_practiced: z.boolean().default(false),
 });
 export type SessionUnit = z.infer<typeof SessionUnitSchema>;
 

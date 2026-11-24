@@ -190,13 +190,12 @@ def test_transcript_pairs_zh_translation_by_paragraph_order(
     assert tr["cues"][0]["children"][0]["text"] == "女：不好意思……"
 
     # Before the gate opens, the translation is equally sealed (same 409).
-    client.post(f"/api/practice/sessions/{session['id']}/finish",
-                headers=auth(USER_A))  # free the active-session slot
-    session2 = create_session(client, USER_A, unit_with_transcript,
+    # (A fresh user: USER_A already practiced this unit, which unlocks it.)
+    session2 = create_session(client, USER_B, unit_with_transcript,
                               [CLOZE_UNIT], feedback="end")
     suid2 = unit_id_map(session2)[CLOZE_UNIT]
     assert client.get(transcript_path(session2, suid2),
-                      headers=auth(USER_A)).status_code == 409
+                      headers=auth(USER_B)).status_code == 409
 
 
 @requires_db
@@ -274,3 +273,49 @@ def test_public_unit_payload_never_carries_cues(pg_engine,
     assert r.status_code == 200
     assert "cues" not in str(r.json())
     assert "すみません" not in str(r.json())
+
+
+@requires_db
+def test_transcript_open_for_unit_practiced_before(
+        pg_engine, unit_with_transcript, monkeypatch):
+    """A unit the caller already formally submitted in an EARLIER session
+    shows its transcript right away in a new session (even before submit,
+    even in unified-feedback mode); feedback/answers stay gated."""
+    client = make_client(monkeypatch, pg_engine)
+    first = create_session(client, USER_A, unit_with_transcript,
+                           [CLOZE_UNIT], feedback="immediate")
+    suid1 = unit_id_map(first)[CLOZE_UNIT]
+    submit(client, USER_A, first["id"], suid1,
+           [(f"{CLOZE_UNIT}-q01", f"{CLOZE_UNIT}-q01-o2"),
+            (f"{CLOZE_UNIT}-q02", f"{CLOZE_UNIT}-q02-o1")])
+
+    for mode in ("immediate", "end"):
+        again = create_session(client, USER_A, unit_with_transcript,
+                               [CLOZE_UNIT], feedback=mode)
+        suid2 = unit_id_map(again)[CLOZE_UNIT]
+        assert again["units"][0]["previously_practiced"] is True
+        r = client.get(transcript_path(again, suid2), headers=auth(USER_A))
+        assert r.status_code == 200, r.text
+        assert r.json()["materials"][0]["cues"] == CUES
+        fb = client.get(
+            f"/api/practice/sessions/{again['id']}/units/{suid2}/feedback",
+            headers=auth(USER_A))
+        assert fb.status_code == 409  # answers/explanations stay sealed
+
+
+@requires_db
+def test_transcript_still_sealed_for_never_practiced_or_other_user(
+        pg_engine, unit_with_transcript, monkeypatch):
+    client = make_client(monkeypatch, pg_engine)
+    first = create_session(client, USER_A, unit_with_transcript,
+                           [CLOZE_UNIT])
+    submit(client, USER_A, first["id"], unit_id_map(first)[CLOZE_UNIT],
+           [(f"{CLOZE_UNIT}-q01", f"{CLOZE_UNIT}-q01-o2"),
+            (f"{CLOZE_UNIT}-q02", f"{CLOZE_UNIT}-q02-o1")])
+    # another user's history never unlocks it
+    other = create_session(client, USER_B, unit_with_transcript,
+                           [CLOZE_UNIT])
+    assert other["units"][0]["previously_practiced"] is False
+    r = client.get(transcript_path(other, unit_id_map(other)[CLOZE_UNIT]),
+                   headers=auth(USER_B))
+    assert r.status_code == 409

@@ -193,10 +193,13 @@ function StepPracticePage({ sessionId }: { sessionId: string }) {
   const audioMaterial = content?.materials.find((m) => m.audio?.kind === "url");
   const audioUrl = audioMaterial?.audio?.kind === "url" ? audioMaterial.audio.url : null;
   // Transcript reveal gate (audio-player.md §8) — mirrors the backend's
-  // _feedback_gate: immediate → THIS unit submitted; end → session ended.
+  // _transcript_gate: immediate → THIS unit submitted; end → session ended;
+  // or the unit was already practiced in an earlier session (ADR-0035).
   // The backend remains the authority; this only drives the UI lock state.
-  const transcriptAllowed = unitSubmitted
-    && (session?.feedback_mode === "immediate" || sessionEnded);
+  const practicedBefore = session?.units.find(
+    (u) => u.id === current?.sessionUnitId)?.previously_practiced ?? false;
+  const transcriptAllowed = practicedBefore || (unitSubmitted
+    && (session?.feedback_mode === "immediate" || sessionEnded));
 
   const onConfirmSubmit = useCallback(() => {
     if (!current) return;

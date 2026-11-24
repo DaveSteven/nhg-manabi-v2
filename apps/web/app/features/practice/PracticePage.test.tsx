@@ -113,6 +113,25 @@ describe("PracticePage", () => {
     expect(within(nav).getByText("练习")).toHaveAttribute("aria-current", "page");
   });
 
+  it("transcript is open before submit only for a unit practiced earlier (ADR-0035)", async () => {
+    for (const [practiced, name] of [[true, "原文"], [false, "原文（提交后可查看）"]] as const) {
+      server.use(
+        http.get(`*/api/practice/sessions/s-1`, () => HttpResponse.json({
+          ...SESSION, units: [{ ...SESSION.units[0], previously_practiced: practiced }] })),
+        http.get(`*/api/releases/r-1/units/u-1`, () => HttpResponse.json({
+          ...PUBLIC_UNIT, materials: [{ id: "m-audio", kind: "audio", role: "primary",
+            language: "ja-JP", content: null, asset_id: "as001" }] })),
+        http.get(`*/api/practice/sessions/s-1/drafts`, () => HttpResponse.json({ drafts: [] })),
+      );
+      const { unmount } = renderRoutes([{ path: "study", children: [
+        { path: "practice/:sessionId", element: <PracticePage sessionId="s-1" /> },
+      ] }], "/study/practice/s-1");
+      const btn = await screen.findByRole("button", { name });
+      if (practiced) expect(btn).toBeEnabled(); else expect(btn).toBeDisabled();
+      unmount();
+    }
+  });
+
   it("restores session with fixed-release unit and supports the full loop", async () => {
     const user = userEvent.setup();
     const { draftCalls, submitCalls } = useSessionHandlers();
