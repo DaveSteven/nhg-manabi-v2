@@ -5,7 +5,7 @@ import { http, HttpResponse } from "msw";
 import { server } from "../../test/mocks/server";
 import { renderRoutes } from "../../test/render";
 import { AnswerDistributionView } from "./AnswerDistribution";
-import { summarize } from "./distributionModel";
+import { summarize, tint } from "./distributionModel";
 
 const DATA = {
   types: [
@@ -42,28 +42,49 @@ describe("summarize", () => {
   });
 });
 
+describe("tint", () => {
+  const bars = (counts: number[]) => {
+    const total = counts.reduce((a, b) => a + b, 0);
+    return { total, bars: counts.map((count, i) => ({
+      position: i + 1, count, percent: (count / total) * 100 })) };
+  };
+  it("colours only clear deviations on a large sample", () => {
+    const cells = tint(bars([200, 300, 300, 200])); // 20/30/30/20 of 1000
+    expect(cells.map((c) => c.tone)).toEqual(["low", "high", "high", "low"]);
+    expect(cells[1]!.strength).toBeGreaterThan(0);
+  });
+  it("never colours near-even or small samples", () => {
+    expect(tint(bars([255, 245, 250, 250])).every((c) => c.tone === "none")).toBe(true);
+    expect(tint(bars([1, 9, 1, 9])).every((c) => c.tone === "none")).toBe(true);
+  });
+});
+
 describe("AnswerDistributionView", () => {
-  it("shows the overall distribution first and filters by level", async () => {
+  it("shows the level's overall bars and a row per type, filtering by level", async () => {
     const user = userEvent.setup();
     render();
-    expect(await screen.findByText(/共 12 题/)).toBeInTheDocument();
+    expect(await screen.findByText(/全部题型 · 共 12 题/)).toBeInTheDocument();
     await user.click(screen.getByRole("tab", { name: "N5" }));
     expect(screen.getByText(/共 4 题/)).toBeInTheDocument();
     expect(screen.getAllByText("75.0%").length).toBeGreaterThan(0);
+    expect(screen.queryByRole("combobox")).not.toBeInTheDocument(); // no type dropdown
     await user.click(screen.getByRole("tab", { name: "N1" }));
-    expect(screen.getByText("该范围暂无统计数据。")).toBeInTheDocument();
+    expect(screen.getByText("该等级暂无统计数据。")).toBeInTheDocument();
   });
 
-  it("per-type table lets you drill into one type", async () => {
+  it("clicking a type row opens its detail in place and toggles it closed", async () => {
     const user = userEvent.setup();
     render();
-    await screen.findByText(/共 12 题/);
+    await screen.findByText(/全部题型/);
     await user.click(screen.getByRole("tab", { name: "N2" }));
-    const table = screen.getByRole("table");
-    expect(within(table).getByText("汉字读音")).toBeInTheDocument();
-    await user.click(within(table).getByRole("button", { name: "汉字读音" }));
-    expect(screen.getByText(/共 4 题/)).toBeInTheDocument();
-    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+    const row = screen.getByRole("row", { name: /汉字读音/ });
+    expect(row).toHaveTextContent("样本少"); // 4 questions < 30
+    expect(screen.queryByRole("region", { name: "汉字读音 详情" })).not.toBeInTheDocument();
+    await user.click(row);
+    const detail = screen.getByRole("region", { name: "汉字读音 详情" });
+    expect(within(detail).getByText("选项 2")).toBeInTheDocument();
+    await user.click(row);
+    expect(screen.queryByRole("region", { name: "汉字读音 详情" })).not.toBeInTheDocument();
   });
 
   it("tells a logged-out user to sign in", async () => {

@@ -1,20 +1,19 @@
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Breadcrumb } from "../../components/Breadcrumb";
-import { Select, type SelectGroup } from "../../components/select";
 import { useNavSection } from "../../components/TopNav";
 import { describeLoadError, type ApiError } from "../../api/errors";
 import type { AnswerDistribution } from "../../api/dto/answerDistribution";
 import { getAnswerDistribution } from "../../api/endpoints/answerDistribution";
 import { useLevel, JLPT_LEVELS } from "../auth/useLevel";
-import { TOPIC_SUBJECTS } from "../topic/topicModel";
-import { ALL, SMALL_SAMPLE, formatPercent, summarize } from "./distributionModel";
+import { ALL, SMALL_SAMPLE, formatPercent, summarize, tint } from "./distributionModel";
 
 /**
  * 历年答案分布 `/study/answer-distribution`: how often 选项 1/2/3/4 is the
- * keyed answer across every current published paper. Filters: level
- * (全部 / N5…N1) and question type (全部 / one type). Aggregate only — the
- * page cannot reveal the answer of any particular question.
+ * keyed answer across every current published paper. Level tabs on top; one
+ * heat-map row per question type (colour = clear deviation from an even
+ * split, never for small samples); clicking a row opens its bars in place.
+ * Aggregate only — it cannot reveal the answer of any particular question.
  */
 export function AnswerDistributionView() {
   useNavSection("topic");
@@ -25,29 +24,18 @@ export function AnswerDistributionView() {
     retry: false,
   });
   const [levelPick, setLevelPick] = useState<string | null>(null);
-  const [typeId, setTypeId] = useState<string>(ALL);
+  const [open, setOpen] = useState<string | null>(null);
   const level = levelPick ?? myLevel ?? ALL;
 
   const data = query.data;
-  const summary = useMemo(
-    () => (data ? summarize(data, level, typeId) : null), [data, level, typeId]);
-  const perType = useMemo(
-    () => (data && typeId === ALL
+  const overall = useMemo(
+    () => (data ? summarize(data, level, ALL) : null), [data, level]);
+  const rows = useMemo(
+    () => (data
       ? data.types.map((t) => ({ t, s: summarize(data, level, t.question_type_id) }))
           .filter((r) => r.s.total > 0)
       : []),
-    [data, level, typeId]);
-
-  const typeItems: SelectGroup[] = useMemo(() => {
-    const groups: SelectGroup[] = [
-      { label: "", options: [{ value: ALL, label: "全部题型" }] }];
-    for (const s of TOPIC_SUBJECTS) {
-      const opts = (data?.types ?? []).filter((t) => t.subject === s.key)
-        .map((t) => ({ value: t.question_type_id, label: t.label_zh }));
-      if (opts.length) groups.push({ label: s.label, options: opts });
-    }
-    return groups;
-  }, [data]);
+    [data, level]);
 
   return (
     <section aria-label="历年答案分布" className="topic-page">
@@ -72,78 +60,96 @@ export function AnswerDistributionView() {
           <div className="tabs" role="tablist" aria-label="等级">
             {[ALL, ...JLPT_LEVELS].map((l) => (
               <button key={l} type="button" role="tab" aria-selected={l === level}
-                      onClick={() => setLevelPick(l)}>
+                      onClick={() => { setLevelPick(l); setOpen(null); }}>
                 {l === ALL ? "全部" : l}
               </button>
             ))}
           </div>
 
-          <div className="dist-filter">
-            <span id="dist-type-label" className="topic-field-label">题型</span>
-            <Select value={typeId} onChange={setTypeId} items={typeItems}
-                    aria-labelledby="dist-type-label" width={220} />
-          </div>
-
-          {summary && summary.total > 0 ? (
-            <div className="card dist-card" aria-label="分布">
-              <p className="dist-total">
-                共 {summary.total} 题
-                {summary.total < SMALL_SAMPLE ? (
-                  <span className="text-aux">（样本较少，仅供参考）</span>
-                ) : null}
-              </p>
-              <ul className="dist-bars">
-                {summary.bars.map((b) => (
-                  <li key={b.position}>
-                    <span className="dist-pos">选项 {b.position}</span>
-                    <span className="dist-track" aria-hidden="true">
-                      <span className="dist-fill" style={{ width: `${b.percent}%` }} />
-                    </span>
-                    <span className="dist-value">
-                      {formatPercent(b.percent)}
-                      <span className="dist-count"> · {b.count} 题</span>
-                    </span>
-                  </li>
-                ))}
-              </ul>
+          {overall && overall.total > 0 ? (
+            <div className="card dist-card" aria-label="总体分布">
+              <p className="dist-total">全部题型 · 共 {overall.total} 题</p>
+              <Bars bars={overall.bars} />
             </div>
           ) : (
-            <p>该范围暂无统计数据。</p>
+            <p>该等级暂无统计数据。</p>
           )}
 
-          {perType.length > 0 ? (
+          {rows.length > 0 ? (
             <div className="card dist-card" aria-label="各题型">
               <h2 className="module-title">各题型分布</h2>
-              <table className="dist-table">
-                <thead>
-                  <tr>
-                    <th scope="col">题型</th>
-                    {[1, 2, 3, 4].map((p) => <th key={p} scope="col">选项 {p}</th>)}
-                    <th scope="col">题数</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {perType.map(({ t, s }) => (
-                    <tr key={t.question_type_id}>
-                      <th scope="row">
-                        <button type="button" className="dist-link"
-                                onClick={() => setTypeId(t.question_type_id)}>
-                          {t.label_zh}
-                        </button>
-                      </th>
-                      {[1, 2, 3, 4].map((p) => {
-                        const b = s.bars.find((x) => x.position === p);
-                        return <td key={p}>{b ? formatPercent(b.percent) : "—"}</td>;
-                      })}
-                      <td>{s.total}</td>
-                    </tr>
+              <p className="text-aux dist-legend">
+                <span className="dist-swatch is-high" aria-hidden="true" />明显偏高
+                <span className="dist-swatch is-low" aria-hidden="true" />明显偏低
+                无色＝与平均无明显差异；样本不足 {SMALL_SAMPLE} 题不着色。点题型查看详情。
+              </p>
+              <div className="dist-heat" role="table" aria-label="题型分布热力图">
+                <div className="dist-heat-row dist-heat-head" role="row">
+                  <span role="columnheader">题型</span>
+                  {[1, 2, 3, 4].map((p) => (
+                    <span key={p} role="columnheader">选项 {p}</span>
                   ))}
-                </tbody>
-              </table>
+                  <span role="columnheader">题数</span>
+                </div>
+                {rows.map(({ t, s }) => {
+                  const cells = tint(s);
+                  const isOpen = open === t.question_type_id;
+                  const small = s.total < SMALL_SAMPLE;
+                  return (
+                    <Fragment key={t.question_type_id}>
+                      <button type="button" role="row"
+                              className={`dist-heat-row dist-heat-item${small ? " is-small" : ""}`}
+                              aria-expanded={isOpen}
+                              onClick={() => setOpen(isOpen ? null : t.question_type_id)}>
+                        <span role="rowheader" className="dist-heat-name">{t.label_zh}</span>
+                        {[1, 2, 3, 4].map((p) => {
+                          const c = cells.find((x) => x.position === p);
+                          return (
+                            <span key={p} role="cell"
+                                  className={`dist-cell${c && c.tone !== "none" ? ` is-${c.tone}` : ""}`}
+                                  style={c && c.tone !== "none"
+                                    ? { ["--strength" as string]: c.strength } : undefined}>
+                              {c ? formatPercent(c.percent) : "—"}
+                            </span>
+                          );
+                        })}
+                        <span role="cell" className="dist-heat-count">
+                          {s.total}{small ? <em>样本少</em> : null}
+                        </span>
+                      </button>
+                      {isOpen ? (
+                        <div className="dist-detail" role="region"
+                             aria-label={`${t.label_zh} 详情`}>
+                          <Bars bars={s.bars} />
+                        </div>
+                      ) : null}
+                    </Fragment>
+                  );
+                })}
+              </div>
             </div>
           ) : null}
         </>
       )}
     </section>
+  );
+}
+
+function Bars({ bars }: { bars: { position: number; count: number; percent: number }[] }) {
+  return (
+    <ul className="dist-bars">
+      {bars.map((b) => (
+        <li key={b.position}>
+          <span className="dist-pos">选项 {b.position}</span>
+          <span className="dist-track" aria-hidden="true">
+            <span className="dist-fill" style={{ width: `${b.percent}%` }} />
+          </span>
+          <span className="dist-value">
+            {formatPercent(b.percent)}
+            <span className="dist-count"> · {b.count} 题</span>
+          </span>
+        </li>
+      ))}
+    </ul>
   );
 }

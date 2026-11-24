@@ -164,11 +164,9 @@
 }
 
 /* 历年答案分布 */
-.dist-filter { display: flex; align-items: center; gap: var(--space-3); margin: var(--space-4) 0; }
 .dist-card { display: grid; gap: var(--space-3); margin-bottom: var(--space-4);
   padding: var(--space-4) var(--space-6); }
 .dist-card .module-title { margin: 0; }
-.dist-table { margin-top: var(--space-2); }
 .dist-total { font-weight: 600; margin: 0; }
 .dist-bars { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-3); }
 .dist-bars li { display: grid; grid-template-columns: 4.5em 1fr 9em; align-items: center; gap: var(--space-3); }
@@ -176,11 +174,27 @@
 .dist-fill { display: block; height: 100%; border-radius: 999px; background: var(--color-primary); }
 .dist-value { font-variant-numeric: tabular-nums; text-align: right; }
 .dist-count { color: var(--color-text-muted); font-size: 13px; }
-.dist-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
-.dist-table th, .dist-table td { padding: var(--space-2) var(--space-3); text-align: right; }
-.dist-table th:first-child, .dist-table tbody th { text-align: left; font-weight: 500; }
-.dist-table thead th { color: var(--color-text-muted); font-weight: 500; font-size: 13px; }
-.dist-table tbody tr + tr { border-top: 1px solid var(--color-border); }
-.dist-link { background: none; border: none; padding: 0; font: inherit; color: inherit; cursor: pointer; }
-.dist-link:hover { color: var(--color-primary); }
-@media (max-width: 767px) { .dist-bars li { grid-template-columns: 4em 1fr 7.5em; } }
+.dist-legend { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin: 0; }
+.dist-swatch { width: 12px; height: 12px; border-radius: 3px; display: inline-block; margin-left: var(--space-2); }
+.dist-swatch.is-high { background: rgba(185, 73, 104, 0.6); }
+.dist-swatch.is-low { background: rgba(88, 110, 140, 0.45); }
+.dist-heat { display: grid; font-variant-numeric: tabular-nums; }
+.dist-heat-row { display: grid; grid-template-columns: minmax(8em, 2fr) repeat(4, 1fr) 6em;
+  align-items: center; gap: var(--space-2); padding: var(--space-1) var(--space-2);
+  background: none; border: none; font: inherit; color: inherit; text-align: right; width: 100%; }
+.dist-heat-head { color: var(--color-text-muted); font-size: 13px; padding-bottom: var(--space-2); }
+.dist-heat-head > span:first-child, .dist-heat-name { text-align: left; }
+.dist-heat-item { cursor: pointer; border-radius: var(--radius-sm); }
+.dist-heat-item:hover { box-shadow: inset 0 0 0 1px var(--color-primary); }
+.dist-heat-item:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 1px; }
+.dist-heat-item.is-small { color: var(--color-text-muted); }
+.dist-heat-count em { display: block; font-style: normal; font-size: 12px; }
+.dist-cell { padding: var(--space-2) var(--space-2); border-radius: var(--radius-sm); text-align: center; }
+.dist-cell.is-high { background: rgba(185, 73, 104, calc(0.12 + 0.5 * var(--strength))); font-weight: 600; }
+.dist-cell.is-low { background: rgba(88, 110, 140, calc(0.1 + 0.4 * var(--strength))); }
+.dist-detail { padding: var(--space-3) var(--space-4) var(--space-4); margin: 0 var(--space-2) var(--space-2);
+  background: var(--color-surface-subtle); border-radius: var(--radius-sm); }
+@media (max-width: 767px) {
+  .dist-bars li { grid-template-columns: 4em 1fr 7.5em; }
+  .dist-heat-row { grid-template-columns: minmax(6em, 2fr) repeat(4, 1fr) 4.5em; font-size: 13px; }
+}

@@ -31,3 +31,25 @@ export function summarize(data: AnswerDistribution, level: string,
 export function formatPercent(v: number): string {
   return `${v.toFixed(1)}%`;
 }
+
+export type Tone = "high" | "low" | "none";
+export interface Cell extends Bar { tone: Tone; strength: number }
+
+/** |z| needed before a cell is coloured. ~99%: with dozens of cells on the
+ * page a looser cut would colour pure noise (≈5% of cells at 95%). */
+export const Z_CUT = 2.58;
+
+/** Colour each option by how far its share is from an even split, but only
+ * when the deviation is statistically clear and the sample is not small.
+ * Never colours small samples (< SMALL_SAMPLE). strength ∈ (0,1]. */
+export function tint(s: Summary): Cell[] {
+  const k = s.bars.length;
+  return s.bars.map((b) => {
+    if (k < 2 || s.total < SMALL_SAMPLE) return { ...b, tone: "none", strength: 0 };
+    const p0 = 1 / k;
+    const z = (b.count / s.total - p0) / Math.sqrt((p0 * (1 - p0)) / s.total);
+    if (Math.abs(z) < Z_CUT) return { ...b, tone: "none", strength: 0 };
+    return { ...b, tone: z > 0 ? "high" : "low",
+             strength: Math.min((Math.abs(z) - Z_CUT) / 2 + 0.35, 1) };
+  });
+}
