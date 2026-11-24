@@ -39,28 +39,45 @@ describe("useReadingScale", () => {
 });
 
 describe("ReadingSizeControl", () => {
-  it("opens a dialog with a slider; moving it saves and shows the label", () => {
+  const open = () => fireEvent.click(screen.getByRole("button", { name: "字号设置" }));
+  const move = (v: string) => fireEvent.change(
+    screen.getByRole("slider", { name: "题目字号" }), { target: { value: v } });
+
+  it("slider only previews; the saved size changes on 完成", () => {
     render(<ReadingSizeControl />);
-    expect(screen.queryByRole("dialog")).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "字号设置" }));
-    expect(screen.getByRole("dialog", { name: "字号设置" })).toBeInTheDocument();
+    open();
     expect(screen.getByLabelText("预览")).toBeInTheDocument();
-    fireEvent.change(screen.getByRole("slider", { name: "题目字号" }),
-                     { target: { value: "2" } });
-    expect(window.localStorage.getItem("jlptgo.readingSize")).toBe("2");
+    move("2");
     expect(screen.getByRole("slider")).toHaveAttribute("aria-valuetext", "大");
+    expect(screen.getByLabelText("预览").style.getPropertyValue("--reading-scale"))
+      .toBe(String(READING_SCALES[2]));
+    expect(window.localStorage.getItem("jlptgo.readingSize")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "完成" }));
+    expect(window.localStorage.getItem("jlptgo.readingSize")).toBe("2");
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 
-  it("reset returns to standard; Escape and 完成 close", () => {
-    window.localStorage.setItem("jlptgo.readingSize", "4");
+  it("取消 / Escape discard the draft", () => {
+    window.localStorage.setItem("jlptgo.readingSize", "1");
     render(<ReadingSizeControl compact />);
     fireEvent.click(screen.getByRole("button", { name: "字号" }));
-    fireEvent.click(screen.getByRole("button", { name: "恢复标准" }));
-    expect(window.localStorage.getItem("jlptgo.readingSize")).toBe("0");
-    fireEvent.keyDown(window, { key: "Escape" });
-    expect(screen.queryByRole("dialog")).toBeNull();
+    move("4");
+    fireEvent.click(screen.getByRole("button", { name: "取消" }));
+    expect(window.localStorage.getItem("jlptgo.readingSize")).toBe("1");
     fireEvent.click(screen.getByRole("button", { name: "字号" }));
-    fireEvent.click(screen.getByRole("button", { name: "完成" }));
+    move("3");
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(window.localStorage.getItem("jlptgo.readingSize")).toBe("1");
     expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("恢复标准 resets the draft only; 完成 saves it", () => {
+    window.localStorage.setItem("jlptgo.readingSize", "4");
+    render(<ReadingSizeControl />);
+    open();
+    fireEvent.click(screen.getByRole("button", { name: "恢复标准" }));
+    expect(window.localStorage.getItem("jlptgo.readingSize")).toBe("4");
+    fireEvent.click(screen.getByRole("button", { name: "完成" }));
+    expect(window.localStorage.getItem("jlptgo.readingSize")).toBe("0");
   });
 });

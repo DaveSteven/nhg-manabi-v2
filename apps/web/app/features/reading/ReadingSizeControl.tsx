@@ -2,7 +2,8 @@ import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Button } from "../../components/Button";
 import {
-  READING_STEP_LABELS, READING_STEPS, useReadingScale, type ReadingStep,
+  READING_SCALES, READING_STEP_LABELS, READING_STEPS, useReadingScale,
+  type ReadingStep,
 } from "./useReadingScale";
 
 /** "字号设置" button; opens a dialog with a snapped slider and live preview
@@ -21,7 +22,9 @@ export function ReadingSizeControl({ compact = false }: { compact?: boolean }) {
 }
 
 export function ReadingSizeDialog({ onClose }: { onClose(): void }) {
-  const { step, setStep } = useReadingScale();
+  const { step: saved, setStep: save } = useReadingScale();
+  // draft: the slider only previews; the page changes on 完成
+  const [step, setStep] = useState<ReadingStep>(saved);
   const titleId = useId();
   const sliderRef = useRef<HTMLInputElement>(null);
 
@@ -40,9 +43,10 @@ export function ReadingSizeDialog({ onClose }: { onClose(): void }) {
            className="reading-size-dialog card"
            onClick={(e) => e.stopPropagation()}>
         <h2 id={titleId}>字号设置</h2>
-        <p className="text-aux">只调整题干、选项、材料和解析，导航等界面不变。</p>
+        <p className="text-aux">只调整题干、选项、材料和解析，导航等界面不变。点「完成」后生效。</p>
 
-        <div className="reading-size-preview" lang="ja" aria-label="预览">
+        <div className="reading-size-preview" lang="ja" aria-label="预览"
+             style={{ "--reading-scale": READING_SCALES[step] } as React.CSSProperties}>
           <div className="richtext">
             <p>この店の客は女性が80%を<u>占める</u>。</p>
             <p className="preview-option">① しめる　② つめる　③ せめる　④ うめる</p>
@@ -64,7 +68,9 @@ export function ReadingSizeDialog({ onClose }: { onClose(): void }) {
         <div className="dialog-actions">
           <Button variant="secondary" onClick={() => setStep(0)}
                   disabled={step === 0}>恢复标准</Button>
-          <Button variant="primary" onClick={onClose}>完成</Button>
+          <Button variant="secondary" onClick={onClose}>取消</Button>
+          <Button variant="primary"
+                  onClick={() => { save(step); onClose(); }}>完成</Button>
         </div>
       </div>
     </div>,
