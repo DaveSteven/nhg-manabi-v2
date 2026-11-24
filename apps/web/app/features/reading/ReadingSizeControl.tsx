@@ -11,10 +11,10 @@ export function ReadingSizeControl({ compact = false }: { compact?: boolean }) {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <button type="button" className="reading-size-btn"
-              aria-haspopup="dialog" onClick={() => setOpen(true)}>
+      <Button variant="secondary" size="sm" aria-haspopup="dialog"
+              onClick={() => setOpen(true)}>
         {compact ? "字号" : "字号设置"}
-      </button>
+      </Button>
       {open ? <ReadingSizeDialog onClose={() => setOpen(false)} /> : null}
     </>
   );

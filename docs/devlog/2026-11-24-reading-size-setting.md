@@ -15,3 +15,7 @@
 
 - 反馈：三个「A」也不好看。改为「字号设置」按钮（模考顶栏用「字号」），点击弹出对话框：带刻度滑轨（吸附 5 档，1–1.5×）、日文题目实时预览、「恢复标准」「完成」，Esc/点遮罩关闭。存储改为档位序号（旧版名称 standard/large/xlarge 自动映射）。ADR-0034 与 design-system 已同步。
 - 测试：`vitest run` 44 文件 375 passed、`tsc` 无错误；web 容器已重建。窄屏底部弹层、预览与实际页面一致性、Ruby 重叠仍待浏览器验收。
+
+## 补充三：按钮样式（同日）
+
+- 反馈：自定义按钮样式奇怪、与进度文字不对齐。改用项目标准 `Button`（secondary、sm，见 button-spec），删除自定义 `.reading-size-btn`；进度行内文字去掉默认下边距，使文字与按钮垂直居中。`reading`+`practice` 相关 7 文件 59 tests passed、tsc 通过，web 容器已重建；浏览器未验收。

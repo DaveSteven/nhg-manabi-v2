@@ -348,20 +348,6 @@ button {
    em multiplier applies once on top of the surrounding stem/option size. */
 .richtext { font-size: calc(1em * var(--reading-scale, 1)); }
 
-.reading-size-btn {
-  appearance: none;
-  padding: 4px 14px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-pill);
-  background: transparent;
-  color: var(--color-ink);
-  font: inherit;
-  font-size: 14px;
-  cursor: pointer;
-  &:hover { background: var(--color-surface-subtle); }
-  &:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
-}
-
 .reading-size-scrim {
   position: fixed;
   inset: 0;
@@ -420,6 +406,8 @@ button {
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
+  margin-bottom: var(--space-3);
+  p { margin: 0; }
 }
 
 .richtext-slot {
