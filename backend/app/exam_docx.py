@@ -12,7 +12,7 @@ from collections import defaultdict
 from pathlib import Path
 
 from docx import Document
-from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_BREAK
+from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml.ns import qn
 from docx.shared import Cm, Pt
 
@@ -49,7 +49,7 @@ def new_doc() -> Document:
     # Headings inherit the exact 15pt line height and would be clipped: use single spacing
     for name in ("Heading 1", "Heading 2", "Heading 3", "Title"):
         h = doc.styles[name].paragraph_format
-        h.line_spacing = 1.2
+        h.line_spacing = Pt(26)      # exact, roomy enough for 16pt Noto Serif JP
         h.space_before, h.space_after = Pt(10), Pt(4)
     return doc
 
@@ -111,10 +111,6 @@ def add_image(doc, asset: dict | None, media_root: Path):
     pic.alignment = WD_ALIGN_PARAGRAPH.CENTER
     pic.paragraph_format.line_spacing = 1.0  # exact line height would clip the picture
     pic.paragraph_format.space_before = pic.paragraph_format.space_after = Pt(6)
-
-
-def page_break(doc):
-    doc.add_paragraph().add_run().add_break(WD_BREAK.PAGE)
 
 
 class ExamData:
@@ -292,10 +288,10 @@ def build_paper(pkg: "ExamData", out, media_root: Path):
     cur_section = None
     for sec, ly, units in pkg.walk():
         if sec["key"] != cur_section:
-            if cur_section is not None:
-                page_break(doc)
-            cur_section = sec["key"]
             h = doc.add_heading(level=1)
+            # page_break_before instead of a break paragraph: no stray blank line/page
+            h.paragraph_format.page_break_before = cur_section is not None
+            cur_section = sec["key"]
             set_font(h.add_run(sec["title"]), 16, True)
             if sec["subject"] == "listening":
                 n = doc.add_paragraph()
@@ -363,10 +359,12 @@ def build_answers(pkg: "ExamData", out, media_root: Path):
                 for cell, txt in ((cells[c * 2], rows[i][1]), (cells[c * 2 + 1], rows[i][2])):
                     cell.text = ""
                     set_font(cell.paragraphs[0].add_run(txt), 10)
-    page_break(doc)
     # explanations + transcripts
+    first = True
     for sec, ly, units in pkg.walk():
         h = doc.add_heading(level=2)
+        h.paragraph_format.page_break_before = first
+        first = False
         set_font(h.add_run(f"{sec['title']}　{ly['display_label']}"), 13, True)
         for unit, qs in units:
             for m in unit["materials"]:
