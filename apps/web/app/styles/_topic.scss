@@ -165,7 +165,10 @@
 
 /* 历年答案分布 */
 .dist-filter { display: flex; align-items: center; gap: var(--space-3); margin: var(--space-4) 0; }
-.dist-card { display: grid; gap: var(--space-3); margin-bottom: var(--space-4); }
+.dist-card { display: grid; gap: var(--space-3); margin-bottom: var(--space-4);
+  padding: var(--space-4) var(--space-6); }
+.dist-card .module-title { margin: 0; }
+.dist-table { margin-top: var(--space-2); }
 .dist-total { font-weight: 600; margin: 0; }
 .dist-bars { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-3); }
 .dist-bars li { display: grid; grid-template-columns: 4.5em 1fr 9em; align-items: center; gap: var(--space-3); }
