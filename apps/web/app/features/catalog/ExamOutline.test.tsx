@@ -60,6 +60,7 @@ const outline = {
       layers: [
         {
           layer_id: "ly-r1", position: 1, question_type_id: "reading_short",
+          question_type_label: "内容理解（短篇）",
           display_label: "問題13", instruction: null,
           units: [
             { unit_id: "u-r1", position: 1, kind: "passage", label: null,
@@ -153,6 +154,7 @@ describe("ExamOutline", () => {
     await user.click(await screen.findByRole("tab", { name: /读解/ }));
     const toggle = await screen.findByRole("button", { name: /問題13/ });
     expect(toggle).toHaveClass("capsule-card");
+    expect(toggle).toHaveTextContent("問題13内容理解（短篇）");
     await user.click(toggle);
     const rows = document.querySelectorAll("button.unit-row");
     expect(rows.length).toBeGreaterThan(0);

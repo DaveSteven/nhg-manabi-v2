@@ -172,6 +172,9 @@ function LayerBlock({ layer, counts, onOpen, onOpenLayer, direct, opening }: {
           {expanded ? "▾" : "▸"}
         </span>
         <span className="layer-label">{label}</span>
+        {layer.question_type_label ? (
+          <span className="layer-type">{layer.question_type_label}</span>
+        ) : null}
         <span className="layer-meta">
           已练习<span className="layer-progress">{practiced}/{layer.units.length}</span>
         </span>
