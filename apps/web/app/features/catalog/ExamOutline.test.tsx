@@ -170,6 +170,9 @@ describe("ExamOutline", () => {
     renderDetail();
     const layer = await screen.findByRole("button", { name: /問題1/ });
     expect(layer).not.toHaveAttribute("aria-expanded"); // no unit list
+    expect(layer).toHaveTextContent("共 5 题"); // size known before clicking
+    expect(layer.querySelector(".unit-chevron")).not.toBeNull(); // › = go
+    expect(layer.querySelector(".layer-chevron")).toBeNull(); // not ▸ expand
     await user.click(layer);
     expect(created).toEqual([{
       feedback_mode: "immediate",

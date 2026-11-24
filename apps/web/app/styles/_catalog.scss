@@ -561,3 +561,7 @@
     outline-offset: 3px;
   }
 }
+
+/* direct-start layer (文字词汇/文法): meta then › like a unit row */
+.layer-toggle > .layer-meta + .unit-chevron { margin-left: var(--space-3); }
+.layer-toggle:hover .unit-chevron { color: inherit; }

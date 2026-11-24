@@ -129,16 +129,24 @@ function LayerBlock({ layer, counts, onOpen, onOpenLayer, direct, opening }: {
   const practiced = layer.units.filter(
     (u) => (counts.get(u.unit_id) ?? 0) > 0).length;
   if (direct) {
+    const total = layer.units.reduce((n, u) => n + u.question_count, 0);
     return (
       <div className="layer-block">
         <button type="button" className="layer-toggle capsule-card"
                 disabled={opening || layer.units.length === 0}
-                aria-label={`练习 ${label}（全部）`}
+                aria-label={`练习 ${label}（共 ${total} 题）`}
                 onClick={() => onOpenLayer(layer)}>
-          <span className="layer-chevron" aria-hidden="true">▸</span>
           <span className="layer-label">{label}</span>
           <span className="layer-meta">
-            已练习<span className="layer-progress">{practiced}/{layer.units.length}</span>
+            共 {total} 题 · 已练习
+            <span className="layer-progress">{practiced}/{layer.units.length}</span>
+          </span>
+          <span className="unit-chevron" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none"
+                 stroke="currentColor" strokeWidth="1.8"
+                 strokeLinecap="round" strokeLinejoin="round">
+              <path d="m9 6 6 6-6 6" />
+            </svg>
           </span>
         </button>
       </div>
