@@ -25,7 +25,7 @@ from docx.shared import Cm, Pt
 
 REPO = Path(__file__).resolve().parent.parent
 MEDIA = REPO / "data" / "v2-media"
-FONT = "Yu Mincho"
+FONT = "Noto Serif JP"
 SUBJECT_ORDER = {"vocabulary": 1, "grammar": 2, "reading": 3, "listening": 4}
 
 
@@ -48,8 +48,9 @@ def new_doc() -> Document:
     doc = Document()
     sec = doc.sections[0]
     sec.page_width, sec.page_height = Cm(21), Cm(29.7)
-    sec.left_margin = sec.right_margin = Cm(2.2)
-    sec.top_margin = sec.bottom_margin = Cm(2.2)
+    sec.left_margin = sec.right_margin = Cm(1.27)
+    sec.top_margin = sec.bottom_margin = Cm(1.27)
+    sec.header_distance = sec.footer_distance = Cm(0.6)
     for name in ("Normal", "Heading 1", "Heading 2", "Heading 3", "Title"):
         st = doc.styles[name]
         st.font.name = FONT
@@ -198,7 +199,8 @@ def build_paper(pkg: Package, out: Path):
                 add_rich_blocks(doc, m["content"], indent_cm=0.5)
             for q in qs:
                 p = doc.add_paragraph()
-                p.paragraph_format.space_before = Pt(6)
+                p.paragraph_format.space_before = Pt(12)
+                p.paragraph_format.space_after = Pt(0)
                 p.paragraph_format.keep_with_next = True
                 set_font(p.add_run(f"{q['printed_number']}．"), bold=True)
                 add_rich(p, q.get("prompt"))
@@ -207,7 +209,8 @@ def build_paper(pkg: Package, out: Path):
                 for o in sorted(q["options"], key=lambda x: x["position"]):
                     op = doc.add_paragraph()
                     op.paragraph_format.left_indent = Cm(1.0)
-                    op.paragraph_format.space_after = Pt(1)
+                    op.paragraph_format.space_before = Pt(0)
+                    op.paragraph_format.space_after = Pt(0)
                     set_font(op.add_run(f"{o['position']}　"))
                     add_rich(op, o["content"])
                     for aid in o.get("media_asset_ids") or []:
