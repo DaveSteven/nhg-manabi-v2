@@ -7,3 +7,7 @@
 ## 测试
 - web 全量 vitest：361 passed、1 failed（`SupplementaryPractice` 「starts a lesson…」，改动前即失败的既有问题）；`tsc --noEmit` 通过。
 - 未做：浏览器视觉与窄屏五项宽度核对。
+
+## 追加：反馈方式并排（同日）
+- 扩展练习页「反馈方式」两个选项改为同一行并排（`topic-field-inline`），窄屏自动换行。
+- 顺带修复既有失败测试：断言文案「结束后揭晓」与页面「结束后总结」不一致，改测试。web 全量 363 passed，tsc 通过；浏览器未核对。

@@ -82,7 +82,7 @@ export function SupplementaryView() {
             ))}
           </div>
 
-          <div className="topic-field" role="radiogroup" aria-label="反馈方式">
+          <div className="topic-field topic-field-inline" role="radiogroup" aria-label="反馈方式">
             <span className="topic-field-label">反馈方式</span>
             <label className="topic-feedback-option">
               <input type="radio" name="supp-feedback" checked={feedback === "immediate"}

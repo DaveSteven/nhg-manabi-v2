@@ -88,7 +88,7 @@ describe("SupplementaryView", () => {
         return HttpResponse.json(SESSION, { status: 201 });
       }));
     renderPage();
-    await user.click(await screen.findByLabelText("统一反馈（结束后揭晓）"));
+    await user.click(await screen.findByLabelText("统一反馈（结束后总结）"));
     await user.click(screen.getByRole("button", { name: "开始第 3 课" }));
     expect(await screen.findByText("practice page")).toBeInTheDocument();
     expect(body).toEqual({ exam_id: "JLPTGO-SUP-N3-kanji-L003", feedback_mode: "end" });
