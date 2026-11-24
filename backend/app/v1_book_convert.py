@@ -34,7 +34,7 @@ SECTION_TITLE = {"vocabulary": "文字・語彙", "grammar": "文法"}
 QUESTION_TYPES = {
     "vocabulary_kanji_reading": dict(source_type_code=11, subject="vocabulary", label_zh="汉字读音", label_ja="漢字読み"),
     "vocabulary_orthography": dict(source_type_code=12, subject="vocabulary", label_zh="汉字书写", label_ja="表記"),
-    "vocabulary_context": dict(source_type_code=13, subject="vocabulary", label_zh="文脉规定", label_ja="文脈規定"),
+    "vocabulary_context": dict(source_type_code=13, subject="vocabulary", label_zh="语境填空", label_ja="文脈規定"),
     "grammar_form": dict(source_type_code=21, subject="grammar", label_zh="语法形式判断", label_ja="文の文法１（文法形式）"),
 }
 INSTRUCTION = {
