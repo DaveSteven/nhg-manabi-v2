@@ -7,7 +7,7 @@ import { NavLink } from "react-router";
  * nav item owns them. The page declares it (via its breadcrumb) and the nav
  * highlights that item. Outside a provider this is a no-op.
  */
-export type NavSection = "topic" | "exams" | "learning";
+export type NavSection = "topic" | "exams" | "supplementary" | "learning";
 const NavSectionContext = createContext<{
   section: NavSection | null;
   setSection: (s: NavSection | null) => void;
@@ -34,7 +34,7 @@ export function useNavSection(section: NavSection): void {
 /**
  * Global top navigation (design-system.md v1.1 §3): a centered floating
  * pill inside the study layout header — never a full-bar menu. Exactly
- * four items (product rule P-002) with short pill labels; active state is
+ * five items (P-002, extended by ADR-0032) with short pill labels; active state is
  * a soft sakura fill, not an underline (page-level tabs keep underlines).
  * Entries M2.2 does not implement render as explicit "暂未开放" states:
  * visible, honest, non-navigating, never fake data.
@@ -80,6 +80,15 @@ function ExamIcon() {
   );
 }
 
+function SupplementaryIcon() {
+  return (
+    <NavIcon>
+      <path d="M12 6.5C10 5 7 4.5 4 5v13c3-.5 6 0 8 1.5 2-1.5 5-2 8-1.5V5c-3-.5-6 0-8 1.5Z" />
+      <path d="M12 6.5V19.5" />
+    </NavIcon>
+  );
+}
+
 function StudyIcon() {
   return (
     <NavIcon>
@@ -110,6 +119,11 @@ export function TopNav() {
                className={({ isActive }) => cls(isActive, "exams")}>
         <ExamIcon />
         <span>试卷</span>
+      </NavLink>
+      <NavLink to="/study/supplementary"
+               className={({ isActive }) => cls(isActive, "supplementary")}>
+        <SupplementaryIcon />
+        <span>扩展</span>
       </NavLink>
       <NavLink to="/study/learning"
                className={({ isActive }) => cls(isActive, "learning")}>

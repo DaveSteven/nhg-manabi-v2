@@ -219,3 +219,5 @@
 - **管理端中文字体（2026-11-18）**：见 `docs/devlog/2026-11-18-admin-cjk-font.md`。字体栈补中文回退（苹方/雅黑/Noto 等），tsc、build 通过；浏览器视觉未复核。
 
 - **试卷详情：文字词汇/文法点開「問題N」直练整个大题（2026-11-24）**：见 `docs/devlog/2026-11-24-exam-layer-practice.md`。纯前端，复用普通练习接口；catalog 28 passed，tsc 通过；全量有 1 个既有扩展练习测试失败；未做浏览器验收。
+
+- **扩展练习独立导航（2026-11-24，ADR-0032）**：见 `docs/devlog/2026-11-24-supplementary-nav.md`。顶栏五项，专项页入口移除；web 361 passed + 1 既有失败，tsc 通过；浏览器未核对。

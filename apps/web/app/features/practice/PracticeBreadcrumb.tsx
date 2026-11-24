@@ -20,7 +20,7 @@ export function PracticeBreadcrumb({ current, examId, topic = false,
   /** 扩展练习 lesson (ADR-0030): trail is 扩展练习 › 练习|结果. */
   supplementary?: boolean;
 }) {
-  useNavSection(topic || supplementary ? "topic" : "exams");
+  useNavSection(supplementary ? "supplementary" : topic ? "topic" : "exams");
   if (supplementary) {
     return (
       <Breadcrumb items={[{ label: "扩展练习", to: "/study/supplementary" },

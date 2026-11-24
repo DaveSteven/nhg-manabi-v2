@@ -11,7 +11,7 @@ import PracticePage from "../routes/study.practice.$sessionId";
 import ResultsPage from "../routes/study.practice.$sessionId.results";
 
 describe("TopNav", () => {
-  it("renders exactly four nav items", () => {
+  it("renders the five nav items", () => {
     renderRoutes([{ path: "study", Component: StudyLayout }], "/study");
     const nav = screen.getByRole("navigation", { name: "主导航" });
     expect(nav).toBeInTheDocument();
@@ -27,6 +27,16 @@ describe("TopNav", () => {
                  "/study/exams");
     expect(screen.getByText("首页").closest("a")).not.toHaveClass("active");
     expect(screen.getByText("试卷").closest("a")).toHaveClass("active");
+  });
+
+  it("扩展 links to the supplementary page and highlights there", () => {
+    renderRoutes([{ path: "study", Component: StudyLayout,
+                    children: [{ path: "supplementary", Component: () => <p>s</p> }] }],
+                 "/study/supplementary");
+    expect(screen.getByText("扩展").closest("a"))
+      .toHaveAttribute("href", "/study/supplementary");
+    expect(screen.getByText("扩展").closest("a")).toHaveClass("active");
+    expect(screen.getByText("专项").closest("a")).not.toHaveClass("active");
   });
 
   it("专项 and 学习 link to their pages", () => {

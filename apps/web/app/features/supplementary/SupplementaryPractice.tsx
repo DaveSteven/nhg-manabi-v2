@@ -32,7 +32,7 @@ export function lessonStatus(l: Lesson): string {
  * Starting one replaces the in-progress practice (ADR-0016, no dialog).
  */
 export function SupplementaryView() {
-  useNavSection("topic");
+  useNavSection("supplementary");
   const navigate = useNavigate();
   const { level } = useLevel();
   const [params, setParams] = useSearchParams();
