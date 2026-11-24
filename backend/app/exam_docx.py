@@ -262,15 +262,22 @@ def option_label(q, option_id):
     return "?"
 
 
+def title_par(doc, text, size, bold=None):
+    """Centered title line. Larger than body text, so it must not inherit the
+    exact 15pt body line height (that clips the glyphs)."""
+    p = doc.add_paragraph()
+    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    p.paragraph_format.line_spacing = 1.3
+    p.paragraph_format.space_after = Pt(2)
+    set_font(p.add_run(text), size, bold)
+    return p
+
+
 def build_paper(pkg: "ExamData", out, media_root: Path):
     doc = new_doc()
     ex = pkg.exam
-    p = doc.add_paragraph()
-    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    set_font(p.add_run(f"日本語能力試験 {ex['level']}　{ex['year']}年{ex['month']}月"), 20, True)
-    p = doc.add_paragraph()
-    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    set_font(p.add_run("問題冊子"), 14)
+    title_par(doc, f"日本語能力試験 {ex['level']}　{ex['year']}年{ex['month']}月", 20, True)
+    title_par(doc, "問題冊子", 14)
     for ph in pkg.phases:
         p = doc.add_paragraph()
         p.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -329,9 +336,7 @@ def build_paper(pkg: "ExamData", out, media_root: Path):
 def build_answers(pkg: "ExamData", out, media_root: Path):
     doc = new_doc()
     ex = pkg.exam
-    p = doc.add_paragraph()
-    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    set_font(p.add_run(f"{ex['year']}年{ex['month']}月 {ex['level']}　答案与解析"), 18, True)
+    title_par(doc, f"{ex['year']}年{ex['month']}月 {ex['level']}　答案与解析", 18, True)
     note = doc.add_paragraph()
     if pkg.unverified_keys:
         set_font(note.add_run(
