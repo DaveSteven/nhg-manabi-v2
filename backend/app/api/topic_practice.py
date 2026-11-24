@@ -34,6 +34,25 @@ router = APIRouter()
 
 Level = Literal["N1", "N2", "N3", "N4", "N5"]
 
+# Order question types the way they appear on the paper (問題1, 2, 3 …), not
+# alphabetically by id. Types missing here sort last, then by id.
+TYPE_PAPER_ORDER = [
+    "vocabulary_kanji_reading", "vocabulary_orthography",
+    "vocabulary_word_formation", "vocabulary_context",
+    "vocabulary_paraphrase", "vocabulary_usage",
+    "grammar_form", "grammar_sentence_composition", "grammar_cloze",
+    "reading_short", "reading_short_set", "reading_medium",
+    "reading_integrated", "reading_long", "reading_information_search",
+    "listening_topic_comprehension", "listening_point_comprehension",
+    "listening_summary_comprehension", "listening_speech_expression",
+    "listening_quick_response", "listening_long_comprehension",
+]
+_TYPE_RANK = {t: i for i, t in enumerate(TYPE_PAPER_ORDER)}
+
+
+def type_sort_key(type_id: str) -> tuple[int, str]:
+    return (_TYPE_RANK.get(type_id, len(_TYPE_RANK)), type_id)
+
 _CANDIDATES_SQL = (
     "SELECT u.release_id, u.unit_id, r.exam_id, u.question_type_id,"
     " (SELECT count(*) FROM release_questions q"
@@ -127,8 +146,9 @@ def list_topic_types(
         wrong = _wrong_map(conn, user_id, level)
         types = conn.execute(text(
             "SELECT id, subject, label_zh, label_ja, default_unit_kind,"
-            " is_provisional FROM question_types ORDER BY subject, id"
+            " is_provisional FROM question_types"
         )).mappings().all()
+    types = sorted(types, key=lambda t: type_sort_key(t["id"]))
     stats: dict[str, dict] = {}
     for c in cands:
         s = stats.setdefault(c["question_type_id"], {
