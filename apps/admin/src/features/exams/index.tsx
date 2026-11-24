@@ -17,6 +17,7 @@ import type { ColumnsType } from 'antd/es/table'
 import {
   type AdminExam,
   describeReleaseError,
+  exportReleaseDocx,
   listAdminExams,
   restoreRelease,
   withdrawRelease,
@@ -65,6 +66,19 @@ export function ExamsPanel() {
     onError: (e) => message.error(describeReleaseError(e)),
     onSettled: () => qc.invalidateQueries({ queryKey: ['admin-exams'] }),
   })
+  const [exporting, setExporting] = useState<string | null>(null)
+  const exportDocx = async (e: AdminExam, kind: 'paper' | 'answers') => {
+    const rid = e.release?.id
+    if (!rid) return
+    setExporting(`${rid}:${kind}`)
+    try {
+      await exportReleaseDocx(rid, kind, `${e.exam_id}-${kind === 'paper' ? '试题' : '答案与解析'}.docx`)
+    } catch (err) {
+      message.error(describeReleaseError(err))
+    } finally {
+      setExporting(null)
+    }
+  }
   const busyId = withdraw.isPending || restore.isPending ? (target?.release?.id ?? null) : null
 
   const columns: ColumnsType<AdminExam> = [
@@ -145,8 +159,9 @@ export function ExamsPanel() {
       render: (_, e) => {
         const rid = e.release?.id ?? null
         const busy = rid !== null && busyId === rid
+        let action: React.ReactNode = null
         if (e.status === 'published' && rid) {
-          return (
+          action = (
             <Button
               size='small'
               disabled={busy}
@@ -160,9 +175,8 @@ export function ExamsPanel() {
               下架
             </Button>
           )
-        }
-        if (e.status === 'withdrawn' && rid) {
-          return (
+        } else if (e.status === 'withdrawn' && rid) {
+          action = (
             <Button
               size='small'
               disabled={busy}
@@ -176,7 +190,28 @@ export function ExamsPanel() {
             </Button>
           )
         }
-        return <Typography.Text type='secondary'>—</Typography.Text>
+        if (!rid) return <Typography.Text type='secondary'>—</Typography.Text>
+        return (
+          <Space size={8}>
+            <Button
+              size='small'
+              loading={exporting === `${rid}:paper`}
+              aria-label={`导出试题 Word ${examLabel(e)}`}
+              onClick={() => void exportDocx(e, 'paper')}
+            >
+              导出试题
+            </Button>
+            <Button
+              size='small'
+              loading={exporting === `${rid}:answers`}
+              aria-label={`导出答案解析 Word ${examLabel(e)}`}
+              onClick={() => void exportDocx(e, 'answers')}
+            >
+              导出答案解析
+            </Button>
+            {action}
+          </Space>
+        )
       },
     },
   ]

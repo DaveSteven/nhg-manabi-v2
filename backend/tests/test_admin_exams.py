@@ -56,7 +56,9 @@ def test_every_admin_exam_endpoint_requires_an_admin_session(client, published_r
     for method, path in (("GET", "/api/admin/exams"),
                          ("GET", f"/api/admin/exams/{EXAM_ID}/releases"),
                          ("POST", f"/api/admin/releases/{rid}/withdraw"),
-                         ("POST", f"/api/admin/releases/{rid}/restore")):
+                         ("POST", f"/api/admin/releases/{rid}/restore"),
+                         ("GET", f"/api/admin/releases/{rid}/export?kind=paper"),
+                         ("GET", f"/api/admin/releases/{rid}/export?kind=answers")):
         assert client.request(method, path).status_code == 401, path
         assert client.request(method, path, headers=STUDENT).status_code == 401, path
 
@@ -201,3 +203,39 @@ def test_releases_listing_for_an_exam(client, pg_engine, published_release):
     assert [r["id"] for r in out] == [str(published_release)]
     assert out[0]["state"] == "published" and out[0]["is_current"] is True
     assert client.get("/api/admin/exams/NOPE/releases", headers=h).status_code == 404
+
+
+# ----------------------------------------------------------------- export ----
+
+@requires_db
+def test_export_returns_word_files_paper_without_answers(client, pg_engine, published_release):
+    import io
+
+    from docx import Document
+
+    h = _admin_headers(client, pg_engine)
+    rid = str(published_release)
+    paper = client.get(f"/api/admin/releases/{rid}/export?kind=paper", headers=h)
+    answers = client.get(f"/api/admin/releases/{rid}/export?kind=answers", headers=h)
+    for r in (paper, answers):
+        assert r.status_code == 200
+        assert r.headers["content-type"].startswith(
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+        assert "attachment" in r.headers["content-disposition"] and EXAM_ID in r.headers["content-disposition"]
+    p_text = "\n".join(x.text for x in Document(io.BytesIO(paper.content)).paragraphs)
+    a_doc = Document(io.BytesIO(answers.content))
+    assert "答案" not in p_text and "解析" not in p_text
+    assert any("答案一览" in x.text for x in a_doc.paragraphs)
+    assert len(a_doc.tables) == 1
+    with pg_engine.connect() as conn:
+        printed = [r[0] for r in conn.execute(text(
+            "SELECT printed_number FROM release_questions WHERE release_id = :r"), {"r": rid})]
+    assert printed and all(f"{n}．" in p_text for n in printed)
+
+
+@requires_db
+def test_export_unknown_release_and_bad_kind(client, pg_engine, published_release):
+    h = _admin_headers(client, pg_engine)
+    missing = "00000000-0000-4000-8000-000000000000"
+    assert client.get(f"/api/admin/releases/{missing}/export", headers=h).status_code == 404
+    assert client.get(f"/api/admin/releases/{published_release}/export?kind=x", headers=h).status_code == 422

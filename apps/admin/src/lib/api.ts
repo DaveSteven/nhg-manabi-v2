@@ -108,6 +108,29 @@ export async function restoreRelease(releaseId: string) {
   await api.post(`/api/admin/releases/${encodeURIComponent(releaseId)}/restore`)
 }
 
+/** Download a release as Word: the paper (no answers) or answers + explanations. */
+export async function exportReleaseDocx(
+  releaseId: string,
+  kind: 'paper' | 'answers',
+  fallbackName: string,
+): Promise<void> {
+  const res = await api.get(`/api/admin/releases/${encodeURIComponent(releaseId)}/export`, {
+    params: { kind },
+    responseType: 'blob',
+  })
+  const cd = String(res.headers['content-disposition'] ?? '')
+  const m = /filename\*=UTF-8''([^;]+)/i.exec(cd)
+  const name = m ? decodeURIComponent(m[1]) : fallbackName
+  const url = URL.createObjectURL(res.data as Blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = name
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  URL.revokeObjectURL(url)
+}
+
 /** Message for a failed release action, using the server's stable error code. */
 export function describeReleaseError(error: unknown): string {
   if (error instanceof AxiosError) {

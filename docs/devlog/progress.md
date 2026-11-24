@@ -4,7 +4,7 @@
 
 ## 真题导出 Word（2026-11-24）
 
-- 新增 `scripts/export_exam_docx.py`，已导出 2025 年 7 月/12 月 N2 的试题与答案解析 Word（仓库外）；仅用 python-docx 回读验证，未在 Word 中核对排版，答案仍为未核验，见 [日志](2026-11-24-n2-2025-docx-export.md)。
+- 管理端试卷列表新增「导出试题 / 导出答案解析」Word 下载（`GET /api/admin/releases/{id}/export`，后端依赖 python-docx）；离线脚本 `scripts/export_exam_docx.py` 共用同一渲染。后端/管理端测试通过；**浏览器点击验收、Word 排版核对、镜像重建与部署均未做**，答案仍为未核验，见 [日志](2026-11-24-n2-2025-docx-export.md)。
 
 ## 现网回退到 V1（2026-11-23）
 

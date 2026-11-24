@@ -1,15 +1,21 @@
 """Admin exam / release management endpoints (ADR-0010: no review flow, so
 the admin's lever is withdraw/restore). Every route needs an admin session;
 the audit identity comes from the session, never from the request body."""
+import io
 import json
 import uuid
+from typing import Literal
+from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import Response
 from pydantic import BaseModel
 from sqlalchemy import text
 
 from app.admin_auth import admin_reviewer_id, require_admin
+from app.api.media import media_storage_root
 from app.db.engine import get_engine
+from app.exam_docx import build_answers, build_paper, load_release
 from app.publisher import (ReleaseStateError, restore_release,
                            withdraw_release)
 
@@ -135,3 +141,27 @@ def admin_withdraw(release_id: uuid.UUID, body: WithdrawBody | None = None,
 @router.post("/api/admin/releases/{release_id}/restore")
 def admin_restore(release_id: uuid.UUID, admin: dict = Depends(require_admin())) -> dict:
     return _release_action(restore_release, release_id, admin_reviewer_id(admin))
+
+
+_DOCX = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+_EXPORT_NAME = {"paper": "試題", "answers": "答案与解析"}
+
+
+@router.get("/api/admin/releases/{release_id}/export")
+def admin_export_release(release_id: uuid.UUID, kind: Literal["paper", "answers"] = "paper",
+                         admin: dict = Depends(require_admin())) -> Response:
+    """Word download of a release: the question paper (no answers) or the
+    answer key + explanations + listening transcripts. Admin-only; withdrawn
+    releases are exportable too. Audio is not embedded."""
+    with get_engine().connect() as conn:
+        data = load_release(conn, str(release_id))
+    if data is None:
+        raise HTTPException(status_code=404, detail="release not found")
+    buf = io.BytesIO()
+    (build_paper if kind == "paper" else build_answers)(data, buf, media_storage_root())
+    exam_id = data.exam["exam_id"]
+    filename = f"{exam_id}-{_EXPORT_NAME[kind]}.docx"
+    return Response(
+        content=buf.getvalue(), media_type=_DOCX,
+        headers={"Content-Disposition": f"attachment; filename*=UTF-8''{quote(filename)}",
+                 "Cache-Control": "no-store"})

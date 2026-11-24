@@ -28,6 +28,7 @@
 - 管理端使用单独权限（至少内容校验/发布角色），校验 Agent 不应拥有直接发布权限。
 - 管理端认证（ADR-0009）：`POST /api/admin/auth/login` 换取不透明 Bearer 令牌（12 小时绝对过期，可撤回，库内只存 SHA-256）；缺失/无效/过期令牌 401，角色不足 403（viewer ⊂ reviewer ⊂ publisher）；登录失败一律同一 401 响应，连续 5 次失败锁定 15 分钟；无 dev_test 旁路，学生令牌与管理员令牌互不通用。审核/发布记录的 `reviewer_id` 由服务端写为 `admin:<id>`，不接受客户端传入。
 - 扩展练习（ADR-0030）：`GET /api/supplementary/lessons?level=` 返回该等级各科目的课程（题数只计可练习题；`answered/correct/wrong` 来自本人最近有效结果）；`POST /api/supplementary/sessions {exam_id, feedback_mode}` 以该课全部可练习 Unit（固定顺序）创建普通 `practice` 会话，`config.supplementary` 记录课程信息，沿用 ADR-0016 的单名额替换；非扩展课或不可练习返回 404 `lesson_not_found`。需要登录，响应不含答案。扩展课不进入历年试卷目录、专项抽样、`/api/me/learning/*`。
+- 管理端导出 Word：`GET /api/admin/releases/{release_id}/export?kind=paper|answers` 返回 .docx 附件（试题不含答案；答案文档含答案一览、解析与听力原文，不含音频）；仅管理员会话，学生端无对应接口。
 - 管理端重置学生密码（ADR-0029）：`POST /api/admin/users/{id}/reset-password` 返回一次性 `temporary_password`，撤销该用户全部会话并写审计 `user_password_reset`（不记录口令）。
 - 学生端账户认证（ADR-0011）：`POST /api/auth/register`（邮箱+密码，注册后未验证不可登录）、`login`（ADR-0029：`identifier` 为邮箱或用户名，含 `@` 即邮箱；旧参数名 `email` 兼容；用户名小写唯一，`email` 可空）、`logout`、`verify-email`、`resend-verification`、`forgot-password`、`reset-password`；`GET/PATCH /api/me`（display_name、current_level；响应含 `username`，`email` 可为 null）。会话为 30 天绝对过期的不透明 Bearer 令牌（库内只存 SHA-256，可撤销）；登录失败/未验证/停用/锁定一律同一 401；`resend-verification` 与 `forgot-password` 对任何账号状态统一 200，不泄漏存在性；注册与重置的字段级错误返回 400 `{"detail":{"field","message"}}`；重置成功撤销该用户全部会话；登录连续失败 5 次锁定 15 分钟。作答域身份仍由 `get_current_user_id` 服务端解析：真实会话令牌优先，`AUTH_MODE=dev_test` 仅非生产可用（ADR-0006 语义不变）。
 

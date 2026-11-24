@@ -4,16 +4,18 @@ import { AxiosError } from 'axios'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AdminExam } from '@/lib/api'
 
-const { listAdminExams, withdrawRelease, restoreRelease } = vi.hoisted(() => ({
+const { listAdminExams, withdrawRelease, restoreRelease, exportReleaseDocx } = vi.hoisted(() => ({
   listAdminExams: vi.fn(),
   withdrawRelease: vi.fn(),
   restoreRelease: vi.fn(),
+  exportReleaseDocx: vi.fn(),
 }))
 vi.mock('@/lib/api', async (orig) => ({
   ...(await orig<typeof import('@/lib/api')>()),
   listAdminExams: () => listAdminExams(),
   withdrawRelease: (...a: unknown[]) => withdrawRelease(...a),
   restoreRelease: (...a: unknown[]) => restoreRelease(...a),
+  exportReleaseDocx: (...a: unknown[]) => exportReleaseDocx(...a),
 }))
 
 import { pickOption, renderApp } from '@/test-utils/render'
@@ -109,6 +111,28 @@ describe('ExamsPanel', () => {
     await u.click(screen.getByRole('button', { name: '下架 2018年12月 N2' }))
     await u.click(await screen.findByRole('button', { name: '确认下架' }))
     expect(await screen.findByText(/不是已发布状态/)).not.toBeNull()
+  })
+
+  it('exports the paper and the answers as Word for the row\'s release', async () => {
+    exportReleaseDocx.mockResolvedValue(undefined)
+    renderPanel()
+    const u = userEvent.setup()
+    await screen.findByTestId('row-C-N3')                       // withdrawn rows are exportable too
+    await u.click(screen.getByRole('button', { name: '导出试题 Word 2018年12月 N2' }))
+    await waitFor(() =>
+      expect(exportReleaseDocx).toHaveBeenCalledWith('rel-A-N2', 'paper', expect.stringContaining('A-N2')))
+    await u.click(screen.getByRole('button', { name: '导出答案解析 Word 2020年12月 N3' }))
+    await waitFor(() =>
+      expect(exportReleaseDocx).toHaveBeenCalledWith('rel-C-N3', 'answers', expect.stringContaining('C-N3')))
+  })
+
+  it('shows an error when the export fails', async () => {
+    exportReleaseDocx.mockRejectedValue(new AxiosError('Network Error'))
+    renderPanel()
+    const u = userEvent.setup()
+    await screen.findByTestId('row-A-N2')
+    await u.click(screen.getByRole('button', { name: '导出试题 Word 2018年12月 N2' }))
+    expect(await screen.findByText(/无法连接管理服务/)).not.toBeNull()
   })
 
   it('shows an error state when the list cannot be loaded', async () => {
