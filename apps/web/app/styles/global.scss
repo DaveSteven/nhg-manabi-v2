@@ -344,6 +344,44 @@ button {
   }
 }
 
+/* ADR-0034: only question content scales; richtext is never nested, so the
+   em multiplier applies once on top of the surrounding stem/option size. */
+.richtext { font-size: calc(1em * var(--reading-scale, 1)); }
+
+.reading-size-btn {
+  appearance: none;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  padding: 2px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--color-ink);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  small { font-size: 12px; color: var(--color-text-secondary); }
+  &:hover { background: var(--color-surface-subtle); }
+  &:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+}
+
+.reading-size-group {
+  display: inline-flex;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+  label {
+    position: relative;
+    padding: 6px 16px;
+    font-size: var(--text-body);
+    cursor: pointer;
+    &.is-on { background: var(--color-primary-soft); color: var(--color-primary); font-weight: 600; }
+    &:has(input:focus-visible) { outline: 2px solid var(--color-primary); outline-offset: -2px; }
+  }
+  input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+}
+
 .richtext-slot {
   background: var(--color-primary-soft);
   border-radius: var(--radius-sm);

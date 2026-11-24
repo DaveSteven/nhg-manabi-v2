@@ -1,3 +1,4 @@
+import { ReadingSizeControl } from "../reading/ReadingSizeControl";
 import { useState } from "react";
 import { Navigate, useNavigate } from "react-router";
 import { useAuth } from "../auth/authStore";
@@ -55,6 +56,17 @@ export function AccountPage() {
             <Select aria-label="备考等级" placeholder="未设置"
                     value={level ?? ""} items={LEVEL_ITEMS}
                     onChange={(v) => setLevel(v as (typeof JLPT_LEVELS)[number])} />
+          </div>
+        </section>
+
+        <section className="card account-group" aria-label="阅读设置">
+          <h2 className="account-group-title">阅读设置</h2>
+          <div className="account-row">
+            <div className="account-row-text">
+              <strong>题目字号</strong>
+              <small>只调整题干、选项、材料和解析，不影响导航等界面</small>
+            </div>
+            <ReadingSizeControl />
           </div>
         </section>
 

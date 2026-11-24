@@ -80,3 +80,4 @@
 - `ADR-0030-supplementary-practice.md`（V1 教材题作为扩展练习）
 - `ADR-0031-v2-replaces-v1-on-existing-server.md`（v2 在现有服务器上替换 V1）
 - `ADR-0032-supplementary-nav-item.md`（扩展练习成为独立顶部导航项，专项页移除入口；修订 P-002）
+- `ADR-0034-reading-size-setting.md`（题目阅读字号三档设置，仅缩放题目内容，本地存储）

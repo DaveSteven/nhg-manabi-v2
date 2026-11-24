@@ -16,6 +16,7 @@ import { useSubmitUnit } from "./useSubmitUnit";
 import { useFeedback } from "./useFeedback";
 import { useFinishSession, useQuickPracticeStart } from "./useStartPractice";
 import { outlineUnitLabel, quickPracticeCopy } from "./quickPracticeCopy";
+import { ReadingSizeControl } from "../reading/ReadingSizeControl";
 import { PracticeBreadcrumb } from "./PracticeBreadcrumb";
 import { FeedbackView } from "./FeedbackView";
 import { UnifiedPracticeView } from "./UnifiedPractice";
@@ -270,6 +271,7 @@ function StepPracticePage({ sessionId }: { sessionId: string }) {
           </h1>
           <p className="text-aux">
             {!isQuick ? `第 ${currentIdx + 1} / ${units.length} 题` : null}
+            {" "}<ReadingSizeControl compact />
           </p>
         </header>
 

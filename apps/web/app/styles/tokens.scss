@@ -61,6 +61,8 @@
   --text-aux: 12px;
   --text-body: 15px;
   --text-question: 17px;
+  /* reading-content multiplier (ADR-0034); set on <html> by useReadingScale */
+  --reading-scale: 1;
   /* heading scale H1–H6 (design-system §7.2); mobile steps down below */
   --text-h1: 38px;
   --text-h2: 30px;

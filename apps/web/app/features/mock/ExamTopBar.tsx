@@ -1,3 +1,4 @@
+import { ReadingSizeControl } from "../reading/ReadingSizeControl";
 import { Button } from "../../components/Button";
 import { formatClock, timeTone, type TimeTone } from "./mockModel";
 
@@ -38,6 +39,7 @@ export function ExamTopBar({ examName, examTitle, where, answered, total,
       <span className={`exam-clock tone-${tone}`} role="timer" aria-label="剩余时间">
         {remaining === null ? "--:--" : formatClock(remaining)}
       </span>
+      <ReadingSizeControl compact />
       <Button variant="secondary" size="sm" onClick={onOpenSheet}>答题卡</Button>
     </header>
     </div>
