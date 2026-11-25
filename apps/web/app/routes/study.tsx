@@ -18,16 +18,21 @@ export const meta: MetaFunction = () => [
   { name: "robots", content: "noindex" },
 ];
 
+/** Guest-viewable pages; everything else under /study requires login. */
+const GUEST_PAGES = new Set(["/study", "/study/exams"]);
+
 export default function StudyLayout() {
   // once the sticky header sits over scrolled content its row becomes a capsule
   const stuck = useScrolled();
   useVisitBeacon();
   const auth = useAuth();
   const location = useLocation();
-  // Unified guard (ADR-0036): every /study page needs a signed-in student;
-  // guests (and sessions dropped after a 401) go to /login, then come back.
-  // VITE_DEV_USER_TOKEN is the dev-tooling identity (no cached profile).
-  if (!auth.user && !import.meta.env.VITE_DEV_USER_TOKEN) {
+  // Unified guard (ADR-0036): /study pages need a signed-in student, except the
+  // browse-only entry pages (home, exam catalog). Guests (and sessions dropped
+  // after a 401) go to /login, then come back. VITE_DEV_USER_TOKEN is the
+  // dev-tooling identity (no cached profile).
+  const isPublic = GUEST_PAGES.has(location.pathname.replace(/\/+$/, "") || "/");
+  if (!auth.user && !isPublic && !import.meta.env.VITE_DEV_USER_TOKEN) {
     return <Navigate to="/login" replace
                      state={{ from: `${location.pathname}${location.search}` }} />;
   }
