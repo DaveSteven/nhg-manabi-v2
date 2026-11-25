@@ -54,3 +54,7 @@
 - `html { -webkit-tap-highlight-color: transparent }` 去掉浏览器默认蓝/灰点按闪色；交互元素加 `touch-action: manipulation`（去双击缩放延迟）。
 - 原来只有 `.btn` 有 `:active` 反馈，卡片/胶囊/选项行去掉默认高亮后会没有任何按压反馈，所以补了 `(hover: none)` 下的轻量按压态（浅底色 + 缩 1.5%，reduced-motion 下不缩放）：试卷胶囊、capsule-card、科目卡、题型卡、Unit/大题行、选项行、顶栏链接。
 - 验证：web 391 tests、tsc、build 通过；**未在真机/真实触屏验证**（桌面浏览器无法触发 `hover: none`）。
+
+## 补充八：听力字幕点按后灰底盖住高亮
+- 原因：`.transcript-cue.is-seekable:hover`（灰底）特异性高于 `.transcript-cue.is-active`（樱色底）；触屏点按后 `:hover` 会"粘住"，灰底就盖住了当前句高亮。
+- 修复：悬停底色只在 `(hover: hover)` 设备生效，且排除 `.is-active`（`:hover:not(.is-active)`）。仅改样式；**未在真机验证**，测试 391 通过、build 通过。

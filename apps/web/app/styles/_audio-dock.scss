@@ -535,7 +535,11 @@
   cursor: pointer;
   transition: background var(--motion-fast);
 
-  &:hover { background: var(--color-surface-subtle); }
+  /* hover tint only on real hover devices (touch keeps :hover "stuck" after a
+     tap) and never over the active cue's sakura fill */
+  @media (hover: hover) {
+    &:hover:not(.is-active) { background: var(--color-surface-subtle); }
+  }
   &:focus-visible {
     outline: 2px solid var(--color-primary);
     outline-offset: -2px;
