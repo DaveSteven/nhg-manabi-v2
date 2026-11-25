@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Navigate, useNavigate } from "react-router";
+import { useNavigate } from "react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ApiError, describeLoadError } from "../../api/errors";
 import { createMock } from "../../api/endpoints/mock";
@@ -37,7 +37,7 @@ export function MockIntro({ examId }: { examId: string }) {
     },
   });
 
-  if (!auth.user) return <Navigate to="/login" replace />;
+  if (!auth.user) return null; // RequireAuth (routes.ts) redirects guests
   if (avail.isPending) return <p role="status">加载中…</p>;
   if (avail.error) return <p role="alert">{describeLoadError(avail.error, "模拟考试")}</p>;
   const a = avail.data;

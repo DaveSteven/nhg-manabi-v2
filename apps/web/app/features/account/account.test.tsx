@@ -1,4 +1,5 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
+import { RequireAuth } from "../../components/RequireAuth";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
@@ -29,7 +30,9 @@ afterAll(() => server.close());
 
 function renderAccount() {
   return renderRoutes([
-    { path: "study/account", Component: AccountPage },
+    { Component: RequireAuth, children: [
+      { path: "study/account", Component: AccountPage },
+    ] },
     { path: "login", element: <p>login-page</p> },
     { path: "study", element: <p>study-home</p> },
   ], "/study/account");

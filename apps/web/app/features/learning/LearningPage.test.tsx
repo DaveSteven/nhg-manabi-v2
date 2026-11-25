@@ -66,11 +66,6 @@ function renderPage(url = "/study/learning") {
 }
 
 describe("LearningView", () => {
-  it("sends guests to the login page", async () => {
-    renderPage();
-    expect(await screen.findByText("login page")).toBeInTheDocument();
-  });
-
   it("formats an empty denominator as — instead of 0%", () => {
     expect(formatPercent(null)).toBe("—");
     expect(formatPercent(0)).toBe("0%");

@@ -1,6 +1,6 @@
 import { ReadingSizeControl } from "../reading/ReadingSizeControl";
 import { useState } from "react";
-import { Navigate, useNavigate } from "react-router";
+import { useNavigate } from "react-router";
 import { useAuth } from "../auth/authStore";
 import { JLPT_LEVELS, useLevel } from "../auth/useLevel";
 import { EditProfileDialog } from "./EditProfileDialog";
@@ -25,7 +25,7 @@ export function AccountPage() {
   const [busy, setBusy] = useState(false);
 
   if (!auth.user) {
-    return <Navigate to="/login" replace />;
+    return null; // RequireAuth (routes.ts) redirects guests
   }
   const user = { ...auth.user, avatar: auth.user.avatar ?? null };
 

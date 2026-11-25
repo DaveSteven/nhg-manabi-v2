@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, Navigate, useNavigate, useSearchParams } from "react-router";
+import { Link, useNavigate, useSearchParams } from "react-router";
 import type { HistoryKind, RecordFilter } from "../../api/dto/learning";
 import { describeLoadError } from "../../api/errors";
 import { useAuth } from "../auth/authStore";
@@ -23,7 +23,7 @@ export function LearningView() {
   const [params, setParams] = useSearchParams();
   const requested = params.get("tab");
   const tab: LearningTab = isLearningTab(requested) ? requested : "overview";
-  if (!auth.user) return <Navigate to="/login" replace />;
+  if (!auth.user) return null; // RequireAuth (routes.ts) redirects guests
 
   return (
     <section aria-label="我的学习" className="learning-page">

@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Link, Navigate, useNavigate } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import type { DraftsList } from "../../api/dto/practice";
 import { ApiError, describeLoadError } from "../../api/errors";
@@ -30,7 +30,7 @@ export function MockExamPage({ sessionId }: { sessionId: string }) {
     }
   }, [state?.state, navigate, sessionId]);
 
-  if (!auth.user) return <Navigate to="/login" replace />;
+  if (!auth.user) return null; // RequireAuth (routes.ts) redirects guests
   if (stateQ.isPending) return <p role="status" className="exam-status">加载考试…</p>;
   if (stateQ.error || !state) {
     return (

@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react";
-import { Navigate } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import type { MockResultQuestion, MockResults as Results } from "../../api/dto/mock";
 import type { FeedbackPayload } from "../../api/dto/practice";
@@ -37,7 +36,7 @@ export function MockResultsPage({ sessionId }: { sessionId: string }) {
     queryFn: ({ signal }) => getMockResults(sessionId, signal),
     retry: 0,
   });
-  if (!auth.user) return <Navigate to="/login" replace />;
+  if (!auth.user) return null; // RequireAuth (routes.ts) redirects guests
   if (q.isPending) return <p role="status">加载中…</p>;
   if (q.error) return <p role="alert">{describeLoadError(q.error, "模拟考试成绩")}</p>;
   return <ResultsView sessionId={sessionId} r={q.data} />;

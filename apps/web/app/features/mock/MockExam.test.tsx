@@ -93,11 +93,6 @@ function setup(opts: { drafts?: unknown[]; submit?: (body: any) => Response } = 
 }
 
 describe("Exam Mode", () => {
-  it("guests are sent to login", async () => {
-    renderExam();
-    expect(await screen.findByText("login page")).toBeInTheDocument();
-  });
-
   it("shows the sticky status bar from real data: phase, big question, progress, server clock", async () => {
     authStore.setSession("tok", USER);
     setup({ drafts: [{ session_unit_id: "su1", unit_id: "u1", unit_position: 1,

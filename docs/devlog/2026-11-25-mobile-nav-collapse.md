@@ -43,3 +43,9 @@
 ## 补充五：无等级用户首页引导
 - 已登录但没有备考等级、且无进行中练习时，首页显示「先选一个备考等级」卡（N5–N1 按钮）；选择走原 `useLevel.setLevel`（本地即时生效并同步 `PATCH /api/me`），随后「今天来一组」卡自动出现。
 - 测试：web 392 tests、tsc 通过（新增 1 条：选等级后出现今天来一组）。**未做浏览器真实账号验证**；游客不显示此卡。
+
+## 补充六：登录守卫改为声明式路由
+- 新增 `components/RequireAuth` + `routes/_require-auth.tsx`；`routes.ts` 把需登录的路由嵌套在它下面（`layout(..., {id})` 用了两次：`/study` 内与布局外的严格模考 `/mock/:sessionId`），公开段只有首页/目录/详情。`study.tsx` 里的路径白名单与守卫删除；LearningPage/AccountPage/MockIntro/MockExam/MockResults 的零散 `Navigate` 改为 `return null`（守卫已保证登录）。
+- 顺带修复：严格模考页之前不在 `/study` 布局内，仅靠页面自带跳转；现在统一受守卫保护，也避免成绩页在游客状态先发请求。
+- 测试：web 391 tests（45 files）、tsc、`pnpm build`（含 check-build）通过；新增 `RequireAuth.test.tsx`（公开/拦截/回跳/401）；旧的各页「游客跳登录」用例并入该测试。浏览器（dev 代理本地后端）：游客 `/study/learning`、`/study/practice`、`/mock/abc` → `/login`；`/study/exams` 与详情不跳。
+- 未验：真实账号下各受保护页正常进入（仅测试覆盖）。
