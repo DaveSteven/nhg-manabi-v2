@@ -1,3 +1,4 @@
+import { authStore } from "../features/auth/authStore";
 import type { ReactElement, ReactNode } from "react";
 import type { RouteObject } from "react-router";
 import { Outlet } from "react-router";
@@ -40,4 +41,12 @@ export function renderRoutes(routes: RouteObject[], url = "/",
   ];
   const router = createMemoryRouter(tree, { initialEntries: [url] });
   return { ...render(<RouterProvider router={router} />), queryClient, router };
+}
+
+/** Sign a test student in (the /study layout redirects guests to /login). */
+export function signInForTest(level: "N1" | "N2" | "N3" | "N4" | "N5" | null = null) {
+  authStore.setSession("test-token", {
+    id: "9a1c66d0-1111-4111-8111-111111111111", email: "student@example.com",
+    username: null, display_name: "小明", current_level: level, avatar: null,
+  } as never);
 }

@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
+import { beforeEach } from "vitest";
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { renderRoutes, renderWithQuery } from "../test/render";
+import { renderRoutes, renderWithQuery, signInForTest } from "../test/render";
 import { TopNav } from "./TopNav";
 import { PracticeBreadcrumb } from "../features/practice/PracticeBreadcrumb";
 import StudyLayout from "../routes/study";
@@ -10,6 +11,8 @@ import ExamListPage from "../routes/study.exams._index";
 import ExamDetailPage from "../routes/study.exams.$examId";
 import PracticePage from "../routes/study.practice.$sessionId";
 import ResultsPage from "../routes/study.practice.$sessionId.results";
+
+beforeEach(() => signInForTest());
 
 describe("TopNav", () => {
   it("renders the five nav items", () => {

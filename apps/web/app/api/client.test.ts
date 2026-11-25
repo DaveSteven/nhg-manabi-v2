@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { apiFetch } from "./client";
 import { ApiError } from "./errors";
+import { setSessionToken, setUnauthorizedHandler } from "./authToken";
 
 function mockFetchOnce(status: number, body: string | null,
                        contentType = "application/json") {
@@ -38,6 +39,30 @@ describe("apiFetch", () => {
     expect(init.headers).toMatchObject({
       Authorization: "Bearer aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
     });
+  });
+
+  it("401 on a token-bearing request fires the unauthorized hook (not for login)", async () => {
+    const hook = vi.fn();
+    setUnauthorizedHandler(hook);
+    try {
+      setSessionToken("stale");
+      mockFetchOnce(401, JSON.stringify({ detail: "bearer token required" }));
+      await expect(apiFetch("/api/me")).rejects.toBeInstanceOf(ApiError);
+      expect(hook).toHaveBeenCalledTimes(1);
+
+      mockFetchOnce(401, JSON.stringify({ detail: "bad credentials" }));
+      await expect(apiFetch("/api/auth/login", { method: "POST", body: {} }))
+        .rejects.toBeInstanceOf(ApiError);
+      expect(hook).toHaveBeenCalledTimes(1);
+
+      setSessionToken(null);
+      mockFetchOnce(401, JSON.stringify({ detail: "bearer token required" }));
+      await expect(apiFetch("/api/me")).rejects.toBeInstanceOf(ApiError);
+      expect(hook).toHaveBeenCalledTimes(1);
+    } finally {
+      setSessionToken(null);
+      setUnauthorizedHandler(null);
+    }
   });
 
   it("throws normalized ApiError for dict-detail 409", async () => {

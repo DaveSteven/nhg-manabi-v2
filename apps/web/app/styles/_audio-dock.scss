@@ -601,3 +601,39 @@
 
   .transcript-panel { animation: none; }
 }
+
+/* Phones (<600px): the single-row pill needs ~535px (info + controls + seek +
+   speed + volume + transcript), so on a 358px dock the seek bar collapsed and
+   controls overflowed. Two rows instead: full-width seek bar on top, controls
+   and the secondary buttons below; the info block is dropped (icon + "音频"
+   is redundant next to the controls). --audio-dock-height grows to match so
+   page padding and the expanded-panel radius/max-height stay correct. */
+@media (max-width: 599px) {
+  :root { --audio-dock-height: 108px; }
+
+  .audio-dock,
+  .audio-dock.is-expanded {
+    border-radius: 28px;
+  }
+  .audio-dock.is-expanded {
+    border-radius: var(--transcript-panel-radius) var(--transcript-panel-radius) 28px 28px;
+  }
+
+  .audio-dock-bar {
+    flex-wrap: wrap;
+    align-content: center;
+    gap: var(--space-1) var(--space-2);
+    padding: var(--space-2) var(--space-4);
+  }
+  .audio-dock-bar .audio-info { display: none; }
+  .audio-dock-bar .audio-progress-zone {
+    order: 1;
+    flex: 1 0 100%;
+    min-width: 0;
+  }
+  .audio-dock-bar .audio-controls { order: 2; margin-right: auto; }
+  .audio-dock-bar .audio-speed,
+  .audio-dock-bar .audio-volume,
+  .audio-dock-bar .audio-transcript-toggle { order: 3; }
+  .audio-dock-bar .audio-error { flex: 1 0 100%; }
+}

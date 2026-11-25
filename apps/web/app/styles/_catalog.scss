@@ -229,6 +229,19 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Phones: the year gets its own line above its capsules (a side-by-side 88px
+   year column leaves two capsules ~130px each). */
+@media (max-width: 599px) {
+  .exam-year-row {
+    grid-template-columns: 1fr;
+    gap: var(--space-1);
+    padding: var(--space-3) 0;
+  }
+  .exam-year { font-size: 20px; line-height: 1.3; }
+  .exam-chips { gap: var(--space-2); }
+  .exam-chip { padding: 0 var(--space-4); }
+}
+
 /* Two equal columns (7月 | 12月): every capsule is a block filling its cell, so
    a lone 7月 lines up with the 7月 of the other rows. */
 .exam-chips {

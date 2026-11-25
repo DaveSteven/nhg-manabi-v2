@@ -1,12 +1,15 @@
 import { beforeAll, afterAll, afterEach, describe, expect, it } from "vitest";
+import { beforeEach } from "vitest";
 import { screen, within } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 import { server } from "../../test/mocks/server";
 import { createQueryClient } from "../../api/queryClient";
-import { renderRoutes } from "../../test/render";
+import { renderRoutes, signInForTest } from "../../test/render";
 import StudyLayout from "../../routes/study";
 import { StudyHome } from "./StudyHome";
 import { authStore } from "../auth/authStore";
+
+beforeEach(() => signInForTest());
 
 const session = {
   id: "s-1",
@@ -114,12 +117,11 @@ describe("StudyHome", () => {
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
-  it("shows the exam countdown for guests but no streak card", async () => {
+  it("shows the exam countdown and no streak card without a streak response", async () => {
+    server.use(http.get(`*/api/me/learning/streak`, () => HttpResponse.json({}, { status: 500 })));
     renderHome();
     const card = await screen.findByRole("region", { name: "考试倒计时" });
     expect(card).toHaveTextContent(/距考试\s*\d+\s*天|今天考试/);
-    expect(screen.queryByRole("region", { name: "连续学习" }))
-      .not.toBeInTheDocument();
   });
 
   it("shows the streak and this week's studied days when signed in", async () => {

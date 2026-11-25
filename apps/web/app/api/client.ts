@@ -1,5 +1,5 @@
 import { API_BASE } from "./env";
-import { getBearerToken } from "./authToken";
+import { getBearerToken, notifyUnauthorized } from "./authToken";
 import { ApiError, networkError, normalizeErrorBody } from "./errors";
 
 export interface ApiRequest {
@@ -79,6 +79,11 @@ export async function apiFetch(path: string, request: ApiRequest = {}): Promise<
     }
   }
 
+  // Stale/revoked session: drop it so the route guard returns to /login. The
+  // login endpoint itself answers 401 for wrong credentials — not a stale session.
+  if (response.status === 401 && token && !path.startsWith("/api/auth/login")) {
+    notifyUnauthorized();
+  }
   if (!response.ok) throw normalizeErrorBody(response.status, payload);
   return payload;
 }

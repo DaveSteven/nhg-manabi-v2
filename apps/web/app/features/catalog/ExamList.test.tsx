@@ -1,12 +1,15 @@
 import { beforeAll, afterAll, afterEach, describe, expect, it } from "vitest";
+import { beforeEach } from "vitest";
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { server } from "../../test/mocks/server";
-import { renderRoutes } from "../../test/render";
+import { renderRoutes, signInForTest } from "../../test/render";
 import { chooseOption } from "../../test/select";
 import StudyLayout from "../../routes/study";
 import ExamListPage from "../../routes/study.exams._index";
+
+beforeEach(() => signInForTest());
 
 const exams = [
   { exam_id: "E-N2-2018-12", release_id: "r2", revision: 1, level: "N2",
@@ -117,8 +120,8 @@ describe("ExamList", () => {
     useExamsHandler();
     renderList();
     await screen.findByRole("listitem", { name: "2019年" });
-    // guests have no header level selector either
-    expect(screen.queryAllByRole("combobox")).toHaveLength(0);
+    // the page itself has no level filter (only the header's 备考等级 selector)
+    expect(screen.queryByRole("combobox", { name: "等级" })).not.toBeInTheDocument();
     expect(screen.queryByText("年份")).not.toBeInTheDocument();
     expect(screen.queryByRole("combobox", { name: "年份" })).not.toBeInTheDocument();
   });

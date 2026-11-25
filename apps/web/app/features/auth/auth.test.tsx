@@ -208,6 +208,41 @@ describe("auth pages", () => {
     expect(window.localStorage.getItem("jlptgo.session_token")).toBe("tok-123");
   });
 
+  it("login returns to the page the guard bounced from", async () => {
+    const user = userEvent.setup();
+    server.use(http.post(`${ORIGIN}/api/auth/login`, () =>
+      HttpResponse.json({
+        token: "tok-123", expires_at: "2026-12-16T00:00:00+00:00", user: USER,
+      })));
+    const { router } = renderRoutes([
+      { path: "login", Component: LoginPage },
+      { path: "study", Component: () => <p>study home</p> },
+      { path: "study/exams", Component: () => <p>exams page</p> },
+    ], "/login");
+    await router.navigate("/login", { state: { from: "/study/exams" } });
+    await user.type(screen.getByLabelText(/邮箱/), "student@example.com");
+    await user.type(screen.getByLabelText(/密码/), "study-hard-88");
+    await user.click(screen.getByRole("button", { name: "登录" }));
+    await screen.findByText("exams page");
+  });
+
+  it("login ignores an off-site `from` and goes to /study", async () => {
+    const user = userEvent.setup();
+    server.use(http.post(`${ORIGIN}/api/auth/login`, () =>
+      HttpResponse.json({
+        token: "tok-123", expires_at: "2026-12-16T00:00:00+00:00", user: USER,
+      })));
+    const { router } = renderRoutes([
+      { path: "login", Component: LoginPage },
+      { path: "study", Component: () => <p>study home</p> },
+    ], "/login");
+    await router.navigate("/login", { state: { from: "//evil.example" } });
+    await user.type(screen.getByLabelText(/邮箱/), "student@example.com");
+    await user.type(screen.getByLabelText(/密码/), "study-hard-88");
+    await user.click(screen.getByRole("button", { name: "登录" }));
+    await screen.findByText("study home");
+  });
+
   it("login accepts a username and sends it as `identifier`; email-less accounts work", async () => {
     const user = userEvent.setup();
     let body: unknown = null;

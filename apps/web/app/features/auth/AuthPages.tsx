@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router";
 import { useEffect, useRef, useState } from "react";
 import {
   fieldErrorFrom,
@@ -63,6 +63,10 @@ function errorMessage(err: unknown, fallback: string): string {
 
 export function LoginPage() {
   const navigate = useNavigate();
+  const from = (useLocation().state as { from?: unknown } | null)?.from;
+  // only ever return to an in-app study path (never an open redirect)
+  const returnTo = typeof from === "string" && /^\/study(\/|\?|$)/.test(from)
+    ? from : "/study";
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -75,7 +79,7 @@ export function LoginPage() {
     try {
       const { token, user } = await loginAccount(identifier.trim(), password);
       authStore.setSession(token, user);
-      navigate("/study");
+      navigate(returnTo, { replace: true });
     } catch (err) {
       setError(errorMessage(err, "登录失败，请稍后重试。"));
       setBusy(false);

@@ -1,12 +1,15 @@
 import { beforeAll, afterAll, afterEach, describe, expect, it } from "vitest";
+import { beforeEach } from "vitest";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { ORIGIN, server } from "../../test/mocks/server";
-import { renderRoutes } from "../../test/render";
+import { renderRoutes, signInForTest } from "../../test/render";
 import StudyLayout from "../../routes/study";
 import ExamDetailPage from "../../routes/study.exams.$examId";
 import PracticeRoute from "../../routes/study.practice.$sessionId";
+
+beforeEach(() => signInForTest());
 
 const outline = {
   exam_id: "E-N2-2018-12",

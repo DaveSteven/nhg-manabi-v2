@@ -1,7 +1,12 @@
 import { afterEach, describe, expect, it } from "vitest";
+import { beforeEach } from "vitest";
 import { act, screen } from "@testing-library/react";
-import { renderRoutes } from "../test/render";
+import { renderRoutes, signInForTest } from "../test/render";
+import { authStore } from "../features/auth/authStore";
+import { notifyUnauthorized } from "../api/authToken";
 import StudyLayout from "./study";
+
+beforeEach(() => signInForTest());
 
 function setScroll(y: number) {
   Object.defineProperty(window, "scrollY", { value: y, configurable: true });
@@ -26,5 +31,33 @@ describe("study header sticky state", () => {
 
     setScroll(0);
     expect(header).not.toHaveClass("is-stuck");
+  });
+});
+
+describe("study auth guard (ADR-0036)", () => {
+  const routes = [
+    { path: "study", Component: StudyLayout,
+      children: [{ path: "exams", element: <p>exams page</p> }] },
+    { path: "login", element: <p>login page</p> },
+  ];
+
+  it("sends guests from any /study page to /login", () => {
+    authStore.clear();
+    const { router } = renderRoutes(routes, "/study/exams?x=1");
+    expect(screen.getByText("login page")).toBeInTheDocument();
+    expect(screen.queryByText("exams page")).not.toBeInTheDocument();
+    expect(router.state.location.state).toEqual({ from: "/study/exams?x=1" });
+  });
+
+  it("lets signed-in students through", () => {
+    renderRoutes(routes, "/study/exams");
+    expect(screen.getByText("exams page")).toBeInTheDocument();
+  });
+
+  it("a 401 on an authenticated request drops the session and redirects", () => {
+    renderRoutes(routes, "/study/exams");
+    act(() => { notifyUnauthorized(); });
+    expect(screen.getByText("login page")).toBeInTheDocument();
+    expect(authStore.get().user).toBeNull();
   });
 });

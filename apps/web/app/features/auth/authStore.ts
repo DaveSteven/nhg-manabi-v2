@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from "react";
 import type { UserProfile } from "../../api/endpoints/auth";
-import { setSessionToken } from "../../api/authToken";
+import { setSessionToken, setUnauthorizedHandler } from "../../api/authToken";
 
 /**
  * Student auth session (ADR-0011): the bearer token lives in localStorage
@@ -75,3 +75,6 @@ export const authStore = {
 export function useAuth(): AuthState {
   return useSyncExternalStore(authStore.subscribe, authStore.get);
 }
+
+// A 401 on an authenticated request means the session is gone server-side.
+setUnauthorizedHandler(() => { if (state.token !== null) authStore.clear(); });

@@ -32,3 +32,18 @@ export function setSessionToken(token: string | null): void {
     // ignore: storage unavailable
   }
 }
+
+/**
+ * Global 401 hook: apiFetch calls this when a request that carried a bearer
+ * token comes back 401 (expired/revoked session). authStore registers the
+ * handler (clear session) so the /study guard then sends the user to /login.
+ */
+let unauthorizedHandler: (() => void) | null = null;
+
+export function setUnauthorizedHandler(handler: (() => void) | null): void {
+  unauthorizedHandler = handler;
+}
+
+export function notifyUnauthorized(): void {
+  unauthorizedHandler?.();
+}
