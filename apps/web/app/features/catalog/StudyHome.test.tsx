@@ -142,6 +142,23 @@ describe("StudyHome", () => {
         count: 10, feedback_mode: "immediate", selection: "smart" });
     });
 
+    it("asks a student without a level to pick one, then offers the set", async () => {
+      signInForTest(null);
+      server.use(
+        http.get(`*/api/topic-practice/types`, () => HttpResponse.json(types)),
+        http.patch(`*/api/me`, () => HttpResponse.json({
+          id: "9a1c66d0-1111-4111-8111-111111111111", email: "student@example.com",
+          username: null, display_name: "小明", current_level: "N2", avatar: null })),
+      );
+      const user = userEvent.setup();
+      renderHome();
+      const pick = await screen.findByRole("region", { name: "选择备考等级" });
+      expect(screen.queryByRole("region", { name: "今天来一组" })).not.toBeInTheDocument();
+      await user.click(within(pick).getByRole("button", { name: "N2" }));
+      expect(await screen.findByRole("region", { name: "今天来一组" })).toBeInTheDocument();
+      expect(screen.queryByRole("region", { name: "选择备考等级" })).not.toBeInTheDocument();
+    });
+
     it("is hidden while there is a practice to continue", async () => {
       signInForTest("N2");
       server.use(

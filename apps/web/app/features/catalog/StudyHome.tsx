@@ -6,7 +6,7 @@ import { useCurrentSession, useExamList } from "./useExamCatalog";
 import { ButtonLink } from "../../components/Button";
 import { useAuth } from "../auth/authStore";
 import { useStreak } from "../learning/useLearning";
-import { useLevel } from "../auth/useLevel";
+import { JLPT_LEVELS, useLevel, type JlptLevel } from "../auth/useLevel";
 import { useStartTopicPractice, useTopicTypes } from "../topic/useTopicPractice";
 import { defaultCount, unitNoun } from "../topic/topicModel";
 import { Button } from "../../components/Button";
@@ -127,6 +127,24 @@ function ContinueSessionCard({ state, exams }: {
   );
 }
 
+/** First-run step for a signed-in student without a target level: one tap,
+ * then the "今天来一组" card takes over. */
+function LevelPickCard({ onPick }: { onPick: (level: JlptLevel) => void }) {
+  return (
+    <section className="card continue-card" aria-label="选择备考等级">
+      <div className="continue-info">
+        <p className="continue-eyebrow">先选一个备考等级</p>
+        <h2>选好后，这里会直接给你今天的第一组题</h2>
+        <div className="level-pick">
+          {JLPT_LEVELS.map((l) => (
+            <Button key={l} variant="secondary" onClick={() => onPick(l)}>{l}</Button>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 /**
  * One-tap "next step" when there is nothing to resume: a smart-random topic
  * set at the student's level — the question type with the most never-answered
@@ -135,13 +153,14 @@ function ContinueSessionCard({ state, exams }: {
  */
 function TodayPracticeCard({ state }: { state: ReturnType<typeof useCurrentSession> }) {
   const auth = useAuth();
-  const { level } = useLevel();
+  const { level, setLevel } = useLevel();
   const navigate = useNavigate();
   const enabled = auth.user !== null && state.kind === "no-active";
   const types = useTopicTypes(enabled ? level : null);
   const start = useStartTopicPractice((session) => {
     navigate(`/study/practice/${encodeURIComponent(session.id)}`);
   });
+  if (enabled && !level) return <LevelPickCard onPick={setLevel} />;
   if (!enabled || !level || !types.data) return null;
   const usable = types.data.types.filter((t) => t.available_units > 0);
   const pool = usable.filter((t) => !t.is_provisional);
