@@ -2,6 +2,10 @@
 
 最后更新：2026-11-24
 
+## 线上前端不再需要强刷（2026-11-25）
+
+- 打包本来就带内容哈希（`assets/*-<hash>.js`，nginx `immutable`）；问题在 HTML 入口没有 `Cache-Control`，浏览器按 Last-Modified 启发式缓存旧页面。现在入口 HTML 为 `no-cache`（ETag 再验证），并把旧 release 的 assets 合并进当前 release，新增 `deploy/prod/release-frontend.sh`，见 [日志](2026-11-25-frontend-cache.md)。线上已 reload 并用 curl 验证；**浏览器实际行为未验收**。
+
 ## v2 重新上线并补同步 V1 数据（2026-11-24）
 
 - 停 V1（API 与数据库均已停，数据与备份保留），v2（提交 `b98434a`，迁移 0021）重新对外；V1 重新上线后的新作答（教材 31 会话、真题 10 会话）已导入 v2，重复运行不新增。同步前修复了 V1 重建导致的编号复用与用户 id 不一致，见 [日志](2026-11-24-redeploy-v2-sync-v1.md)。**`main` 未合并；未做真实用户登录与移动端验收；V1 备份 cron 待清理；无异地备份**。

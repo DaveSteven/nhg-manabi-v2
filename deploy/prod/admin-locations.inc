@@ -12,4 +12,12 @@ location /assets/ {
     add_header Cache-Control "public, immutable";
     try_files $uri =404;
 }
-location / { try_files $uri /index.html; }
+location / {
+    try_files $uri /index.html;
+    # HTML must revalidate so a new release is picked up; hashed /assets/ stay
+    # immutable. Security headers repeated (a location add_header drops the server ones).
+    add_header Cache-Control "no-cache" always;
+    add_header X-Content-Type-Options nosniff always;
+    add_header Referrer-Policy strict-origin-when-cross-origin always;
+    add_header X-Frame-Options DENY always;
+}

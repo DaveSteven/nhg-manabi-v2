@@ -18,5 +18,19 @@ location = / { return 302 /study; }
 # SPA routes use the noindex fallback, never the brand HTML.
 location ~ ^/(study|mock|login|register|verify-email|forgot-password|reset-password)(/|$) {
     try_files /__spa-fallback.html =404;
+    # HTML entry points must revalidate (ETag -> 304) so a new release is picked
+    # up on the next load; hashed /assets/ stay immutable. add_header in a
+    # location drops the server-level ones, so the security headers are repeated.
+    add_header Cache-Control "no-cache" always;
+    add_header X-Content-Type-Options nosniff always;
+    add_header Referrer-Policy strict-origin-when-cross-origin always;
 }
-location / { try_files $uri =404; }
+location / {
+    try_files $uri =404;
+    # HTML entry points must revalidate (ETag -> 304) so a new release is picked
+    # up on the next load; hashed /assets/ stay immutable. add_header in a
+    # location drops the server-level ones, so the security headers are repeated.
+    add_header Cache-Control "no-cache" always;
+    add_header X-Content-Type-Options nosniff always;
+    add_header Referrer-Policy strict-origin-when-cross-origin always;
+}
