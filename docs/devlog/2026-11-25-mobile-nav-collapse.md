@@ -58,3 +58,7 @@
 ## 补充八：听力字幕点按后灰底盖住高亮
 - 原因：`.transcript-cue.is-seekable:hover`（灰底）特异性高于 `.transcript-cue.is-active`（樱色底）；触屏点按后 `:hover` 会"粘住"，灰底就盖住了当前句高亮。
 - 修复：悬停底色只在 `(hover: hover)` 设备生效，且排除 `.is-active`（`:hover:not(.is-active)`）。仅改样式；**未在真机验证**，测试 391 通过、build 通过。
+
+## 部署（用户 2026-11-25 授权）
+- 仅前端：`pnpm build`（提交 `0892389`）→ `deploy/prod/release-frontend.sh web` → 新 release `20261125T052841`，`current` 已切换（旧 release `20261124T143840`，回滚=把 `/opt/nhg-manabi-v2/web/current` 软链指回它）。后端、数据库、admin 未动。
+- 线上验证（curl）：`/` 302、`/study` `/study/exams` `/login` 200，HTML `no-cache`，新 manifest 含 `require-auth` 路由，`/api/exams` 正常。**未做：** 真实账号/真机浏览器验收；`main` 未合并（待用户确认上线验收后再合）。
