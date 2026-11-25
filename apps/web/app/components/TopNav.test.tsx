@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { renderRoutes, renderWithQuery } from "../test/render";
 import { TopNav } from "./TopNav";
 import { PracticeBreadcrumb } from "../features/practice/PracticeBreadcrumb";
@@ -45,6 +46,31 @@ describe("TopNav", () => {
       .toHaveAttribute("href", "/study/practice");
     expect(screen.getByText("学习").closest("a"))
       .toHaveAttribute("href", "/study/learning");
+  });
+});
+
+describe("TopNav mobile toggle", () => {
+  const routes = [{ path: "study", Component: StudyLayout, children: [
+    { path: "exams", Component: () => <p>exams</p> }] }];
+
+  it("toggles aria-expanded and closes on Escape", async () => {
+    renderRoutes(routes, "/study");
+    const btn = screen.getByRole("button", { name: "展开菜单" });
+    expect(btn).toHaveAttribute("aria-expanded", "false");
+    await userEvent.click(btn);
+    expect(screen.getByRole("button", { name: "收起菜单" }))
+      .toHaveAttribute("aria-expanded", "true");
+    await userEvent.keyboard("{Escape}");
+    expect(screen.getByRole("button", { name: "展开菜单" }))
+      .toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("closes after choosing a destination", async () => {
+    renderRoutes(routes, "/study");
+    await userEvent.click(screen.getByRole("button", { name: "展开菜单" }));
+    await userEvent.click(screen.getByText("试卷"));
+    expect(screen.getByRole("button", { name: "展开菜单" }))
+      .toHaveAttribute("aria-expanded", "false");
   });
 });
 

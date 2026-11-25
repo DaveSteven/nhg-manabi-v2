@@ -1,5 +1,5 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
-import { NavLink } from "react-router";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { NavLink, useLocation } from "react-router";
 
 /**
  * Practice/result pages live under /study/practice/:id whether they were
@@ -104,32 +104,61 @@ export function TopNav() {
   const section = useContext(NavSectionContext)?.section ?? null;
   const cls = (isActive: boolean, own: NavSection) =>
     `topnav-link${(section ? section === own : isActive) ? " active" : ""}`;
+  // Narrow screens (<768px): the pill collapses behind a toggle and opens as a
+  // dropdown. CSS decides what is visible; `open` is irrelevant on wide screens.
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const { pathname } = useLocation();
+  useEffect(() => { setOpen(false); }, [pathname]);
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: PointerEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    document.addEventListener("pointerdown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
   return (
-    <nav aria-label="主导航" className="topnav">
-      <NavLink to="/study" end className="topnav-link">
-        <HomeIcon />
-        <span>首页</span>
-      </NavLink>
-      <NavLink to="/study/practice" end
-               className={({ isActive }) => cls(isActive, "topic")}>
-        <TopicIcon />
-        <span>专项</span>
-      </NavLink>
-      <NavLink to="/study/exams"
-               className={({ isActive }) => cls(isActive, "exams")}>
-        <ExamIcon />
-        <span>试卷</span>
-      </NavLink>
-      <NavLink to="/study/supplementary"
-               className={({ isActive }) => cls(isActive, "supplementary")}>
-        <SupplementaryIcon />
-        <span>扩展</span>
-      </NavLink>
-      <NavLink to="/study/learning"
-               className={({ isActive }) => cls(isActive, "learning")}>
-        <StudyIcon />
-        <span>学习</span>
-      </NavLink>
-    </nav>
+    <div ref={wrapRef} className={open ? "topnav-wrap is-open" : "topnav-wrap"}>
+      <button type="button" className="topnav-toggle" aria-expanded={open}
+              aria-controls="topnav-menu" aria-label={open ? "收起菜单" : "展开菜单"}
+              onClick={() => setOpen((v) => !v)}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
+             strokeLinecap="round" aria-hidden="true">
+          {open ? <path d="M6 6l12 12M18 6 6 18" /> : <path d="M4 7h16M4 12h16M4 17h16" />}
+        </svg>
+      </button>
+      <nav id="topnav-menu" aria-label="主导航" className="topnav">
+        <NavLink to="/study" end className="topnav-link">
+          <HomeIcon />
+          <span>首页</span>
+        </NavLink>
+        <NavLink to="/study/practice" end
+                 className={({ isActive }) => cls(isActive, "topic")}>
+          <TopicIcon />
+          <span>专项</span>
+        </NavLink>
+        <NavLink to="/study/exams"
+                 className={({ isActive }) => cls(isActive, "exams")}>
+          <ExamIcon />
+          <span>试卷</span>
+        </NavLink>
+        <NavLink to="/study/supplementary"
+                 className={({ isActive }) => cls(isActive, "supplementary")}>
+          <SupplementaryIcon />
+          <span>扩展</span>
+        </NavLink>
+        <NavLink to="/study/learning"
+                 className={({ isActive }) => cls(isActive, "learning")}>
+          <StudyIcon />
+          <span>学习</span>
+        </NavLink>
+      </nav>
+    </div>
   );
 }
