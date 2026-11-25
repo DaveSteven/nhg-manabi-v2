@@ -18,6 +18,14 @@
 
 html {
   -webkit-text-size-adjust: 100%;
+  /* no browser-default flash on tap (mobile WebKit/Blink); our own :hover /
+     :active / :focus-visible states remain the feedback */
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* tap = click immediately: no double-tap-zoom delay on controls */
+a, button, summary, label, select, [role="button"], [role="tab"], input[type="range"] {
+  touch-action: manipulation;
 }
 
 /* Page background (user-confirmed 2026-11-16): three soft radial washes
@@ -572,4 +580,28 @@ button {
 
 @media (prefers-reduced-motion: reduce) {
   .breadcrumb a { transition: none; }
+}
+
+/* Touch press feedback (replaces the browser's default tap flash): a brief
+   tint + tiny shrink on tappable cards/rows while the finger is down. Only on
+   devices without hover so desktop hover styles are untouched. */
+@media (hover: none) {
+  .exam-chip:active,
+  .capsule-card:active,
+  .subject-card:active,
+  .topic-type:active,
+  .unit-row:active,
+  .layer-toggle:active,
+  .option-row:active,
+  .topnav-link:active {
+    background-color: var(--color-surface-subtle);
+    transform: scale(0.985);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .exam-chip:active, .capsule-card:active, .subject-card:active, .topic-type:active,
+  .unit-row:active, .layer-toggle:active, .option-row:active, .topnav-link:active {
+    transform: none;
+  }
 }

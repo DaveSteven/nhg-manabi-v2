@@ -49,3 +49,8 @@
 - 顺带修复：严格模考页之前不在 `/study` 布局内，仅靠页面自带跳转；现在统一受守卫保护，也避免成绩页在游客状态先发请求。
 - 测试：web 391 tests（45 files）、tsc、`pnpm build`（含 check-build）通过；新增 `RequireAuth.test.tsx`（公开/拦截/回跳/401）；旧的各页「游客跳登录」用例并入该测试。浏览器（dev 代理本地后端）：游客 `/study/learning`、`/study/practice`、`/mock/abc` → `/login`；`/study/exams` 与详情不跳。
 - 未验：真实账号下各受保护页正常进入（仅测试覆盖）。
+
+## 补充七：移动端点击默认高亮
+- `html { -webkit-tap-highlight-color: transparent }` 去掉浏览器默认蓝/灰点按闪色；交互元素加 `touch-action: manipulation`（去双击缩放延迟）。
+- 原来只有 `.btn` 有 `:active` 反馈，卡片/胶囊/选项行去掉默认高亮后会没有任何按压反馈，所以补了 `(hover: none)` 下的轻量按压态（浅底色 + 缩 1.5%，reduced-motion 下不缩放）：试卷胶囊、capsule-card、科目卡、题型卡、Unit/大题行、选项行、顶栏链接。
+- 验证：web 391 tests、tsc、build 通过；**未在真机/真实触屏验证**（桌面浏览器无法触发 `hover: none`）。
