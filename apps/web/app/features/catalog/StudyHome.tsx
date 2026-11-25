@@ -1,11 +1,15 @@
 import type { ReactNode } from "react";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import type { ExamSummary } from "../../api/dto/exam";
 import type { PracticeSession } from "../../api/dto/practice";
 import { useCurrentSession, useExamList } from "./useExamCatalog";
 import { ButtonLink } from "../../components/Button";
 import { useAuth } from "../auth/authStore";
 import { useStreak } from "../learning/useLearning";
+import { useLevel } from "../auth/useLevel";
+import { useStartTopicPractice, useTopicTypes } from "../topic/useTopicPractice";
+import { defaultCount, unitNoun } from "../topic/topicModel";
+import { Button } from "../../components/Button";
 import { nextSitting } from "./examDates";
 
 /** Page header copy per design-system.md v1.1 §5.2 + the confirmed home
@@ -123,6 +127,47 @@ function ContinueSessionCard({ state, exams }: {
   );
 }
 
+/**
+ * One-tap "next step" when there is nothing to resume: a smart-random topic
+ * set at the student's level — the question type with the most never-answered
+ * Units (stable provisional-free types first), default size, immediate feedback.
+ * Everything shown comes from the real /topic-practice/types counts.
+ */
+function TodayPracticeCard({ state }: { state: ReturnType<typeof useCurrentSession> }) {
+  const auth = useAuth();
+  const { level } = useLevel();
+  const navigate = useNavigate();
+  const enabled = auth.user !== null && state.kind === "no-active";
+  const types = useTopicTypes(enabled ? level : null);
+  const start = useStartTopicPractice((session) => {
+    navigate(`/study/practice/${encodeURIComponent(session.id)}`);
+  });
+  if (!enabled || !level || !types.data) return null;
+  const usable = types.data.types.filter((t) => t.available_units > 0);
+  const pool = usable.filter((t) => !t.is_provisional);
+  const best = [...(pool.length > 0 ? pool : usable)]
+    .sort((a, b) => b.new_units - a.new_units || b.available_units - a.available_units)[0];
+  if (!best) return null;
+  const count = defaultCount(best);
+  return (
+    <section className="card continue-card" aria-label="今天来一组">
+      <span className="continue-icon" aria-hidden="true"><PlayIcon /></span>
+      <div className="continue-info">
+        <p className="continue-eyebrow">今天来一组 · {level}</p>
+        <h2>{best.label_zh} · {count} {unitNoun(best.unit_kind)}</h2>
+        <p className="text-aux">新题为主，兼顾复习。想换题型？<Link to="/study/practice">去专项练习</Link></p>
+      </div>
+      <Button variant="primary" loading={start.isPending}
+              onClick={() => start.mutate({
+                level, question_type_id: best.question_type_id, count,
+                feedback_mode: "immediate", selection: "smart" })}>
+        开始<span aria-hidden="true">→</span>
+      </Button>
+      {start.error ? <p role="alert">开始失败：{start.error.message}</p> : null}
+    </section>
+  );
+}
+
 const WEEK_LABELS = ["一", "二", "三", "四", "五", "六", "日"];
 
 function ExamCountdownCard() {
@@ -185,6 +230,7 @@ export function StudyHome() {
       </header>
 
       <ContinueSessionCard state={sessionState} exams={examList} />
+      <TodayPracticeCard state={sessionState} />
 
       <div className={`progress-row${auth.user ? "" : " is-single"}`}>
         <ExamCountdownCard />

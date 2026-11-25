@@ -1,6 +1,7 @@
 import { beforeAll, afterAll, afterEach, describe, expect, it } from "vitest";
 import { beforeEach } from "vitest";
 import { screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { server } from "../../test/mocks/server";
 import { createQueryClient } from "../../api/queryClient";
@@ -105,6 +106,52 @@ describe("StudyHome", () => {
     expect(screen.queryByRole("region", { name: "继续上次练习" }))
       .not.toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  describe("今天来一组", () => {
+    const types = { level: "N2", types: [
+      { question_type_id: "grammar_cloze", subject: "grammar", label_zh: "文法填空",
+        label_ja: "文法", unit_kind: "set", is_provisional: false,
+        available_units: 30, available_questions: 150, new_units: 12, wrong_units: 0 },
+      { question_type_id: "vocabulary_kanji_reading", subject: "vocabulary",
+        label_zh: "汉字读音", label_ja: "漢字", unit_kind: "set", is_provisional: false,
+        available_units: 40, available_questions: 200, new_units: 30, wrong_units: 2 },
+    ] };
+
+    it("offers a one-tap smart set for the level and starts it", async () => {
+      signInForTest("N2");
+      let body: unknown = null;
+      server.use(
+        http.get(`*/api/topic-practice/types`, () => HttpResponse.json(types)),
+        http.post(`*/api/topic-practice/sessions`, async ({ request }) => {
+          body = await request.json();
+          return HttpResponse.json(session, { status: 201 });
+        }),
+      );
+      const user = userEvent.setup();
+      renderRoutes([{ path: "study", Component: StudyLayout, children: [
+        { index: true, Component: StudyHome },
+        { path: "practice/:id", Component: () => <p>practice page</p> },
+      ] }], "/study");
+      const card = await screen.findByRole("region", { name: "今天来一组" });
+      // picks the type with the most never-answered Units
+      expect(card).toHaveTextContent("汉字读音 · 10 组");
+      await user.click(within(card).getByRole("button", { name: /开始/ }));
+      await screen.findByText("practice page");
+      expect(body).toEqual({ level: "N2", question_type_id: "vocabulary_kanji_reading",
+        count: 10, feedback_mode: "immediate", selection: "smart" });
+    });
+
+    it("is hidden while there is a practice to continue", async () => {
+      signInForTest("N2");
+      server.use(
+        http.get(`*/api/topic-practice/types`, () => HttpResponse.json(types)),
+        http.get(`*/api/practice/sessions/current`, () => HttpResponse.json(session)),
+      );
+      renderHome();
+      await screen.findByRole("region", { name: "继续上次练习" });
+      expect(screen.queryByRole("region", { name: "今天来一组" })).not.toBeInTheDocument();
+    });
   });
 
   it("unauthenticated current-session is quiet, not an error banner", async () => {

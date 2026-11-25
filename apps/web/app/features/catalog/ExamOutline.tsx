@@ -1,6 +1,7 @@
 import { useCallback, useState } from "react";
 import { readTabSubject, saveTabSubject } from "./tabMemory";
-import { useNavigate } from "react-router";
+import { useLocation, useNavigate } from "react-router";
+import { useAuth } from "../auth/authStore";
 import { useQuery } from "@tanstack/react-query";
 import type { ExamOutline, OutlineLayer, OutlineUnit } from "../../api/dto/exam";
 import { Breadcrumb } from "../../components/Breadcrumb";
@@ -30,6 +31,16 @@ function PracticeCount({ count }: { count: number | undefined }) {
 
 export function ExamOutlineView({ outline }: { outline: ExamOutline }) {
   const navigate = useNavigate();
+  const location = useLocation();
+  const signedIn = useAuth().user !== null;
+  // Guests may read the outline; the first "start" asks them to sign in and
+  // brings them back to this exact page (ADR-0036).
+  const requireLogin = useCallback(() => {
+    navigate("/login", { state: {
+      from: `${location.pathname}${location.search}`,
+      intent: examTitle(outline),
+    } });
+  }, [navigate, location.pathname, location.search, outline]);
   // selected tab is remembered by subject (not index) across visits
   const [subjectKey, setSubjectKey] = useState<string | null>(
     () => readTabSubject(outline.exam_id));
@@ -40,6 +51,7 @@ export function ExamOutlineView({ outline }: { outline: ExamOutline }) {
   const status = useQuery({
     queryKey: ["practice-status", outline.exam_id],
     queryFn: ({ signal }) => getExamPracticeStatus(outline.exam_id, signal),
+    enabled: signedIn,
   });
   const counts = new Map(
     (status.data?.units ?? []).map((u) => [u.unit_id, u.submitted_count]),
@@ -49,9 +61,10 @@ export function ExamOutlineView({ outline }: { outline: ExamOutline }) {
     navigate(`/study/practice/${encodeURIComponent(session.id)}`);
   });
   const openLayer = useCallback((layer: OutlineLayer) => {
+    if (!signedIn) { requireLogin(); return; }
     startLayer.mutate({ units: layer.units.map((u) => ({
       release_id: outline.release_id, unit_id: u.unit_id })) });
-  }, [outline.release_id, startLayer]);
+  }, [outline.release_id, startLayer, signedIn, requireLogin]);
 
   // strict-mock entry only for papers with real phases/time limits (M10)
   const mock = useMockAvailability(outline.exam_id);
@@ -62,8 +75,9 @@ export function ExamOutlineView({ outline }: { outline: ExamOutline }) {
   const section = sections[sectionIdx];
 
   const openUnit = useCallback((unit: OutlineUnit) => {
+    if (!signedIn) { requireLogin(); return; }
     start.mutate({ release_id: outline.release_id, unit_id: unit.unit_id });
-  }, [outline.release_id, start]);
+  }, [outline.release_id, start, signedIn, requireLogin]);
 
   return (
     <section aria-label="试卷详情">
@@ -78,6 +92,10 @@ export function ExamOutlineView({ outline }: { outline: ExamOutline }) {
           </ButtonLink>
         ) : null}
       </div>
+
+      {signedIn ? null : (
+        <p className="text-aux" role="note">登录后可开始练习，并记录每道题的作答和进度。</p>
+      )}
 
       <div className="tabs" role="tablist" aria-label="学科大题">
         {sections.map((s, i) => (
@@ -110,7 +128,7 @@ export function ExamOutlineView({ outline }: { outline: ExamOutline }) {
         </div>
       ) : null}
 
-      <MockRecords examId={outline.exam_id} />
+      {signedIn ? <MockRecords examId={outline.exam_id} /> : null}
 
       {start.error || startLayer.error ? (
         <p role="alert">

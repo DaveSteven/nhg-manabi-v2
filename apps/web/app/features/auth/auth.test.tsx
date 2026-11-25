@@ -226,6 +226,12 @@ describe("auth pages", () => {
     await screen.findByText("exams page");
   });
 
+  it("login page says what the user was about to open", async () => {
+    const { router } = renderRoutes([{ path: "login", Component: LoginPage }], "/login");
+    await router.navigate("/login", { state: { from: "/study/exams/E-1", intent: "2018年12月 N2" } });
+    expect(await screen.findByText("登录后继续：2018年12月 N2")).toBeInTheDocument();
+  });
+
   it("login ignores an off-site `from` and goes to /study", async () => {
     const user = userEvent.setup();
     server.use(http.post(`${ORIGIN}/api/auth/login`, () =>

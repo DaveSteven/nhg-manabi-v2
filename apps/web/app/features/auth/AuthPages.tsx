@@ -63,7 +63,10 @@ function errorMessage(err: unknown, fallback: string): string {
 
 export function LoginPage() {
   const navigate = useNavigate();
-  const from = (useLocation().state as { from?: unknown } | null)?.from;
+  const navState = useLocation().state as { from?: unknown; intent?: unknown } | null;
+  const from = navState?.from;
+  // why the guard sent the user here, e.g. the exam they tried to open
+  const intent = typeof navState?.intent === "string" ? navState.intent : null;
   // only ever return to an in-app study path (never an open redirect)
   const returnTo = typeof from === "string" && /^\/study(\/|\?|$)/.test(from)
     ? from : "/study";
@@ -88,6 +91,7 @@ export function LoginPage() {
 
   return (
     <AuthShell title="登录">
+      {intent ? <p className="form-info" role="status">登录后继续：{intent}</p> : null}
       <form onSubmit={submit} className="auth-form">
         <label>
           邮箱或用户名

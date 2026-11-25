@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { ORIGIN, server } from "../../test/mocks/server";
 import { renderRoutes, signInForTest } from "../../test/render";
+import { authStore } from "../auth/authStore";
 import StudyLayout from "../../routes/study";
 import ExamDetailPage from "../../routes/study.exams.$examId";
 import PracticeRoute from "../../routes/study.practice.$sessionId";
@@ -136,6 +137,28 @@ describe("ExamOutline", () => {
       "/study/exams/E-N2-2018-12",
     );
   }
+
+  it("guests can read the outline; starting a unit sends them to login and back", async () => {
+    const user = userEvent.setup();
+    useOutlineHandler();
+    let statusCalls = 0;
+    server.use(http.get(`*/api/exams/E-N2-2018-12/practice-status`, () => {
+      statusCalls += 1;
+      return HttpResponse.json({ exam_id: "E-N2-2018-12", units: [] });
+    }));
+    authStore.clear();
+    const { router } = renderRoutes(
+      [{ path: "study", Component: StudyLayout, children: [
+        { path: "exams/:examId", Component: ExamDetailPage },
+      ] }, { path: "login", element: <p>login page</p> }],
+      "/study/exams/E-N2-2018-12");
+    expect(await screen.findByRole("note")).toHaveTextContent("登录后可开始练习");
+    await user.click(await screen.findByRole("button", { name: /問題1/ }));
+    await screen.findByText("login page");
+    expect(router.state.location.state).toEqual({
+      from: "/study/exams/E-N2-2018-12", intent: "2018年12月 N2" });
+    expect(statusCalls).toBe(0);
+  });
 
   it("shows a text breadcrumb 试卷 > 详情 instead of a back link", async () => {
     useOutlineHandler();

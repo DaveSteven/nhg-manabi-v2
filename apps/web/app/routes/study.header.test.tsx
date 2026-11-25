@@ -39,7 +39,8 @@ describe("study auth guard (ADR-0036)", () => {
     { path: "study", Component: StudyLayout,
       children: [{ index: true, element: <p>home page</p> },
         { path: "exams", element: <p>exams page</p> },
-        { path: "exams/:id", element: <p>exam detail</p> }] },
+        { path: "exams/:id", element: <p>exam detail</p> },
+        { path: "exams/:id/mock", element: <p>mock page</p> }] },
     { path: "login", element: <p>login page</p> },
   ];
 
@@ -52,12 +53,18 @@ describe("study auth guard (ADR-0036)", () => {
     expect(screen.getByText("home page")).toBeInTheDocument();
   });
 
+  it("lets guests read an exam detail page", () => {
+    authStore.clear();
+    renderRoutes(routes, "/study/exams/E-1");
+    expect(screen.getByText("exam detail")).toBeInTheDocument();
+  });
+
   it("sends guests from any other /study page to /login", () => {
     authStore.clear();
-    const { router } = renderRoutes(routes, "/study/exams/E-1?x=1");
+    const { router } = renderRoutes(routes, "/study/exams/E-1/mock?x=1");
     expect(screen.getByText("login page")).toBeInTheDocument();
-    expect(screen.queryByText("exam detail")).not.toBeInTheDocument();
-    expect(router.state.location.state).toEqual({ from: "/study/exams/E-1?x=1" });
+    expect(screen.queryByText("mock page")).not.toBeInTheDocument();
+    expect(router.state.location.state).toEqual({ from: "/study/exams/E-1/mock?x=1" });
   });
 
   it("lets signed-in students through", () => {
@@ -66,7 +73,7 @@ describe("study auth guard (ADR-0036)", () => {
   });
 
   it("a 401 on an authenticated request drops the session and redirects", () => {
-    renderRoutes(routes, "/study/exams/E-1");
+    renderRoutes(routes, "/study/exams/E-1/mock");
     act(() => { notifyUnauthorized(); });
     expect(screen.getByText("login page")).toBeInTheDocument();
     expect(authStore.get().user).toBeNull();
