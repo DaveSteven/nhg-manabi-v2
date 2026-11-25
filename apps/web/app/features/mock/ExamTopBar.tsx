@@ -39,8 +39,10 @@ export function ExamTopBar({ examName, examTitle, where, answered, total,
       <span className={`exam-clock tone-${tone}`} role="timer" aria-label="剩余时间">
         {remaining === null ? "--:--" : formatClock(remaining)}
       </span>
-      <ReadingSizeControl compact />
-      <Button variant="secondary" size="sm" onClick={onOpenSheet}>答题卡</Button>
+      <div className="exam-bar-actions">
+        <ReadingSizeControl compact />
+        <Button variant="secondary" size="sm" onClick={onOpenSheet}>答题卡</Button>
+      </div>
     </header>
     </div>
   );
